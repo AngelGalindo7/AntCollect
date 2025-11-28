@@ -1,25 +1,20 @@
 from fastapi import FastAPI, UploadFile, File, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from database import SessionLocal
-from models import Image, User, RefreshToken
+from database import get_db
+from models import PostImage, User, RefreshToken, Post
 import shutil, os
 import os
-from utils.files import save_upload_file, get_file_size
+from utils.files import save_upload_file, get_file_size, delete_file
 from schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse
-from utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token
+from utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
 
 
 app = FastAPI()
 
 UPLOAD_DIR = "Uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
 
 
 @app.get("/test-db/")
@@ -60,7 +55,7 @@ def create_user(
 
     return new_user
 
-
+#TODO Add token to httpcookie/local memory in the frontend
 @app.post("/login", response_model= TokenResponse)
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
@@ -70,7 +65,9 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     
     verify_password(user.password, db_user.password_hash)
 
-    access_token = create_access_token({"sub" : db_user.id})
+    #"sub" field has to be a string not a int
+    #TODO Look into making user.id to str
+    access_token = create_access_token({"sub" : str(db_user.id)})
     refresh_token_data = create_refresh_token({"sub" : db_user.id})
 
     refresh_token = RefreshToken(
@@ -80,7 +77,8 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         expires_at=refresh_token_data["expires_at"],
         revoked=False
     )
-
+    
+    #TODO Look into wether multiple user refresh accounts should be added to db
     db.add(refresh_token)
     db.commit()
     db.refresh(refresh_token)
@@ -95,6 +93,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         )
     )
 
+#TODO Add token to httpcookie/local memory in the frontend
 @app.post("/authorize-token")
 def authorize_token(
     req:RefreshRequest,
@@ -134,31 +133,105 @@ def authorize_token(
     )
 
 
-    
-@app.post("/upload-image")
-def upload_image(
-    user_id: int | None = None,
-    file: UploadFile = File(...),
+#TODO Add a ban table in postgresql and check if user_id is not banned
+@app.post("/upload-post")
+def upload_post(
+    caption: str=Form(...),
+    is_published: bool = Form(True),
+    post_images: list[UploadFile] = File(...),
+    user_id: User = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
     ):
     
-    file_path = save_upload_file(file)
-    size_bytes = get_file_size(file_path)
 
-    new_image = Image(
+    try:
+        print(f"userid:{user_id}")
+        post = Post(
         user_id=user_id,
-        filename=file.filename,
-        file_path=file_path,
-        mime_type=file.content_type,
-        size_bytes=size_bytes,
-    )
-
-    db.add(new_image)
-    db.commit()
-    db.refresh(new_image)
-
-    return {
-        "id": str(new_image.id),
+        caption=caption,
+        is_published=is_published
+    )   
+        
+        db.add(post)
+        db.flush()
+        image_records = []
+        uploaded_files = []
+        for i, image in enumerate(post_images):
+            file_path = save_upload_file(image)
+            uploaded_files.append(file_path)
+            size_bytes = get_file_size(file_path)
+            order_index = i+1
+            post_image = PostImage(
+                post_id=post.post_id,
+                order_index=order_index,
+                filename=image.filename,
+                file_path=file_path,
+                mime_type=image.content_type,
+                size_bytes=size_bytes,
+            )
+            image_records.append(post_image)
+        
+        db.add_all(image_records)
+        db.commit()
+        db.refresh(post)
+        return {
+        "post_id": str(post.post_id),
         "message": "Upload successful"
     }
+    
+    except Exception as e:
+        db.rollback()
+        #add cleanup function
 
+        for path in uploaded_files:
+            try:
+                pass
+                delete_file(path)
+            except Exception:
+                pass
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred during upload: {e}"
+        )
+
+#def like_image(
+#user_id: User = Depends(authenthicate_access_token))
+#db: Depends(get_db)
+
+"""
+new_like = PostLike(
+    post_id=post_id
+    user_id =user_id)
+
+db.add(new_like)
+db.commit()
+db.refresh(new_like)
+
+return {
+    "id": }
+"""
+
+"""
+TODO Make post api
+
+@app.post("/make_post")
+def post(
+    user: User= Depends(authenticate_access_token))
+    db: Depends(get_db)
+    TXT:
+""" 
+
+
+
+"""TODO Make comment api
+
+@app.post("comment_post")
+def comment(
+    user: User = Depends(authenthicate_access_token))"""
+
+
+"""TODO Verify logic on banning
+Should each api request check if user is banned?
+Or should a user not be able to make any request at all
+
+"""
