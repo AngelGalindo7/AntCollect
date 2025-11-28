@@ -32,6 +32,7 @@ class PostImage(Base):
     __tablename__ = "post_images"
     post_image_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.post_id"), nullable = False)
+    order_index: Mapped[int] = mapped_column(Integer, nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     file_path: Mapped[str] = mapped_column(String(255), nullable=False)
     mime_type: Mapped[str] = mapped_column(String(50), nullable=False)
