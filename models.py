@@ -64,7 +64,7 @@ class PostLike(Base):
 
 class PostComment(Base):
     __tablename__ = "post_comments"
-    comment_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    post_comment_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.post_id"))
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     content: Mapped[str] = mapped_column(Text)
