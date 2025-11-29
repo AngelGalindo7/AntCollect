@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from database import get_db
-from models import PostImage, User, RefreshToken, Post
+from models import PostImage, User, RefreshToken, Post, PostLike, PostComment
 import shutil, os
 import os
 from utils.files import save_upload_file, get_file_size, delete_file
@@ -193,41 +193,56 @@ def upload_post(
             status_code=500,
             detail=f"An error occurred during upload: {e}"
         )
+@app.post("/like_image")
+def like_image(
+    post_id: int, 
+    user_id: User = Depends(authenthicate_access_token),
+    db: Session = Depends(get_db)
+):
 
-#def like_image(
-#user_id: User = Depends(authenthicate_access_token))
-#db: Depends(get_db)
+    new_like = PostLike(
+    post_id=post_id,
+    user_id =user_id
+    )
 
-"""
-new_like = PostLike(
-    post_id=post_id
-    user_id =user_id)
+    db.add(new_like)
+    db.commit()
+    db.refresh(new_like)
 
-db.add(new_like)
-db.commit()
-db.refresh(new_like)
+    return {
+        "like_id": new_like.like_id,
+        "message": "Successfully liked"}
 
-return {
-    "id": }
-"""
 
-"""
-TODO Make post api
-
-@app.post("/make_post")
-def post(
-    user: User= Depends(authenticate_access_token))
-    db: Depends(get_db)
-    TXT:
-""" 
+    #TODO like_image/comment errors out after commenting/liking again
+    #add error handling
 
 
 
-"""TODO Make comment api
 
-@app.post("comment_post")
+@app.post("/comment_post")
 def comment(
-    user: User = Depends(authenthicate_access_token))"""
+    post_id: int,
+    content: str,
+    user_id: User = Depends(authenthicate_access_token),
+    db: Session = Depends(get_db)
+):
+    
+    new_comment = PostComment(
+        post_id=post_id,
+        user_id=user_id,
+        content=content,
+
+    )
+    db.add(new_comment)
+    db.commit()
+    db.refresh(new_comment)
+
+    return {
+        "comment_id": new_comment.post_comment_id,
+        "message": "Successfully commented"}
+    
+
 
 
 """TODO Verify logic on banning
