@@ -1,10 +1,11 @@
 import uuid
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON, Text,func, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON, Text,func, Boolean, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 import datetime
-
+#Added unique constraint
+#TODO Add unique constraints 
 
 class User(Base):
     __tablename__ = "users"
@@ -30,6 +31,7 @@ class Post(Base):
 #Change to PostImages
 class PostImage(Base):
     __tablename__ = "post_images"
+    __table_args__ = (UniqueConstraint("post_id","order_index",name="uq_post_image_order"))
     post_image_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.post_id"), nullable = False)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -57,11 +59,11 @@ class RefreshToken(Base):
 
 class PostLike(Base):
     __tablename__ = "post_likes"
+    __table_args__ = (UniqueConstraint("post_id", "user_id", name="uq_post_user_like"),)
     like_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.post_id"))
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable = False)
     liked_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
 class PostComment(Base):
     __tablename__ = "post_comments"
     post_comment_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
