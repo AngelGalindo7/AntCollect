@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from database import get_db
 from models import PostImage, User, RefreshToken, Post, PostLike, PostComment
 import shutil, os
@@ -200,23 +201,73 @@ def like_image(
     db: Session = Depends(get_db)
 ):
 
+
+
+    existing_like = (
+        db.query(PostLike)
+        .filter(
+            PostLike.user_id==user_id,
+            PostLike.post_id==post_id
+        )
+        .first()
+    )
+
+    if existing_like:
+        db.delete(existing_like)
+        db.commit()
+        return {
+            "message":"Unliked",
+            "liked":False
+        }
+
     new_like = PostLike(
     post_id=post_id,
     user_id =user_id
     )
 
-    db.add(new_like)
-    db.commit()
-    db.refresh(new_like)
+    try:
+        db.add(new_like)
+        db.commit()
+        db.refresh(new_like)
 
-    return {
-        "like_id": new_like.like_id,
-        "message": "Successfully liked"}
+        return {
+            "like_id":new_like.like_id,
+            "messae":"Liked",
+            "liked":True
+            }
+    #Catches race condition where simultaneous try to like 
+    except IntegrityError:
+        db.rollback()
+        #The row must have been created in the other request
+        return {
+            "messae":"Liked",
+            "liked":True
+            }
 
 
-    #TODO like_image/comment errors out after commenting/liking again
-    #add error handling
+    #TODO seperate main.py into routers for auth and posts
 
+    #TODO Add messaging section for users to message each other
+
+    #TODO Look into adding pydantic schemas in the resposnes for the endpoints
+
+    #TODO Look into the correct input for comment/like
+
+    #TODO For comment/like/post if token is expired then look into how to deal with it
+    #1 within endpoint catch the error and call get autheriation jwt token
+    #2 return response to frontend and let frontend call the get atuehrization token
+    #prioritize low latency, "efficient" 
+
+    #TODO Finish figma db tables for post users, refresh, comments, likes, comments
+    #Add entity relationships as well
+
+    #TODO Update README With current progress, description
+
+    #TODO Create frontend with react, typescript, add login
+
+    #TODO Add java microservice to track  requests to db success/failure, average speed for each request
+    #Point is to track db usage and how code is affected after refactors etc 
+    
 
 
 
