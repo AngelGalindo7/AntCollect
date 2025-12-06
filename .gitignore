@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+
+antcollect/
+
+.env
+
+.DS_Store
+
+Uploads/
+
+requirements.txt
+
+table_creation.txt
