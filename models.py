@@ -1,9 +1,11 @@
 import uuid
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON, Text,func, Boolean, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID, JSONB, ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 import datetime
+from enum import Enum
+
 #Added unique constraint
 #TODO Add unique constraints 
 
@@ -16,6 +18,12 @@ class User(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+
+class PostType(str, Enum):
+    collection = "collection"
+    looking_for = "looking_for"
+    trading = "trading"
+
 #For caption use of Text, vs String etc
 class Post(Base):
     __tablename__ = "posts"
@@ -25,13 +33,13 @@ class Post(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     is_published: Mapped[bool] = mapped_column(Boolean, server_default="True")
-
     images: Mapped[list["PostImage"]] = relationship("PostImage", back_populates="post",cascade="all, delete-orphan")
+    type: Mapped[PostType] = mapped_column(ENUM(PostType, name = "post_type_enum"), nullable=False)
 
 #Change to PostImages
 class PostImage(Base):
     __tablename__ = "post_images"
-    __table_args__ = (UniqueConstraint("post_id","order_index",name="uq_post_image_order"))
+    __table_args__ = (UniqueConstraint("post_id","order_index",name="uq_post_image_order"),)
     post_image_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.post_id"), nullable = False)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -74,3 +82,5 @@ class PostComment(Base):
 
 
 #TODO Add a BAN TABLE
+
+
