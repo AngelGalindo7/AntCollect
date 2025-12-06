@@ -28,3 +28,8 @@ def save_upload_file(file: UploadFile) -> str:
 def get_file_size(file_path:str) -> int:
     """Return file size in bytes"""
     return os.path.getsize(file_path)
+
+#TODO Complete function
+def delete_file(file_path):
+    
+    return None

@@ -28,3 +28,6 @@ class AuthorizeTokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str
+
+class AccessRequest(BaseModel):
+    access_token: str

@@ -2,9 +2,14 @@ import bcrypt
 from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
 import jwt
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
+from backend.schemas import AccessRequest
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 SECRET_KEY = "a_super_secret_key"
+security = HTTPBearer() #Reads the "Authorization: Bearer <token> header"
+
+
 def hash_password(password: str) -> str:
 
     hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
@@ -53,3 +58,24 @@ def valid_refresh_token(db_token):
     
     return True
 
+
+def authenthicate_access_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    
+    access_token_str = credentials.credentials
+
+
+    try:
+        payload = jwt.decode(access_token_str, SECRET_KEY, algorithms=["HS256"])
+        user_id = payload.get("sub")
+        payload_type = payload.get("type")
+
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Access token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    if not user_id:
+        raise  HTTPException(status_code=401, detail="Invalid refresh token payload")
+    if not payload_type == "access":
+        raise HTTPException(status_code=401, detail="Invalid payload type")
+    
+    return user_id

@@ -3,11 +3,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from database import get_db
-from models import PostImage, User, RefreshToken, Post, PostLike, PostComment
+from backend.models import PostImage, User, RefreshToken, Post, PostLike, PostComment
 import shutil, os
 import os
 from utils.files import save_upload_file, get_file_size, delete_file
-from schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse
+from backend.schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse
 from utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
 
 
