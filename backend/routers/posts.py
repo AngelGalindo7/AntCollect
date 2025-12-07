@@ -1,10 +1,10 @@
 from fastapi import UploadFile, File, Depends, Form, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from database import get_db
-from backend.models import PostImage, User, Post, PostLike, PostComment
-from utils.files import save_upload_file, get_file_size, delete_file
-from utils.auth import authenthicate_access_token
+from backend.database import get_db
+from ..models import PostImage, User, Post, PostLike, PostComment
+from ..utils.files import save_upload_file, get_file_size, delete_file
+from ..utils.auth import authenthicate_access_token
 
 
 router = APIRouter(

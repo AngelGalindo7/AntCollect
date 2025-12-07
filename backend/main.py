@@ -1,8 +1,11 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from database import get_db
-from routers import auth, users, posts
+from .database import get_db
+from .routers import auth, users, posts
+
+#. relative import current package .. import from parent package
+#packages make relative imports reliable
 
 app = FastAPI()
 
