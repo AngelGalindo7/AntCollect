@@ -1,10 +1,10 @@
 from fastapi import Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from database import get_db
-from backend.models import User, RefreshToken
-from backend.schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse
-from utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
+from ..database import get_db
+from ..models import User, RefreshToken
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse
+from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
 
 
 
@@ -19,10 +19,13 @@ def create_user(
     user:UserCreate,
     db: Session = Depends(get_db)
 ):  
-    print("Original password:", user.password)
-    print("Type:", type(user.password))
-    print("Length (chars):", len(user.password))
+    # print("Original password:", user.password)
+    # print("Type:", type(user.password))
+    # print("Length (chars):", len(user.password))
     
+    #validate input 
+
+
     # Convert to bytes
     password_bytes = user.password.encode("utf-8")
     print("Bytes:", password_bytes)
