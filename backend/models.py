@@ -24,6 +24,12 @@ class PostType(str, Enum):
     looking_for = "looking_for"
     trading = "trading"
 
+class EngagementType(str, Enum):
+    like = "like"
+    comment = "comment"
+    share = "share"
+    view = "view"
+
 #For caption use of Text, vs String etc
 class Post(Base):
     __tablename__ = "posts"
@@ -33,7 +39,7 @@ class Post(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     is_published: Mapped[bool] = mapped_column(Boolean, server_default="True")
-    images: Mapped[list["PostImage"]] = relationship("PostImage", back_populates="post",cascade="all, delete-orphan")
+    images: Mapped[list["PostImage"]] = relationship("PostImage", back_populates="post",cascade="all, delete-obackend/routers/posts.pyrphan")
     type: Mapped[PostType] = mapped_column(ENUM(PostType, name = "post_type_enum"), nullable=False, default = PostType.collection)
 
 #Change to PostImages
@@ -81,6 +87,24 @@ class PostComment(Base):
     content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+class EngagementLog(Base):
+    __tablename__ = "engagement_log"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
+    # Using the ENUM for specific event tracking
+    event_type: Mapped[EngagementType] = mapped_column(
+        ENUM(EngagementType, name="engagement_type_enum"), 
+        nullable=False
+    )
+    
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), 
+        server_default=func.now(),
+        nullable=False
+    )
 
 #TODO Add a BAN TABLE
 
