@@ -24,9 +24,10 @@ def upload_post(
     db: Session = Depends(get_db)
     ):
     
+    image_records = []
+    uploaded_files = []
 
     try:
-        print(f"userid:{user_id}")
         post = Post(
         user_id=user_id,
         caption=caption,
@@ -35,15 +36,14 @@ def upload_post(
         
         db.add(post)
         db.flush()
-        image_records = []
-        uploaded_files = []
+        
         for i, image in enumerate(post_images):
             file_path = save_upload_file(image)
             uploaded_files.append(file_path)
             size_bytes = get_file_size(file_path)
             order_index = i+1
             post_image = PostImage(
-                post_id=post.post_id,
+                post_id=post.id,
                 order_index=order_index,
                 filename=image.filename,
                 file_path=file_path,
@@ -56,7 +56,7 @@ def upload_post(
         db.commit()
         db.refresh(post)
         return {
-        "post_id": str(post.post_id),
+        "post_id": str(post.id),
         "message": "Upload successful"
     }
     
@@ -64,9 +64,12 @@ def upload_post(
         db.rollback()
         #add cleanup function
 
-        for path in uploaded_files:
+        # 'locals()' is a dictionary of all current local variables.
+        # We use .get() to safely retrieve the list. If it doesn't exist, we get an empty list [].
+        files_to_delete = locals().get('uploaded_files', [])
+        
+        for path in files_to_delete:
             try:
-                pass
                 delete_file(path)
             except Exception:
                 pass
@@ -111,8 +114,8 @@ def like_image(
         db.refresh(new_like)
 
         return {
-            "like_id":new_like.like_id,
-            "messae":"Liked",
+            "like_id":new_like.id,
+            "messaege":"Liked",
             "liked":True
             }
     #Catches race condition where simultaneous try to like 
@@ -172,7 +175,7 @@ def comment(
     db.refresh(new_comment)
 
     return {
-        "comment_id": new_comment.post_comment_id,
+        "comment_id": new_comment.id,
         "message": "Successfully commented"}
     
 

@@ -27,21 +27,21 @@ class PostType(str, Enum):
 #For caption use of Text, vs String etc
 class Post(Base):
     __tablename__ = "posts"
-    post_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     caption: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     is_published: Mapped[bool] = mapped_column(Boolean, server_default="True")
     images: Mapped[list["PostImage"]] = relationship("PostImage", back_populates="post",cascade="all, delete-orphan")
-    type: Mapped[PostType] = mapped_column(ENUM(PostType, name = "post_type_enum"), nullable=False)
+    type: Mapped[PostType] = mapped_column(ENUM(PostType, name = "post_type_enum"), nullable=False, default = PostType.collection)
 
 #Change to PostImages
 class PostImage(Base):
     __tablename__ = "post_images"
     __table_args__ = (UniqueConstraint("post_id","order_index",name="uq_post_image_order"),)
-    post_image_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.post_id"), nullable = False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.id"), nullable = False)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     file_path: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -57,7 +57,7 @@ class PostImage(Base):
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     token: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     issued_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     expires_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -68,14 +68,15 @@ class RefreshToken(Base):
 class PostLike(Base):
     __tablename__ = "post_likes"
     __table_args__ = (UniqueConstraint("post_id", "user_id", name="uq_post_user_like"),)
-    like_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.post_id"))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.id"))
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable = False)
     liked_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
 class PostComment(Base):
     __tablename__ = "post_comments"
-    post_comment_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.post_id"))
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.id"))
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     content: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
