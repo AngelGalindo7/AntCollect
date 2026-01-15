@@ -1,8 +1,9 @@
 from fastapi import UploadFile, File, Depends, Form, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 from backend.database import get_db
-from ..models import PostImage, User, Post, PostLike, PostComment
+from ..models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType
 from ..utils.files import save_upload_file, get_file_size, delete_file
 from ..utils.auth import authenthicate_access_token
 
@@ -108,8 +109,15 @@ def like_image(
     user_id =user_id
     )
 
+    new_engagement = EngagementLog(
+        post_id=post_id,
+        user_id=user_id,
+        event_type=EngagementType.like
+    )
+
     try:
         db.add(new_like)
+        db.add(new_engagement)
         db.commit()
         db.refresh(new_like)
 
@@ -127,6 +135,31 @@ def like_image(
             "liked":True
             }
 
+@router.get("/top")
+def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
+
+
+    top_posts = (
+        db.query(
+            Post,
+            func.count(EngagementLog.id).label("total_engagement")
+        )
+        .join(EngagementLog, Post.id == EngagementLog.post_id)
+        .goup_by(Post.id)
+        .order_by(func.count(EngagementLog.id).desc())
+        .limit(k)
+        .all()
+    )
+
+    return [
+        {
+            "post_id": post.id,
+            "caption": post.caption,
+            "engagement_score": total_engagement
+
+        }
+        for post, total_engagement in top_posts
+    ]
 
     #TODO Add messaging section for users to message each other
 
@@ -170,7 +203,14 @@ def comment(
         content=content,
 
     )
+
+    new_engagement = EngagementLog(
+        post_id=post_id,
+        user_id=user_id,
+        event_type=EngagementType.comment
+    )
     db.add(new_comment)
+    db.add(new_engagement)
     db.commit()
     db.refresh(new_comment)
 
