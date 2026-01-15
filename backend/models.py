@@ -39,7 +39,6 @@ class Post(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     is_published: Mapped[bool] = mapped_column(Boolean, server_default="True")
-    images: Mapped[list["PostImage"]] = relationship("PostImage", back_populates="post",cascade="all, delete-obackend/routers/posts.pyrphan")
     type: Mapped[PostType] = mapped_column(ENUM(PostType, name = "post_type_enum"), nullable=False, default = PostType.collection)
 
 #Change to PostImages
