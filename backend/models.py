@@ -36,11 +36,13 @@ class Post(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
     caption: Mapped[str] = mapped_column(Text)
+    is_published: Mapped[bool] = mapped_column(Boolean, server_default="True")
+    images: Mapped[list["PostImage"]] = relationship("PostImage", back_populates="post",cascade="all, delete-orphan")
+    public: Mapped[bool] = mapped_column(Boolean, server_default="True")
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    is_published: Mapped[bool] = mapped_column(Boolean, server_default="True")
     type: Mapped[PostType] = mapped_column(ENUM(PostType, name = "post_type_enum"), nullable=False, default = PostType.collection)
-
+    
 #Change to PostImages
 class PostImage(Base):
     __tablename__ = "post_images"
@@ -87,7 +89,7 @@ class PostComment(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 class EngagementLog(Base):
-    __tablename__ = "engagement_log"
+    __tablename__ = "engagement_logs"
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
