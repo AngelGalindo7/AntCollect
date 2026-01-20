@@ -7,7 +7,6 @@ from ..models import PostImage, User, Post, PostLike, PostComment, EngagementLog
 from ..utils.files import save_upload_file, get_file_size, delete_file
 from ..utils.auth import authenthicate_access_token
 
-
 router = APIRouter(
     prefix="/posts",
     tags=["Posts"]
@@ -145,7 +144,7 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
             func.count(EngagementLog.id).label("total_engagement")
         )
         .join(EngagementLog, Post.id == EngagementLog.post_id)
-        .goup_by(Post.id)
+        .group_by(Post.id)
         .order_by(func.count(EngagementLog.id).desc())
         .limit(k)
         .all()

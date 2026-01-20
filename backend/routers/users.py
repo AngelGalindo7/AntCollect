@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from ..database import get_db
 from ..models import User, RefreshToken
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
-
+from typing import List
 
 
 router = APIRouter(
@@ -82,3 +82,26 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
             username=db_user.username
         )
     )
+
+
+@router.post("/search_user", response_model = List[SearchResponse])
+def search_user(
+    request: SearchRequest,
+    db: Session = Depends(get_db),
+    user_id: User = Depends(authenthicate_access_token)):
+
+    if not request.query:
+        return []
+    
+
+    users = db.query(User).filter(
+        User.username.ilike(f"{request.query}%")
+    ).limit(10).all()
+
+    return users
+
+# @router.post("/retrieve_user")
+# def retrieve_user(
+#     db: Session = Depends(get_db);
+#     user_id: User = Depends(authenthicate_access_token),
+# )

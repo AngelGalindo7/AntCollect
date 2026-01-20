@@ -32,3 +32,11 @@ class AuthorizeTokenResponse(BaseModel):
 
 class AccessRequest(BaseModel):
     access_token: str
+
+class SearchRequest(BaseModel):
+    query: str
+
+
+class  SearchResponse(BaseModel):
+    id: int
+    username: str
