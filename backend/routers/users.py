@@ -1,9 +1,10 @@
 from fastapi import Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select, func
 from ..database import get_db
-from ..models import User, RefreshToken
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse
+from ..models import User, RefreshToken, Post, PostLike, PostImage
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostQueryResult
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
 from typing import List
 
@@ -100,8 +101,54 @@ def search_user(
 
     return users
 
-# @router.post("/retrieve_user")
-# def retrieve_user(
-#     db: Session = Depends(get_db);
-#     user_id: User = Depends(authenthicate_access_token),
-# )
+
+#TODO Filter out private,non published posts in the query to avoid fetching invalid data
+@router.post("/get_user_", response_model = UserProfileResponse)
+def retrieve_user(
+    profile_id: int,
+    db: Session = Depends(get_db),
+    user_id: User = Depends(authenthicate_access_token)
+):
+
+    likes_subquery = (
+        select(func.count(PostLike.id))
+        .where(PostLike.post_id == Post.id)
+        .scalar_subquery()
+    )
+
+    posts_query = (
+        select(
+            Post.id.label("post_id"),
+            Post.caption,
+            Post.public,
+            Post.is_published,
+            Post.type,
+            Post.updated_at,
+            func.array_agg(
+                PostImage.file_path,
+                order_by=PostImage.order_index
+            ).label("image_paths"),
+            likes_subquery.label("total_likes")
+        )
+        .outerjoin(PostImage, Post.id == PostImage.post_id)
+        .group_by(Post.id)
+    )
+
+
+    is_owner = (user_id == profile_id)
+    
+    if is_owner:
+        # Owner sees everything (public and private)
+        posts_query = posts_query.where(Post.user_id == user_id)
+    else:
+        posts_query = posts_query.where(
+        Post.user_id == user_id,
+        Post.is_published == True,
+        Post.public == True
+    )
+
+    results = db.execute(posts_query).all()
+    return UserProfileResponse(
+        user_id=profile_id,
+        posts=[PostQueryResult.model_validate(row) for row in results]
+    )

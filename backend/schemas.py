@@ -1,5 +1,7 @@
-from pydantic import BaseModel, EmailStr
-
+from pydantic import BaseModel, EmailStr, ConfigDict
+from typing import List, Optional
+from enum import Enum
+from datetime import datetime 
 class UserCreate(BaseModel):
     username: str
     password: str
@@ -40,3 +42,27 @@ class SearchRequest(BaseModel):
 class  SearchResponse(BaseModel):
     id: int
     username: str
+
+class PostType(str, Enum):
+    collection = "collection"
+    looking_for = "looking_for"
+    trading = "trading"
+
+class PostQueryResult(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    post_id: int
+    caption: str
+    public: bool
+    is_published: bool
+    type: PostType
+    updated_at: datetime
+    image_paths: List[Optional[str]] # List of strings from array_agg
+    total_likes: int
+
+class UserProfileResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    posts: List[PostQueryResult]
+
