@@ -66,3 +66,9 @@ class UserProfileResponse(BaseModel):
     user_id: int
     posts: List[PostQueryResult]
 
+class UserPostLikesResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    posts: List[PostQueryResult]
+
