@@ -1,0 +1,91 @@
+import uuid
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON, Text,func, Boolean, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID, JSONB, ENUM
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from ..database import Base
+import datetime
+from enum import Enum
+
+
+
+
+class PostType(str, Enum):
+    collection = "collection"
+    looking_for = "looking_for"
+    trading = "trading"
+
+class EngagementType(str, Enum):
+    like = "like"
+    comment = "comment"
+    share = "share"
+    view = "view"
+
+
+
+#For caption use of Text, vs String etc
+class Post(Base):
+    __tablename__ = "posts"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
+    caption: Mapped[str] = mapped_column(Text)
+    is_published: Mapped[bool] = mapped_column(Boolean, server_default="True")
+    images: Mapped[list["PostImage"]] = relationship("PostImage", back_populates="post",cascade="all, delete-orphan")
+    public: Mapped[bool] = mapped_column(Boolean, server_default="True")
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    type: Mapped[PostType] = mapped_column(ENUM(PostType, name = "post_type_enum"), nullable=False, default = PostType.collection)
+    
+#Change to PostImages
+class PostImage(Base):
+    __tablename__ = "post_images"
+    __table_args__ = (UniqueConstraint("post_id","order_index",name="uq_post_image_order"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.id"), nullable = False)
+    order_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(255), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    json_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    upload_time: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    post: Mapped["Post"] = relationship("Post", back_populates="images")
+
+
+
+
+
+class PostLike(Base):
+    __tablename__ = "post_likes"
+    __table_args__ = (UniqueConstraint("post_id", "user_id", name="uq_post_user_like"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.id"))
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable = False)
+    liked_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+class PostComment(Base):
+    __tablename__ = "post_comments"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.id"))
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"))
+    content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+class EngagementLog(Base):
+    __tablename__ = "engagement_logs"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    post_id: Mapped[int] = mapped_column(Integer, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
+    # Using the ENUM for specific event tracking
+    event_type: Mapped[EngagementType] = mapped_column(
+        ENUM(EngagementType, name="engagement_type_enum"), 
+        nullable=False
+    )
+    
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime(timezone=True), 
+        server_default=func.now(),
+        nullable=False
+    )

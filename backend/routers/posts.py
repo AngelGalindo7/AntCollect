@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
 from backend.database import get_db
-from ..models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType
+from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType
 from ..utils.files import save_upload_file, get_file_size, delete_file
 from ..utils.auth import authenthicate_access_token
 

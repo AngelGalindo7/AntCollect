@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
 from ..database import get_db
-from ..models import User, RefreshToken, Post, PostLike, PostImage
+from backend.models import User, RefreshToken, Post, PostLike, PostImage
 from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostQueryResult, UserPostLikesResponse
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
 from typing import List
