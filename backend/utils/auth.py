@@ -2,7 +2,7 @@ import bcrypt
 from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
 import jwt
-from fastapi import HTTPException, Depends
+from fastapi import HTTPException, Depends, Request
 from backend.schemas import AccessRequest
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -59,11 +59,22 @@ def valid_refresh_token(db_token):
     return True
 
 
-def authenthicate_access_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def authenthicate_access_token(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security)):
     
-    access_token_str = credentials.credentials
+    access_token_str = request.cookies.get("access_token")
+
+    if not access_token_str and credentials:
+        access_token_str = credentials.credentials
+    if not access_token_str:
+        raise HTTPException(status_code=401, detail="No access token provided")
+    
+    return _decode_access_token(access_token_str)
 
 
+def _decode_access_token(access_token_str: str):
+    
     try:
         payload = jwt.decode(access_token_str, SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("sub")
@@ -75,7 +86,7 @@ def authenthicate_access_token(credentials: HTTPAuthorizationCredentials = Depen
         raise HTTPException(status_code=401, detail="Invalid token")
     if not user_id:
         raise  HTTPException(status_code=401, detail="Invalid refresh token payload")
-    if not payload_type == "access":
+    if payload_type != "access":
         raise HTTPException(status_code=401, detail="Invalid payload type")
     
     return user_id
