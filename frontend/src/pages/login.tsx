@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+const API_BASE = "http://localhost:8000";
+
 
 const LogIn: React.FC = () => {
     const [email, setEmail] = useState("");
@@ -6,7 +9,8 @@ const LogIn: React.FC = () => {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
-    //Error checking for passwords match
+    const navigate = useNavigate();
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
@@ -16,31 +20,32 @@ const LogIn: React.FC = () => {
     
 
     try {
-        const res = await fetch("http://127.0.0.1:8000/users/login",{
+        const res = await fetch(`${API_BASE}/users/login`,{
           method: "POST",
           headers: { "Content-Type": "application/json"},
           body: JSON.stringify({
             email,
             password,
-            //confirm_password: confirmPassword
           }),
+          credentials: "include",
         });
-
         const data = await res.json();
-        localStorage.setItem("access_token", data.access_token);
-        localStorage.setItem("refresh_token", data.refresh_token);
-
-        console.log("Response from backend", data);
-
         if (!res.ok) {
           setError(data.detail || "Something went wrong.");
           return;
         }
-        //replace with real backend fetch call
-        //await fetch("/api/signup", {...})
+    
+        if (data.user) {
 
-        setSuccess(data.msg || "Redirecting ...");
+
+          localStorage.setItem("userId", data.user.id.toString());
+          localStorage.setItem("email", data.user.email);
+          localStorage.setItem("username", data.user.username);        }
+        
+        setSuccess("Redirecting ...");
+        navigate("/Home")
     } catch (err) { 
+      
         console.error("Network Error:", err);
         setError("Network error.");
     }
