@@ -1,56 +1,98 @@
-from fastapi import FastAPI, UploadFile, File, Depends, Form, HTTPException, APIRouter
+from fastapi import Depends, HTTPException, APIRouter, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import text
-from sqlalchemy.exc import IntegrityError
-from..database import get_db
-from backend.models import PostImage, User, RefreshToken, Post, PostLike, PostComment
-import shutil, os
-import os
-from ..utils.files import save_upload_file, get_file_size, delete_file
-from backend.schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse
-from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
+from fastapi.responses import JSONResponseon
+
+from ..database import get_db
+from backend.models import RefreshToken
+from ..utils.auth import create_access_token, create_refresh_token, valid_refresh_token
+from fastapi.responses import JSONResponse
+
 
 
 router = APIRouter(
     prefix="/auth",
-    tags=["Auth"]
+    tags=["Auth"],
 )
 
-#TODO Add token to httpcookie/local memory in the frontend
+ACCESS_TOKEN_MAX_AGE = 31 * 60 # 31 minutes
+REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60  # 30 days
+
+
+
+def _cookie_response(content: dict, access_token: str, refresh_token:str):
+    
+    """Build and return JSONResponse with httpOnly cookies for access/refresh tokens."""
+
+    response = JSONResponse(content=content)
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=ACCESS_TOKEN_MAX_AGE,
+        path="/"
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=REFRESH_TOKEN_MAX_AGE,
+        path="/"
+    )
+    return response
+
+# TODO Add token to httpcookie/local memory in the frontend
 @router.post("/authorize-token")
 def authorize_token(
-    req:RefreshRequest,
-    db: Session = Depends(get_db)
+    request: Request,
+    db: Session = Depends(get_db),
 ):
-    db_token = db.query(RefreshToken).filter(RefreshToken.token == req.refresh_token).first()
 
+
+
+    refresh_token_str = request.cookies.get("refresh_token")
+    if not refresh_token_str:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    db_token = db.query(RefreshToken).filter(RefreshToken.token == refresh_token_str).first()
     if not db_token:
-        raise HTTPException(status_code=401, detail="Invalid token1")
-    
+        raise HTTPException(status_code=401, detail="Invalid token")
     if not valid_refresh_token(db_token):
         raise HTTPException(status_code=401, detail="Invalid token")
-    
 
-    new_access_token = create_access_token({"sub" : db_token.user_id})
-    new_refresh_token = create_refresh_token({"sub" : db_token.user_id})
+
+    new_acces_token = create_access_token({"sub": db_token.user_id})
+    new_refresh_token_data = create_refresh_token({"sub": db_token.user_id})
 
     db_token.revoked = True
 
-    refresh_token = RefreshToken(
-        user_id = db_token.user_id,
-        token = new_refresh_token["token"],
-        issued_at = new_refresh_token["issued_at"],
-        expires_at = new_refresh_token["expires_at"],
-        revoked=False
+    new_refresh = RefreshToken(
+        user_id=db_token.user_id,
+        token=new_refresh_token_data["token"],
+        issued_at=new_refresh_token_data["issued_at"],
+        expires_at=new_refresh_token_data["expires_at"],
+        revoked=False,
     )
-    #TODO Look into transition block for atomicity
-    #TODO Make sure column blocks of timestamps match inserted data
-    db.add(refresh_token)
-    db.commit()
-    db.refresh(refresh_token)
 
-    return AuthorizeTokenResponse(
-        access_token=new_access_token,
-        refresh_token=new_refresh_token["token"],
-        token_type= "bearer"
+    db.add(new_refresh)
+    db.commit()
+    db.refresh(new_refresh)
+
+    return _cookie_response(
+        content={"ok": True},
+        access_token=new_acces_token,
+        refresh_token=new_refresh_token_data["token"],
     )
+
+"""
+@router.post("/logout")
+def logout():
+    response = JSONResponse(content={"ok": True})
+    for cookie_name in ["access_token", "refresh_token"]:
+        response.delete_cookie(cookie_name, path="/")
+    return response
+    """
