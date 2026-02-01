@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException, APIRouter
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
@@ -8,6 +9,8 @@ from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, Refres
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
 from typing import List
 
+ACCESS_TOKEN_MAX_AGE = 31 * 60  # 31 minutes
+REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60  # 30 days
 
 router = APIRouter(
     prefix="/users",
@@ -46,8 +49,7 @@ def create_user(
 
     return new_user
 
-#TODO Add token to httpcookie/local memory in the frontend
-@router.post("/login", response_model= TokenResponse)
+@router.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
 
@@ -73,16 +75,38 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     db.add(refresh_token)
     db.commit()
     db.refresh(refresh_token)
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token_data["token"],
-        token_type="bearer",
-        user=UserResponse(
-            id=db_user.id,
-            email=db_user.email,
-            username=db_user.username
-        )
+
+    content = {
+        "user": {
+            "id": db_user.id,
+            "email": db_user.email,
+            "username": db_user.username
+        }
+    }
+
+    response = JSONResponse(content=content)
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=ACCESS_TOKEN_MAX_AGE,
+        path="/"
     )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token_data["token"],
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=REFRESH_TOKEN_MAX_AGE,
+        path="/"
+    )
+
+    return response
+    
 
 
 @router.post("/search_user", response_model = List[SearchResponse])
