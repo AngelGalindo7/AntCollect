@@ -7,6 +7,10 @@ class UserCreate(BaseModel):
     password: str
     email: EmailStr
 
+class UserSearch(BaseModel):
+    user_id: int
+    username: str
+    email: EmailStr
 
 class UserResponse(BaseModel):
     id: int
@@ -72,3 +76,5 @@ class UserPostLikesResponse(BaseModel):
     user_id: int
     posts: List[PostQueryResult]
 
+class GetUserByIdRequest(BaseModel):
+    profile_id: int
