@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, APIRouter, Request
 from sqlalchemy.orm import Session
-from fastapi.responses import JSONResponseon
+from fastapi.responses import JSONResponse
 
 from ..database import get_db
 from backend.models import RefreshToken
