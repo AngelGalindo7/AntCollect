@@ -1,11 +1,11 @@
-from fastapi import Depends, HTTPException, APIRouter
+from fastapi import Depends, HTTPException, APIRouter, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostQueryResult, UserPostLikesResponse
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostQueryResult, UserPostLikesResponse, GetUserByIdRequest, UserSearch
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
 from typing import List
 
@@ -53,6 +53,7 @@ def create_user(
 def login(user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
 
+
     if not db_user:
         raise HTTPException(status_code=400, detail="Invalid email or password")
     
@@ -60,7 +61,12 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 
     #"sub" field has to be a string not a int
     #TODO Look into making user.id to str
-    access_token = create_access_token({"sub" : str(db_user.id)})
+    access_token = create_access_token({
+        "sub": str(db_user.id),
+        "username": db_user.username,
+        "email": db_user.email
+                    })
+    
     refresh_token_data = create_refresh_token({"sub" : db_user.id})
 
     refresh_token = RefreshToken(
@@ -113,7 +119,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
 def search_user(
     request: SearchRequest,
     db: Session = Depends(get_db),
-    user_id: User = Depends(authenthicate_access_token)):
+    user: User = Depends(authenthicate_access_token)):
 
     if not request.query:
         return []
@@ -129,11 +135,10 @@ def search_user(
 #TODO Filter out private,non published posts in the query to avoid fetching invalid data
 @router.post("/get_user_", response_model = UserProfileResponse)
 def retrieve_user(
-    profile_id: int,
+    profile_id: GetUserByIdRequest,
     db: Session = Depends(get_db),
-    user_id: User = Depends(authenthicate_access_token)
+    user: UserSearch = Depends(authenthicate_access_token)
 ):
-
     likes_subquery = (
         select(func.count(PostLike.id))
         .where(PostLike.post_id == Post.id)
@@ -159,21 +164,21 @@ def retrieve_user(
     )
 
 
-    is_owner = (user_id == profile_id)
+    is_owner = (user.user_id == profile_id)
     
     if is_owner:
         # Owner sees everything (public and private)
-        posts_query = posts_query.where(Post.user_id == user_id)
+        posts_query = posts_query.where(Post.user_id == user.user_id)
     else:
         posts_query = posts_query.where(
-        Post.user_id == user_id,
+        Post.user_id == user.user_id,
         Post.is_published == True,
         Post.public == True
     )
 
     results = db.execute(posts_query).all()
     return UserProfileResponse(
-        user_id=profile_id,
+        user_id=profile_id.profile_id,
         posts=[PostQueryResult.model_validate(row) for row in results]
     )
 
@@ -220,4 +225,3 @@ def retrieve_user_likes(
         user_id=user_id,
         posts=[PostQueryResult.model_validate(row) for row in results]
     )
-    
