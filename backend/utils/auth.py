@@ -3,11 +3,11 @@ from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
 import jwt
 from fastapi import HTTPException, Depends, Request
-from backend.schemas import AccessRequest
+from backend.schemas import AccessRequest, UserSearch
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 SECRET_KEY = "a_super_secret_key"
-security = HTTPBearer() #Reads the "Authorization: Bearer <token> header"
+security = HTTPBearer(auto_error=False) #Reads the "Authorization: Bearer <token> header"
 
 
 def hash_password(password: str) -> str:
@@ -62,7 +62,6 @@ def valid_refresh_token(db_token):
 def authenthicate_access_token(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security)):
-    
     access_token_str = request.cookies.get("access_token")
 
     if not access_token_str and credentials:
@@ -78,6 +77,8 @@ def _decode_access_token(access_token_str: str):
     try:
         payload = jwt.decode(access_token_str, SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("sub")
+        username = payload.get("username")
+        email = payload.get("email")
         payload_type = payload.get("type")
 
     except jwt.ExpiredSignatureError:
@@ -89,4 +90,8 @@ def _decode_access_token(access_token_str: str):
     if payload_type != "access":
         raise HTTPException(status_code=401, detail="Invalid payload type")
     
-    return user_id
+    return UserSearch(
+        user_id=int(user_id),
+        username=username,
+        email=email
+    )
