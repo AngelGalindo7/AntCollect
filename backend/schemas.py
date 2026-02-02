@@ -76,5 +76,6 @@ class UserPostLikesResponse(BaseModel):
     user_id: int
     posts: List[PostQueryResult]
 
-class GetUserByIdRequest(BaseModel):
-    profile_id: int
+
+class GetUserByUsernameRequest(BaseModel):
+    username: str

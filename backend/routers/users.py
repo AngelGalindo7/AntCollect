@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostQueryResult, UserPostLikesResponse, GetUserByIdRequest, UserSearch
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostQueryResult, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
 from typing import List
 
@@ -120,7 +120,7 @@ def search_user(
     request: SearchRequest,
     db: Session = Depends(get_db),
     user: User = Depends(authenthicate_access_token)):
-
+    
     if not request.query:
         return []
     
@@ -135,10 +135,18 @@ def search_user(
 #TODO Filter out private,non published posts in the query to avoid fetching invalid data
 @router.post("/get_user_", response_model = UserProfileResponse)
 def retrieve_user(
-    profile_id: GetUserByIdRequest,
+    target_username: GetUserByUsernameRequest,
     db: Session = Depends(get_db),
     user: UserSearch = Depends(authenthicate_access_token)
 ):
+    
+    target_user = db.execute(
+        select(User).where(User.username == target_username.username)
+    ).scalar_one_or_none()
+    
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     likes_subquery = (
         select(func.count(PostLike.id))
         .where(PostLike.post_id == Post.id)
@@ -164,21 +172,21 @@ def retrieve_user(
     )
 
 
-    is_owner = (user.user_id == profile_id)
+    is_owner = (user.user_id == target_user.id)
     
     if is_owner:
         # Owner sees everything (public and private)
         posts_query = posts_query.where(Post.user_id == user.user_id)
     else:
         posts_query = posts_query.where(
-        Post.user_id == user.user_id,
+        Post.user_id == target_user.id,
         Post.is_published == True,
         Post.public == True
     )
 
     results = db.execute(posts_query).all()
     return UserProfileResponse(
-        user_id=profile_id.profile_id,
+        user_id=target_user.id,
         posts=[PostQueryResult.model_validate(row) for row in results]
     )
 
