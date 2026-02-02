@@ -16,8 +16,6 @@ const LogIn: React.FC = () => {
         setError("");
         setSuccess("");
 
-          
-    
 
     try {
         const res = await fetch(`${API_BASE}/users/login`,{
@@ -43,7 +41,7 @@ const LogIn: React.FC = () => {
           localStorage.setItem("username", data.user.username);        }
         
         setSuccess("Redirecting ...");
-        navigate("/Home")
+        navigate(`/${data.user.username}`);
     } catch (err) { 
       
         console.error("Network Error:", err);

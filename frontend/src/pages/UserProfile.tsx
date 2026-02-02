@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import PostGridLayout from "./PostGridLayout";
 import type { Post, ProfileResponse } from "./Types";
-
+import Search from './Search';
+import { useParams } from "react-router-dom";
 const API_BASE = "http://localhost:8000";
 
 /**
@@ -25,23 +26,24 @@ const API_BASE = "http://localhost:8000";
 const UserProfile: React.FC = () => {
 	const [profile, setProfile] = useState<ProfileResponse | null>(null);
 	const [loading, setLoading] = useState(false);
-	const [username, setUsername] = useState<string>("");
+	const { username } = useParams<{ username: string }>();
 
+	useEffect(() => {
 	// Fetch user profile from backend
 	const fetchProfile = async () => {
 		setLoading(true);
 		try {
-			const storedUsername = localStorage.getItem("username");
-			const storedUserId = localStorage.getItem("userId");
+			// const storedUsername = localStorage.getItem("username");
+			// const storedUserId = localStorage.getItem("userId");
 
-			if (!storedUserId) {
-				console.error("No user ID found");
-				return;
-			}
+			// if (!storedUserId) {
+			// 	console.error("No user ID found");
+			// 	return;
+			// }
 
-			if (storedUsername) {
-				setUsername(storedUsername);
-			}
+			// if (storedUsername) {
+			// 	setUsername(storedUsername);
+			// }
 
 			const res = await fetch(`${API_BASE}/users/get_user_`, {
 				method: "POST",
@@ -49,7 +51,7 @@ const UserProfile: React.FC = () => {
 					"Content-Type": "application/json",
 				},
 				credentials: "include",
-				body: JSON.stringify({ profile_id: Number(storedUserId) }),
+				body: JSON.stringify({ username: String(username) }),
 			});
 
 			if (!res.ok) {
@@ -78,9 +80,9 @@ const UserProfile: React.FC = () => {
 		}
 	};
 
-	useEffect(() => {
+	
 		fetchProfile();
-	}, []);
+	}, [username]);
 
 	// Handle post click
 	const handlePostClick = (post: Post, imageIndex: number) => {
@@ -107,7 +109,12 @@ const UserProfile: React.FC = () => {
 
 	return (
 		<div className="w-full">
-			{/* User Profile Header */}
+		{/* Search Component */}
+		<div className="bg-white border-b border-gray-200 px-4 py-4">
+			<div className="max-w-6xl mx-auto">
+				<Search />
+			</div>
+		</div>
 			<div className="bg-white border-b border-gray-200 px-4 py-6">
 				<div className="max-w-6xl mx-auto">
 					<h1 className="text-3xl font-bold text-gray-900">{username}</h1>
