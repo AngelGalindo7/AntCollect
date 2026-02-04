@@ -1,9 +1,10 @@
 from fastapi import UploadFile, File, Depends, Form, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func
+from sqlalchemy import func, select, desc
 from backend.database import get_db
 from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType
+from backend.schemas import TopPostsResponse, PostWithEngagement
 from ..utils.files import save_upload_file, get_file_size, delete_file
 from ..utils.auth import authenthicate_access_token
 
@@ -138,27 +139,75 @@ def like_image(
 def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
 
 
-    top_posts = (
-        db.query(
-            Post,
-            func.count(EngagementLog.id).label("total_engagement")
-        )
-        .join(EngagementLog, Post.id == EngagementLog.post_id)
-        .group_by(Post.id)
-        .order_by(func.count(EngagementLog.id).desc())
-        .limit(k)
-        .all()
+    # top_posts = (
+    #     db.query(
+    #         Post,
+    #         func.count(EngagementLog.id).label("total_engagement")
+    #     )
+    #     .join(EngagementLog, Post.id == EngagementLog.post_id)
+    #     .group_by(Post.id)
+    #     .order_by(func.count(EngagementLog.id).desc())
+    #     .limit(k)
+    #     .all()
+    # )
+
+    likes_subquery = (
+        select(func.count(PostLike.id))
+        .where(PostLike.post_id == Post.id)
+        .scalar_subquery()
+    )
+    top_posts_subquery = (
+        select(Post.id.label("id"),
+               func.count(EngagementLog.id).label("engagement_count")
+               )
+               .join(EngagementLog, Post.id == EngagementLog.post_id)
+               .where(Post.public == True, Post.is_published == True)
+               .group_by(Post.id)
+               .order_by(func.count(EngagementLog.id).desc())
+               .limit(k)
+               .subquery()
     )
 
-    return [
-        {
-            "post_id": post.id,
-            "caption": post.caption,
-            "engagement_score": total_engagement
+    final_query = (
+        select(
+            Post.id.label("post_id"),
+            Post.caption,
+            Post.public,
+            Post.is_published,
+            Post.type,
+            Post.updated_at,
+            top_posts_subquery.c.engagement_count.label("total_engagement"),
+            #consider wrapping in array_remove to eliminate null values
+            func.array_agg(PostImage.file_path,
+                           order_by=PostImage.order_index
+                           ).label("image_paths"),
+            likes_subquery.label("total_likes")
 
-        }
-        for post, total_engagement in top_posts
-    ]
+    )
+    .join(top_posts_subquery, Post.id == top_posts_subquery.c.id )
+    .outerjoin(PostImage, Post.id == PostImage.post_id)
+    .group_by(Post.id,top_posts_subquery.c.engagement_count)
+    .order_by(top_posts_subquery.c.engagement_count.desc())
+    )
+
+    results = db.execute(final_query).all()
+
+
+    # return [
+    #     {
+    #         "post_id": post.id,
+    #         "caption": post.caption,
+    #         "engagement_score": total_engagement
+
+    #     }
+    #     for post, total_engagement in top_posts
+    #]
+
+    return TopPostsResponse(
+        total_returned=len(results),
+        k_value=k,
+        posts=[PostWithEngagement.model_validate(row) for row in results]
+    )
 
     #TODO Add messaging section for users to message each other
 

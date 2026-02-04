@@ -72,6 +72,7 @@ class TopPostsResponse(BaseModel):
     total_returned: int
     k_value: int
     posts : List[PostWithEngagement]
+
 class UserProfileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -82,7 +83,7 @@ class UserPostLikesResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     user_id: int
-    posts: List[PostQueryResult]
+    posts: List[PostBase]
 
 class GetUserByIdRequest(BaseModel):
     profile_id: int
