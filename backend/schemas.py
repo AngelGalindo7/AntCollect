@@ -52,7 +52,7 @@ class PostType(str, Enum):
     looking_for = "looking_for"
     trading = "trading"
 
-class PostQueryResult(BaseModel):
+class PostBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     post_id: int
@@ -64,11 +64,19 @@ class PostQueryResult(BaseModel):
     image_paths: List[Optional[str]] # List of strings from array_agg
     total_likes: int
 
+class PostWithEngagement(PostBase):
+    total_engagement: int
+
+class TopPostsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    total_returned: int
+    k_value: int
+    posts : List[PostWithEngagement]
 class UserProfileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     user_id: int
-    posts: List[PostQueryResult]
+    posts: List[PostBase]
 
 class UserPostLikesResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -76,6 +84,8 @@ class UserPostLikesResponse(BaseModel):
     user_id: int
     posts: List[PostQueryResult]
 
+class GetUserByIdRequest(BaseModel):
+    profile_id: int
 
 class GetUserByUsernameRequest(BaseModel):
     username: str

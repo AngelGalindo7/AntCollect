@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostQueryResult, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
 from typing import List
 
@@ -187,7 +187,7 @@ def retrieve_user(
     results = db.execute(posts_query).all()
     return UserProfileResponse(
         user_id=target_user.id,
-        posts=[PostQueryResult.model_validate(row) for row in results]
+        posts=[PostBase.model_validate(row) for row in results]
     )
 
 @router.post("/retrieve_user_likes", response_model=UserPostLikesResponse)
@@ -231,5 +231,5 @@ def retrieve_user_likes(
 
     return UserPostLikesResponse(
         user_id=user_id,
-        posts=[PostQueryResult.model_validate(row) for row in results]
+        posts=[PostBase.model_validate(row) for row in results]
     )
