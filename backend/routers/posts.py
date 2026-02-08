@@ -21,10 +21,11 @@ def upload_post(
     caption: str=Form(...),
     is_published: bool = Form(True),
     post_images: list[UploadFile] = File(...),
-    user_id: User = Depends(authenthicate_access_token),
+    current_user: User = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
     ):
     
+    user_id = current_user.user_id
     image_records = []
     uploaded_files = []
 
