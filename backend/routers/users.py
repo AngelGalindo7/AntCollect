@@ -6,10 +6,10 @@ from sqlalchemy import select, func
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage
 from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest
-from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,valid_refresh_token,authenthicate_access_token
+from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,authenthicate_access_token
 from typing import List
 
-ACCESS_TOKEN_MAX_AGE = 31 * 60  # 31 minutes
+ACCESS_TOKEN_MAX_AGE = 2 * 60  # 31 minutes
 REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60  # 30 days
 
 router = APIRouter(
@@ -32,10 +32,10 @@ def create_user(
 
     # Convert to bytes
     password_bytes = user.password.encode("utf-8")
-    print("Bytes:", password_bytes)
-    print("Length (bytes):", len(password_bytes))
+    #print("Bytes:", password_bytes)
+    #print("Length (bytes):", len(password_bytes))
     hashed_pw = hash_password(user.password)
-    print(hash_password("Passowrd@"))
+    #print(hash_password("Passowrd@"))
 
     new_user = User(
         username = user.username,
@@ -67,7 +67,10 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         "email": db_user.email
                     })
     
-    refresh_token_data = create_refresh_token({"sub" : db_user.id})
+    refresh_token_data = create_refresh_token({
+        "sub": str(db_user.id),
+        "username": db_user.username,
+        "email": db_user.email})
 
     refresh_token = RefreshToken(
         user_id=db_user.id,
@@ -169,6 +172,7 @@ def retrieve_user(
         )
         .outerjoin(PostImage, Post.id == PostImage.post_id)
         .group_by(Post.id)
+        .order_by(Post.updated_at.desc())
     )
 
 

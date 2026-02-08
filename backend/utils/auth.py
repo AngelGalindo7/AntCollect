@@ -38,12 +38,11 @@ def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
     token_info = {"issued_at":issued_at, "expires_at":expires_at,"token":token}
     return token_info
 
-def valid_refresh_token(db_token):
+def decode_refresh_token(db_token):
     
-    if db_token.revoked:
-        raise HTTPException(status_code=401, detail="Refresh token revoked")
+
     try:
-        payload = jwt.decode(db_token.token, SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(db_token, SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("sub")
         payload_type = payload.get("type")
         
@@ -56,7 +55,7 @@ def valid_refresh_token(db_token):
     if not payload_type == "refresh":
         raise HTTPException(status_code=401, detail="Invalid payload type")
     
-    return True
+    return user_id
 
 
 def authenthicate_access_token(

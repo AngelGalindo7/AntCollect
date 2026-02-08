@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import PostGridLayout from "./PostGridLayout";
 import Search from "./Search";
 import type { Post } from "./Types";
+import { fetchWithAuth } from "../utils/api";
 
 const API_BASE = "http://localhost:8000";
 
@@ -14,7 +15,7 @@ const HomePage: React.FC = () => {
         const fetchPosts = async () => {
             setLoading(true);
             try {
-                const res = await fetch(`${API_BASE}/posts/top`, {
+                const res = await fetchWithAuth(`${API_BASE}/posts/top`, {
                     method: "GET",
                     headers: { "Content-Type": "application/json" },
                 });

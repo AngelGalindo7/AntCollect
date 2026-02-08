@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import PostGridLayout from "./PostGridLayout";
 import type { Post, ProfileResponse } from "./Types";
 import Search from './Search';
+import { fetchWithAuth } from "../utils/api";
 import { useParams } from "react-router-dom";
 const API_BASE = "http://localhost:8000";
 
@@ -45,7 +46,7 @@ const UserProfile: React.FC = () => {
 			// 	setUsername(storedUsername);
 			// }
 
-			const res = await fetch(`${API_BASE}/users/get_user_`, {
+			const res = await fetchWithAuth(`${API_BASE}/users/get_user_`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -74,6 +75,8 @@ const UserProfile: React.FC = () => {
 
 			setProfile(transformedData);
 		} catch (err) {
+
+
 			console.error(err);
 		} finally {
 			setLoading(false);

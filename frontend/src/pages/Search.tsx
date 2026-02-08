@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { fetchWithAuth } from "../utils/api";
 
 const API_BASE = "http://localhost:8000";
 
@@ -32,7 +33,7 @@ const Search: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/users/search_user`, {
+      const response = await fetchWithAuth(`${API_BASE}/users/search_user`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

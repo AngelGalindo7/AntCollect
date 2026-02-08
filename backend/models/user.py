@@ -10,7 +10,7 @@ from enum import Enum
 class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    username: Mapped[str] =  mapped_column(String(50), nullable=False)
+    username: Mapped[str] =  mapped_column(String(50), nullable=False, unique=True)
     email: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'),nullable=False)
