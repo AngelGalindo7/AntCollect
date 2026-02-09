@@ -2,19 +2,24 @@ import React, { useState } from 'react';
 import { fetchWithAuth } from '../utils/api';
 const API_BASE = "http://localhost:8000";
 
+interface CreatePostProps {
+  onSuccess?: () => void;
+}
 
-function CreatePost() {
+function CreatePost({ onSuccess }: CreatePostProps) {
 
     const [caption, setCaption] = useState('')
-    const [files, setFiles] = useState([])
+    const [files, setFiles] = useState<File[]>([])
 
 
 
-    const handleFileChange = (e) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files) {
         setFiles(Array.from(e.target.files));
+      }
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     
     e.preventDefault();
     const formData = new FormData();
@@ -35,7 +40,13 @@ function CreatePost() {
     
     const text = await response.text();
     console.log('Response:', text); // See what you're actually getting
+    
+    setCaption('');
+    setFiles([]);
 
+    if (onSuccess) {
+      onSuccess();
+    }
 
     } catch (err) { 
         console.error('Upload error:', err);
@@ -67,7 +78,7 @@ return (
       htmlFor="file-upload"
       className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition"
     >
-      <span className="text-sm text-gray-600">📷 Click to upload images</span>
+      <span className="text-sm text-gray-600">{files.length > 0 ? `${files.length} file(s) selected` : 'Click to upload images'}</span>
     </label>
   </div>
   
