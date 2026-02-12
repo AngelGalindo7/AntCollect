@@ -36,7 +36,7 @@ def upload_post(
         caption=caption,
         type=type,
         is_published=is_published
-    )   
+        )   
         
         db.add(post)
         db.flush()
@@ -46,34 +46,19 @@ def upload_post(
             #uploaded_files.append(file_path)
             #size_bytes = get_file_size(file_path)
             image_data = process_and_save_image(image_file, user_id)
-            
+
             all_created_files.extend(image_data["paths"].values())
-            
+
             variants = {}
-            
-            """for size_name in ["thumbnail", "medium", "original"]:
-                variants[size_name] = {
-                    "path": image_data["paths"][size_name],
-                    "size_bytes": image_data["sizes"][size_name],
-                    "width": image_data["dimensions"][size_name]["width"],
-                    "height": image_data["dimensions"][size_name]["height"]
-                 }"""
-            
+
             order_index = i+1
             post_image = PostImage(
                 post_id=post.id,
                 order_index=order_index,
                 filename=image.filename,
-                json_metadata={
-                        "paths": {
-                            "thumbnail": image_data["paths"]["thumbnail"],
-                            "medium": image_data["paths"]["medium"],
-                            "original": image_data["paths"]["original"]
-                        },
-                        "original_width": image_data["dimensions"]["original"]["width"],
-                        "original_height": image_data["dimensions"]["original"]["height"]
-                    } 
-
+                file_path=file_path,
+                mime_type=image.content_type,
+                size_bytes=size_bytes,
             )
             image_records.append(post_image)
         
@@ -91,8 +76,9 @@ def upload_post(
 
         # 'locals()' is a dictionary of all current local variables.
         # We use .get() to safely retrieve the list. If it doesn't exist, we get an empty list [].
+        files_to_delete = locals().get('uploaded_files', [])
         
-        for path in all_created_files:
+        for path in files_to_delete:
             try:
                 delete_file(path)
             except Exception:
@@ -106,7 +92,7 @@ def like_image(
     post_id: int, 
     user_id: User = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
-):
+        for path in files_to_delete:
 
 
 
@@ -129,6 +115,28 @@ def like_image(
 
     new_like = PostLike(
     post_id=post_id,
+    user_id =user_id
+    )
+
+    new_engagement = EngagementLog(
+        post_id=post_id,
+        user_id=user_id,
+        event_type=EngagementType.like
+    )
+
+    try:
+        db.add(new_like)
+        db.add(new_engagement)
+        db.commit()
+        db.refresh(new_like)
+
+        return {
+            "like_id":new_like.id,
+            "messaege":"Liked",
+            "liked":True
+            }
+    #Catches race condition where simultaneous try to like 
+    except IntegrityError:
     user_id =user_id
     )
 
@@ -201,9 +209,9 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
             Post.updated_at,
             top_posts_subquery.c.engagement_count.label("total_engagement"),
             #consider wrapping in array_remove to eliminate null values
-            func.array_agg(PostImage.file_path,
+            func.array_agg(PostImage.json_metadata,
                            order_by=PostImage.order_index
-                           ).label("image_paths"),
+                           ).label("images"),
             likes_subquery.label("total_likes")
 
     )
@@ -242,28 +250,6 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
     #1 within endpoint catch the error and call get autheriation jwt token
     #2 return response to frontend and let frontend call the get atuehrization token
     #prioritize low latency, "efficient" 
-
-    #TODO Finish figma db tables for post users, refresh, comments, likes, comments
-    #Add entity relationships as well
-
-    #TODO Update README With current progress, description
-
-    #TODO Create frontend with react, typescript, add login
-
-    #TODO Add java microservice to track  requests to db success/failure, average speed for each request
-    #Point is to track db usage and how code is affected after refactors etc 
-    
-    #TODO Add get likes for post @app.get("/post/{post_id}/likes_count")
-
-    #TODO Add get to check if user liked a post @app.get("/post/{post_id}/liked_by_me")
-
-
-
-
-@router.post("/comment_post")
-def comment(
-    post_id: int,
-    content: str,
     user_id: User = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
 ):

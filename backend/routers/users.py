@@ -165,9 +165,9 @@ def retrieve_user(
             Post.type,
             Post.updated_at,
             func.array_agg(
-                PostImage.file_path,
+                PostImage.json_metadata,
                 order_by=PostImage.order_index
-            ).label("image_paths"),
+            ).label("images"),
             likes_subquery.label("total_likes")
         )
         .outerjoin(PostImage, Post.id == PostImage.post_id)
@@ -216,9 +216,9 @@ def retrieve_user_likes(
             Post.type,
             Post.updated_at,
             func.array_agg(
-                PostImage.file_path,
+                PostImage.file_metadata,
                 order_by=PostImage.order_index
-            ).label("image_paths"),
+            ).label("images"),
             likes_subquery.label("total_likes")
         )
         .join(PostLike, Post.id == PostLike.post_id)
