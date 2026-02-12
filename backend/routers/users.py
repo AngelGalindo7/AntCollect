@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, APIRouter, Request
+from fastapi import Depends, HTTPException, APIRouter, Request, File
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -237,3 +237,110 @@ def retrieve_user_likes(
         user_id=user_id,
         posts=[PostBase.model_validate(row) for row in results]
     )
+
+@router.post("update-bio")
+def update_bio(
+        
+        new_bio: str=Form(...)
+        db: Session = Depends(get_db)
+        user: UserSearch = Depends(authenthicate_access_token)
+
+    )
+
+
+
+    user_id = current_user.user_id
+    
+
+    try:
+        
+        update_user = db.query(User).filter(User.id == user_id).update({"bio": new_bio})
+
+        db.commit()
+
+        return {
+        "user_id": str(user_id),
+        "message": "Update successful"
+    }
+    
+    except Exception as e:
+        db.rollback(        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred during upload: {e}"
+        )
+
+@router.post("update-bio")
+def update_bio(
+        
+        new_bio: str=Form(...)
+        db: Session = Depends(get_db)
+        user: UserSearch = Depends(authenthicate_access_token)
+
+    )
+
+
+
+    user_id = current_user.user_id
+    
+
+    try:
+        
+        update_user = db.query(User).filter(User.id == user_id).update({"bio": new_bio})
+
+        db.commit()
+
+        return {
+        "user_id": str(user_id),
+        "message": "Update successful"
+    }
+    
+    except Exception as e:
+        db.rollback(        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred during upload: {e}"
+        )
+
+
+@router.post("/update-avatar")
+def update_avatar(
+        
+        new_avatar: UploadFile=File(...)
+        db: Session = Depends(get_db)
+        user: UserSearch = Depends(authenthicate_access_token)
+
+    )
+
+
+
+    user_id = current_user.user_id
+    uploaded_avatar = None
+
+    try:
+        file_path = save_upload_file(new_avatar) 
+
+        update_user = db.query(User).filter(User.id == user_id).update({"avatar_path": file_path})
+        #TODO Delete old avatar_path in stored uploads
+        db.commit()
+
+        return {
+        "user_id": str(user_id),
+        "message": "Update successful"
+    }
+    
+    except Exception as e:
+        db.rollback()
+
+                
+        if file_path:
+        try:
+            delete_file(file_path)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred during update: {e}"
+        )
+
+
+
+
