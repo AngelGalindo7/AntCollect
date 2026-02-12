@@ -5,7 +5,7 @@ from sqlalchemy import func, select, desc
 from backend.database import get_db
 from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType
 from backend.schemas import TopPostsResponse, PostWithEngagement
-from ..utils.files import save_upload_file, get_file_size, delete_file
+from ..utils.files import save_upload_file, get_file_size, delete_file, process_and_save_image
 from ..utils.auth import authenthicate_access_token
 
 router = APIRouter(
@@ -19,6 +19,7 @@ router = APIRouter(
 @router.post("/upload-post")
 def upload_post(
     caption: str=Form(...),
+    type: str=Form(...),
     is_published: bool = Form(True),
     post_images: list[UploadFile] = File(...),
     current_user: User = Depends(authenthicate_access_token),
@@ -27,12 +28,13 @@ def upload_post(
     
     user_id = current_user.user_id
     image_records = []
-    uploaded_files = []
+    all_created_files = []
 
     try:
         post = Post(
         user_id=user_id,
         caption=caption,
+        type=type,
         is_published=is_published
     )   
         
@@ -40,17 +42,38 @@ def upload_post(
         db.flush()
         
         for i, image in enumerate(post_images):
-            file_path = save_upload_file(image)
-            uploaded_files.append(file_path)
-            size_bytes = get_file_size(file_path)
+            #file_path = save_upload_file(image)
+            #uploaded_files.append(file_path)
+            #size_bytes = get_file_size(file_path)
+            image_data = process_and_save_image(image_file, user_id)
+            
+            all_created_files.extend(image_data["paths"].values())
+            
+            variants = {}
+            
+            """for size_name in ["thumbnail", "medium", "original"]:
+                variants[size_name] = {
+                    "path": image_data["paths"][size_name],
+                    "size_bytes": image_data["sizes"][size_name],
+                    "width": image_data["dimensions"][size_name]["width"],
+                    "height": image_data["dimensions"][size_name]["height"]
+                 }"""
+            
             order_index = i+1
             post_image = PostImage(
                 post_id=post.id,
                 order_index=order_index,
                 filename=image.filename,
-                file_path=file_path,
-                mime_type=image.content_type,
-                size_bytes=size_bytes,
+                json_metadata={
+                        "paths": {
+                            "thumbnail": image_data["paths"]["thumbnail"],
+                            "medium": image_data["paths"]["medium"],
+                            "original": image_data["paths"]["original"]
+                        },
+                        "original_width": image_data["dimensions"]["original"]["width"],
+                        "original_height": image_data["dimensions"]["original"]["height"]
+                    } 
+
             )
             image_records.append(post_image)
         
@@ -68,9 +91,8 @@ def upload_post(
 
         # 'locals()' is a dictionary of all current local variables.
         # We use .get() to safely retrieve the list. If it doesn't exist, we get an empty list [].
-        files_to_delete = locals().get('uploaded_files', [])
         
-        for path in files_to_delete:
+        for path in all_created_files:
             try:
                 delete_file(path)
             except Exception:
