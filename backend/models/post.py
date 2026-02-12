@@ -44,11 +44,8 @@ class PostImage(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     post_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("posts.id", ondelete="CASCADE"), nullable=False)
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text('1'))
-    filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    file_path: Mapped[str] = mapped_column(String(512), nullable=False)
-    mime_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    json_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False) 
+    json_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=False)
     upload_time: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'),nullable=False)
 
     post: Mapped["Post"] = relationship("Post", back_populates="images")
