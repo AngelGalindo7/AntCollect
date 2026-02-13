@@ -2,15 +2,22 @@ import React, { useState } from 'react';
 import { fetchWithAuth } from '../utils/api';
 const API_BASE = "http://localhost:8000";
 
+enum PostType {
+
+  LOOKING_FOR = "looking_for",
+  COLLECTION = "collection",
+  TRADING ="trading"
+}
+
 interface CreatePostProps {
   onSuccess?: () => void;
 }
 
 function CreatePost({ onSuccess }: CreatePostProps) {
 
-    const [caption, setCaption] = useState('')
-    const [files, setFiles] = useState<File[]>([])
-
+    const [caption, setCaption] = useState('');
+    const [files, setFiles] = useState<File[]>([]);
+    const [postType, setPostType] = useState<PostType>(PostType.COLLECTION);
 
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,6 +33,7 @@ function CreatePost({ onSuccess }: CreatePostProps) {
 
     formData.append('caption', caption);
     formData.append('is_published', 'true');
+    formData.append('post_type', postType);
     
     files.forEach((file) => {
         formData.append('post_images', file);
@@ -43,6 +51,7 @@ function CreatePost({ onSuccess }: CreatePostProps) {
     
     setCaption('');
     setFiles([]);
+    setPostType(PostType.COLLECTION);
 
     if (onSuccess) {
       onSuccess();
@@ -57,6 +66,20 @@ function CreatePost({ onSuccess }: CreatePostProps) {
 return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-lg p-6 bg-white rounded-lg border border-gray-200">
   
+
+  <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700">Post Type</label>
+            <select 
+              value={postType}
+              onChange={(e) => setPostType(e.target.value as PostType)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value={PostType.COLLECTION}>Collection</option>
+              <option value={PostType.LOOKING_FOR}>Looking For</option>
+              <option value={PostType.TRADING}>Trading</option>
+            </select>
+          </div>
+
   <textarea 
     placeholder="Write a caption..." 
     value={caption}
