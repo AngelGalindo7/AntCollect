@@ -52,6 +52,18 @@ class PostType(str, Enum):
     looking_for = "looking_for"
     trading = "trading"
 
+
+
+class ImagePaths(BaseModel):
+    medium: str
+    original: str
+    thumbnail: str
+
+class ImageMetadata(BaseModel):
+    paths: ImagePaths
+    original_width: int
+    original_height: int
+
 class PostBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -61,7 +73,7 @@ class PostBase(BaseModel):
     is_published: bool
     type: PostType
     updated_at: datetime
-    image_paths: List[Optional[str]] # List of strings from array_agg
+    images: List[Optional[ImageMetadata]] # List of strings from array_agg
     total_likes: int
 
 class PostWithEngagement(PostBase):

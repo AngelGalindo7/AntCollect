@@ -24,7 +24,7 @@ app.add_middleware(
 app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(posts.router)
-app.mount("/uploads", StaticFiles(directory="Uploads"), name="uploads")
+app.mount("/Uploads", StaticFiles(directory="Uploads"), name="uploads")
 @app.get("/test-db/")
 def test_db(db: Session = Depends(get_db)):
     try:
