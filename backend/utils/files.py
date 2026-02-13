@@ -1,7 +1,11 @@
 import os 
 import shutil 
 from fastapi import UploadFile, HTTPException
-
+from typing import List, Dict
+from PIL import Image
+import magic
+import io
+import uuid
 UPLOAD_BASE_DIR = "Uploads"
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -15,7 +19,7 @@ ALLOWED_MIMES =  ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 ALLOWED_FILE_TYPE = ['jpeg', 'png', 'webp', 'gif']
 
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(UPLOAD_BASE_DIR, exist_ok=True)
 
 def save_upload_file(file: UploadFile) -> str:
 
@@ -90,23 +94,14 @@ def check_file_size(file: UploadFile):
     return size
 
 def validate_image(file: UploadFile):
-
-    content = file.file.read(2048)
-    file.file.seek(0)
-
-    mime = magic.from_buffer(content, mime=True)
-
-    if mime not in ALLOWED_MIMES:
-        raise HTTPException(400, f"Invalid image type: {mime}")
-
-
-    file_type = imghdr.what(None,h=content)
-
-    if file_type not in ALLOWED_FILE_TYPE:
-        raise HTTPException(400, "File signature doesn't match image type")
-
-
-    return mime
+    try:
+        file.file.seek(0)
+        img = Image.open(file.file)
+        img.verify()
+        file.file.seek(0)
+        return True
+    except Exception:
+        raise HTTPException(400, "Invalid or corrupted image file")
 
 def handle_transparent_images(image):
 
@@ -127,11 +122,10 @@ def handle_transparent_images(image):
     return image
 
 def process_and_save_image(file: UploadFile, user_id: int) -> Dict:
-
-
-    mime_type = validate_image(file)
-
+    
     file_size = check_file_size(file)
+    validate_image(file)
+   
 
     contents = file.file.read()
 
