@@ -64,15 +64,11 @@ const UserProfile: React.FC = () => {
 				...data,
 				posts: data.posts.map((post) => ({
 					...post,
-					image_paths: post.image_paths.map((path) => {
-						if (!path) return null;
-						const parts = path.split(/\\|\//);
-						const filename = parts[parts.length - 1];
-						return `${API_BASE}/uploads/${encodeURIComponent(filename)}`;
-					}),
-				})),
-			};
-
+					image_paths: post.images
+            .filter(img => img && img.paths?.medium)
+            .map((img) => `${API_BASE}/${img.paths.original}`),
+    })),
+};
 			setProfile(transformedData);
 		} catch (err) {
 

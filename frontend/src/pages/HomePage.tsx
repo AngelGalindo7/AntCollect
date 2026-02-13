@@ -36,25 +36,34 @@ const HomePage: React.FC = () => {
                 }
 
 
-                const transformedPosts = postsArray.map((post: any) => ({
-                    ...post,
-                    // Safety check: ensure image_paths exists before mapping
-                    image_paths: (post.image_paths || []).map((path: string) => {
-                        if (!path) return null;
-                        const parts = path.split(/\\|\//);
-                        const filename = parts[parts.length - 1];
-                        return `${API_BASE}/uploads/${encodeURIComponent(filename)}`;
-                    }),
-                }));
-                
+                //const transformedPosts = postsArray.map((post: any) => ({
+                //    ...post,
+                //    // Safety check: ensure image_paths exists before mapping
+                //    image_paths: (post.image_paths || []).map((path: string) => {
+                //        if (!path) return null;
+                //        const parts = path.split(/\\|\//);
+                //        const filename = parts[parts.length - 1];
+                //        return `${API_BASE}/uploads/${encodeURIComponent(filename)}`;
+                //    }),
+                //}));
+                const transformedData = {
+				        ...data,
+				        posts: data.posts.map((post) => ({
+					      ...post,
+					      image_paths: post.images
+                .filter(img => img && img.paths?.medium)
+                .map((img) => `${API_BASE}/${img.paths.original}`),
+                  })),
+                  };
+                            
                 setPosts(transformedPosts);
 
-            } catch (err) {
+              } catch (err) {
                 console.error("Error fetching home posts:", err);
                 setError("Could not load the feed.");
-            } finally {
+              } finally {
                 setLoading(false);
-            }
+              }
         };
 
         fetchPosts();
