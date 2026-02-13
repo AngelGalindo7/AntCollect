@@ -19,13 +19,13 @@ router = APIRouter(
 @router.post("/upload-post")
 def upload_post(
     caption: str=Form(...),
-    type: str=Form(...),
+    post_type: str=Form(...),
     is_published: bool = Form(True),
     post_images: list[UploadFile] = File(...),
     current_user: User = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
     ):
-    
+     
     user_id = current_user.user_id
     image_records = []
     all_created_files = []
@@ -34,19 +34,16 @@ def upload_post(
         post = Post(
         user_id=user_id,
         caption=caption,
-        type=type,
+        type=post_type,
         is_published=is_published
     )   
-        
         db.add(post)
         db.flush()
-        
         for i, image in enumerate(post_images):
             #file_path = save_upload_file(image)
             #uploaded_files.append(file_path)
             #size_bytes = get_file_size(file_path)
-            image_data = process_and_save_image(image_file, user_id)
-            
+            image_data = process_and_save_image(image, user_id)
             all_created_files.extend(image_data["paths"].values())
             
             variants = {}
