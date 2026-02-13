@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, APIRouter, Request, File
+from fastapi import Depends, HTTPException, APIRouter, Request, File, Form,UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -241,11 +241,11 @@ def retrieve_user_likes(
 @router.post("update-bio")
 def update_bio(
         
-        new_bio: str=Form(...)
-        db: Session = Depends(get_db)
+        new_bio: str=Form(...),
+        db: Session = Depends(get_db),
         user: UserSearch = Depends(authenthicate_access_token)
 
-    )
+):
 
 
 
@@ -264,11 +264,12 @@ def update_bio(
     }
     
     except Exception as e:
-        db.rollback(        raise HTTPException(
+        db.rollback()
+        raise HTTPException(
             status_code=500,
             detail=f"An error occurred during upload: {e}"
-        )
-
+            )
+"""
 @router.post("update-bio")
 def update_bio(
         
@@ -299,16 +300,16 @@ def update_bio(
             status_code=500,
             detail=f"An error occurred during upload: {e}"
         )
-
+"""
 
 @router.post("/update-avatar")
 def update_avatar(
         
-        new_avatar: UploadFile=File(...)
-        db: Session = Depends(get_db)
+        new_avatar: UploadFile=File(...),
+        db: Session = Depends(get_db),
         user: UserSearch = Depends(authenthicate_access_token)
 
-    )
+):
 
 
 
@@ -332,13 +333,13 @@ def update_avatar(
 
                 
         if file_path:
-        try:
-            delete_file(file_path)
-        except Exception:
-            pass
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred during update: {e}"
+            try:
+                delete_file(file_path)
+            except Exception:
+                pass
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"An error occurred during update: {e}"
         )
 
 
