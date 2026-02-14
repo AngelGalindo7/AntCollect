@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
 from ..database import get_db
-from backend.models import User, RefreshToken, Post, PostLike, PostImage
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest
+from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,authenthicate_access_token
 from typing import List
 
@@ -118,23 +118,98 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     
 
 
-@router.post("/search_user", response_model = List[SearchResponse])
+@router.post("/search_user", response_model=SearchResponse)
 def search_user(
     request: SearchRequest,
     db: Session = Depends(get_db),
     user: User = Depends(authenthicate_access_token)):
     
     if not request.query:
-        return []
+        return SearchResponse(
+            query="",
+            users=[],
+            posts=None
+        )
     
 
-    users = db.query(User).filter(
-        User.username.ilike(f"{request.query}%")
-    ).limit(10).all()
+    user_results = _search_users(request.query, 10, db)
+    post_results = None
+
+    if request.search_type == "full":
+        post_results = _search_posts(request.query, 10, db)
+
+    #return SearchResponse(
+    #query=q,
+    #users = user_results,
+    #posts = post_results
+    #)
+    #print(user_results[0])
+    return SearchResponse(
+    query=request.query,
+    users=[UserResult(
+        id=u.id,
+        username=u.username,
+        avatar_path=u.avatar_path
+
+    ) for u in user_results],
+    posts=post_results
+)
+
+
+def _search_users(query: str,limit: int,db: Session) -> List[User]:
+    users = db.execute(
+        select(User)
+        .where(User.username.ilike(f"%{query}%"))
+        .limit(limit)
+    ).scalars().all()
 
     return users
 
+def _search_posts(query: str, limit: int, db: Session) -> List[PostWithEngagement]:
+    print(f"inside")
+    top_search_posts_subquery = (
+        select(
+            Post.id.label("id"),
+            func.count(EngagementLog.id).label("engagement_count")
+        )
+        .outerjoin(EngagementLog, Post.id == EngagementLog.post_id)
+        .where(
+            Post.caption.ilike(f"%{query}%"),
+            Post.public == True,
+            Post.is_published == True
+        )
+        .group_by(Post.id)
+        .order_by(func.count(EngagementLog.id).desc())
+        .limit(limit)  # ← Apply limit early!
+        .subquery()
+    )
+    
+    likes_subquery = (
+        select(func.count(PostLike.id))
+        .where(PostLike.post_id == Post.id)
+        .scalar_subquery()
+    )
 
+    
+    posts = db.execute(
+        select(
+            Post.id.label("post_id"),
+            Post.caption,
+            Post.public,
+            Post.is_published,
+            Post.type,
+            Post.updated_at,
+            top_search_posts_subquery.c.engagement_count.label("total_engagement"),
+            func.array_agg(PostImage.json_metadata).label("images"),
+            likes_subquery.label("total_likes")
+        )
+        .join(top_search_posts_subquery, Post.id == top_search_posts_subquery.c.id)
+        .outerjoin(PostImage, Post.id == PostImage.post_id)
+        .group_by(Post.id, top_search_posts_subquery.c.engagement_count)
+        .order_by(top_search_posts_subquery.c.engagement_count.desc())
+    ).all()
+
+    return [PostWithEngagement.model_validate(row) for row in posts]
 #TODO Filter out private,non published posts in the query to avoid fetching invalid data
 @router.post("/get_user_", response_model = UserProfileResponse)
 def retrieve_user(
