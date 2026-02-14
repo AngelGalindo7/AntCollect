@@ -41,11 +41,17 @@ class AccessRequest(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str
+    search_type: str = "quick"
 
 
-class  SearchResponse(BaseModel):
+class UserResult(BaseModel):
     id: int
     username: str
+    avatar_path: Optional[str]
+
+class PostResult(BaseModel):
+    post_id: int
+
 
 class PostType(str, Enum):
     collection = "collection"
@@ -78,6 +84,13 @@ class PostBase(BaseModel):
 
 class PostWithEngagement(PostBase):
     total_engagement: int
+
+
+class  SearchResponse(BaseModel):
+    query: str
+    users: List[UserResult]
+    posts: Optional[List[PostWithEngagement]] = None
+
 
 class TopPostsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
