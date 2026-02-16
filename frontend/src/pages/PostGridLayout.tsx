@@ -31,9 +31,10 @@ import type { Post } from './Types';
 interface PostGridLayoutProps {
   posts: Post[];
   onPostClick?: (post: Post, imageIndex: number) => void;
+  onLikeToggle?: (postId: number, isLiked: boolean) => void;
 }
 
-const PostGridLayout: React.FC<PostGridLayoutProps> = ({ posts, onPostClick }) => {
+const PostGridLayout: React.FC<PostGridLayoutProps> = ({ posts, onPostClick, onLikeToggle }) => {
   if (!posts || posts.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -67,6 +68,7 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({ posts, onPostClick }) =
                 imagePath={post.image_paths[0]}
                 imageIndex={0}
                 onClick={onPostClick}
+                onLikeToggle={onLikeToggle}
               />
             ))}
       </div>
