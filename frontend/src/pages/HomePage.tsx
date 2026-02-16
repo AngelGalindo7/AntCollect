@@ -80,7 +80,26 @@ const HomePage: React.FC = () => {
         console.log(`Clicked post ${post.post_id}, image index: ${imageIndex}`);
         // Add navigation logic here, e.g., navigate(`/post/${post.post_id}`)
     };
+    
 
+    const handleLikeToggle = (postId: number, isLiked: boolean) => {
+        // Update the posts array with the new like count
+        setiPosts(prevPosts => 
+            prevPosts.map(post => {
+                if (post.post_id === postId) {
+                    // If liked, increment count; if unliked, decrement count
+                    return {
+                        ...post,
+                        total_likes: isLiked 
+                            ? post.total_likes + 1 
+                            : post.total_likes - 1
+                    };
+                }
+                return post;
+            })
+        );
+  }
+    
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -118,7 +137,11 @@ const HomePage: React.FC = () => {
 
             {/* Posts Grid Layout */}
             {posts.length > 0 ? (
-                <PostGridLayout posts={posts} onPostClick={handlePostClick} />
+                <PostGridLayout
+                posts={posts}
+                onPostClick={handlePostClick}
+                onLikeToggle={handleLikeToggle}
+                />
             ) : (
                 <div className="flex justify-center py-10 text-gray-500">
                     No posts found.
