@@ -19,13 +19,19 @@ const HomePage: React.FC = () => {
                     method: "GET",
                     headers: { "Content-Type": "application/json" },
                 });
+                
 
+                if (!res.ok) {
+                throw new Error(`Failed to load feed: ${res.status}`);
+        }
                 const rawData = await res.json();
                 
                 // DEBUG LOG: See exactly what the API returns
 
                 // Check if the API returns an array directly, or an object like { posts: [...] }
-                let postsArray = [];
+                let postsArray: any[] = [];
+                
+                
                 if (Array.isArray(rawData)) {
                     postsArray = rawData;
                 } else if (rawData.posts && Array.isArray(rawData.posts)) {
@@ -47,16 +53,16 @@ const HomePage: React.FC = () => {
                 //    }),
                 //}));
                 const transformedData = {
-				        ...data,
-				        posts: data.posts.map((post) => ({
+				        ...rawData,
+				        posts: rawData.posts.map((post) => ({
 					      ...post,
 					      image_paths: post.images
                 .filter(img => img && img.paths?.medium)
                 .map((img) => `${API_BASE}/${img.paths.original}`),
                   })),
                   };
-                            
-                setPosts(transformedPosts);
+                        
+                setPosts(transformedData);
 
               } catch (err) {
                 console.error("Error fetching home posts:", err);
