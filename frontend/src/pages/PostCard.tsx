@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Post } from './Types';
-
+import { fetchWithAuth } from '../utils/api';
 /**
  * PostCard Component
  * 
@@ -31,61 +31,147 @@ interface PostCardProps {
   imagePath: string | null;
   imageIndex: number;
   onClick?: (post: Post, imageIndex: number) => void;
+  onLikeToggle?: (postId: number, isLiked: boolean) => void;
+
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClick }) => {
+
+
+const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClick, onLikeToggle }) => {
+  
+
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(post.total_likes);
+
 
   const handleClick = () => {
     onClick?.(post, imageIndex);
   };
 
+  const handleLikeClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+  
+
+
+  
+  const newLikedState= !isLiked;
+  setIsLiked(newLikedState);
+
+  setLikeCount(prev => newLikedState ? prev + 1 : prev -1);
+
+  onLikeToggle?.(post.post_id, newLikedState);
+  
+  
+    try {
+
+      console.log("post id being liked:", post.post_id);
+      const API_BASE = "http://localhost:8000";
+      const response = await fetchWithAuth(`${API_BASE}/posts/like_image`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // Add auth headers if needed
+        },
+        credentials: "include",
+        
+        body: JSON.stringify({
+          post_id: post.post_id,
+        })
+      });
+
+      if (!response.ok) {
+        // If API fails, revert the optimistic update
+        setIsLiked(!newLikedState);
+        setLikeCount(prev => newLikedState ? prev - 1 : prev + 1);
+        console.error("Failed to update like status");
+      }
+    } catch (error) {
+      // If API fails, revert the optimistic update
+      setIsLiked(!newLikedState);
+      setLikeCount(prev => newLikedState ? prev - 1 : prev + 1);
+      console.error("Error calling like API:", error);
+    }
+  };
+  
+  const getPostTypeLetter = (type: string): string => {
+  
+
+    return type.charAt(0).toUpperCase();
+
+  };
   return (
-    <div
-      className="relative aspect-square overflow-hidden bg-gray-100 cursor-pointer group"
-      onClick={handleClick}
-    >
-      {imagePath ? (
-        <>
+
+ 
+    <div className="relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+      {/* ADDED: Top section - Title and Type Badge */}
+      <div className="px-3 py-2 bg-white border-b border-gray-200 flex items-start justify-between">
+        {/* Title - left side, truncated to 2 lines */}
+        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 flex-1 pr-2">
+          {post.caption || 'Untitled Post'}
+        </h3>
+        
+        {/* ADDED: Type badge - top right corner */}
+        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs font-bold">
+          {getPostTypeLetter(post.type)}
+        </div>
+      </div>
+
+      {/* Image section - clickable to view post details */}
+      <div
+        className="relative aspect-square overflow-hidden bg-gray-100 cursor-pointer group"
+        onClick={handleClick}
+      >
+        {imagePath ? (
           <img
             src={imagePath}
             alt={post.caption || `Post ${post.post_id}`}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-200">
+            <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </div>
+        )}
+      </div>
 
-          
-            <div className="absolute inset-0 bg-[rgba(0,0,0,0.5)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="text-white text-center p-4">
-                <div className="flex items-center justify-center gap-4 mb-2">
-                  <span className="flex items-center gap-1">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    {post.total_likes}
-                  </span>
-                </div>
-                {post.caption && <p className="text-sm line-clamp-2">{post.caption}</p>}
-              </div>
-            </div>
-          
-        </>
-      ) : (
-        <div className="w-full h-full flex items-center justify-center bg-gray-200">
-          <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="px-3 py-2 bg-white border-t border-gray-200">
+        <button
+          onClick={handleLikeClick}
+          className="flex items-center gap-2 text-sm font-medium transition-colors duration-200 hover:opacity-80"
+          aria-label={isLiked ? "Unlike post" : "Like post"}
+        >
+          {/* Heart icon - red if liked, gray if not */}
+          <svg 
+            className={`w-5 h-5 transition-colors duration-200 ${
+              isLiked ? 'text-red-500 fill-red-500' : 'text-gray-400 fill-none'
+            }`}
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
             />
           </svg>
-        </div>
-      )}
+          
+          {/* Like count */}
+          <span className={`${isLiked ? 'text-red-500' : 'text-gray-700'}`}>
+            {likeCount}
+          </span>
+        </button>
+      </div>
     </div>
   );
-};
-
+}; 
 export default PostCard;
