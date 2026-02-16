@@ -89,6 +89,28 @@ const UserProfile: React.FC = () => {
 		// This could navigate to detail view, open modal, etc.
 		console.log(`Clicked post ${post.post_id}, image index: ${imageIndex}`);
 	};
+     
+
+  const handleLikeToggle = (postId: number, isLiked: boolean) => {
+    setProfile(prevProfile => {
+      if (!prevProfile) return prevProfile;
+
+
+        return {
+          ...prevProfile,
+          posts: prevProfile.posts.map(post=> {
+            if (post.post_id === postId) {
+              return {
+                ...post,
+                total_likes: isLiked ? post.total_likes + 1 : post.total_likes - 1
+
+              };
+            }
+            return post;
+          })
+        };
+    });
+  } ;
 
 	if (loading) {
 		return (
@@ -124,7 +146,10 @@ const UserProfile: React.FC = () => {
 			</div>
 
 			{/* Posts Grid */}
-			<PostGridLayout posts={profile.posts} onPostClick={handlePostClick} />
+			<PostGridLayout 
+        posts={profile.posts} 
+        onPostClick={handlePostClick} 
+        onLikeToggle={handleLikeToggle} />
 		</div>
 	);
 };
