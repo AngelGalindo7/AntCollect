@@ -166,7 +166,6 @@ def _search_users(query: str,limit: int,db: Session) -> List[User]:
     return users
 
 def _search_posts(query: str, limit: int, db: Session) -> List[PostWithEngagement]:
-    print(f"inside")
     top_search_posts_subquery = (
         select(
             Post.id.label("id"),
@@ -225,6 +224,16 @@ def retrieve_user(
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
+
+
+    existing_like_subquery = (
+    select(func.count(PostLike.id))
+    .where(
+        PostLike.post_id == Post.id,
+        PostLike.user_id == user.user_id  # current user from auth token
+    )
+    .scalar_subquery()
+) 
     likes_subquery = (
         select(func.count(PostLike.id))
         .where(PostLike.post_id == Post.id)
@@ -243,7 +252,8 @@ def retrieve_user(
                 PostImage.json_metadata,
                 order_by=PostImage.order_index
             ).label("images"),
-            likes_subquery.label("total_likes")
+            likes_subquery.label("total_likes"),
+            existing_like_subquery.label("is_liked")
         )
         .outerjoin(PostImage, Post.id == PostImage.post_id)
         .group_by(Post.id)
