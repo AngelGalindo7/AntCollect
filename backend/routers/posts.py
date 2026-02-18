@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select, desc
 from backend.database import get_db
 from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType
-from backend.schemas import TopPostsResponse, PostWithEngagement
+from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest
 from ..utils.files import save_upload_file, get_file_size, delete_file, process_and_save_image
 from ..utils.auth import authenthicate_access_token
 
@@ -100,23 +100,24 @@ def upload_post(
         )
 @router.post("/like_image")
 def like_image(
-    post_id: int, 
-    user_id: User = Depends(authenthicate_access_token),
+    request: LikeImageRequest, 
+    user: User = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
 ):
-
 
 
     existing_like = (
         db.query(PostLike)
         .filter(
-            PostLike.user_id==user_id,
-            PostLike.post_id==post_id
+            PostLike.user_id==user.user_id,
+            PostLike.post_id==request.post_id
         )
         .first()
     )
+    print(f"Existing like: {existing_like}")
 
     if existing_like:
+        print(f"OKay delete?")
         db.delete(existing_like)
         db.commit()
         return {
@@ -125,13 +126,13 @@ def like_image(
         }
 
     new_like = PostLike(
-    post_id=post_id,
-    user_id =user_id
+    post_id=request.post_id,
+    user_id =user.user_id
     )
 
     new_engagement = EngagementLog(
-        post_id=post_id,
-        user_id=user_id,
+        post_id=request.post_id,
+        user_id=user.user_id,
         event_type=EngagementType.like
     )
 
@@ -143,7 +144,7 @@ def like_image(
 
         return {
             "like_id":new_like.id,
-            "messaege":"Liked",
+            "message":"Liked",
             "liked":True
             }
     #Catches race condition where simultaneous try to like 
@@ -151,7 +152,7 @@ def like_image(
         db.rollback()
         #The row must have been created in the other request
         return {
-            "messae":"Liked",
+            "message":"Liked",
             "liked":True
             }
 
@@ -171,8 +172,18 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
     #     .all()
     # )
 
+
+    existing_like = (
+        db.query(PostLike)
+        .filter(
+            PostLike.user_id==user.user_id,
+            PostLike.post_id==request.post_id
+        )
+        .first()
+    )
+
     likes_subquery = (
-        select(func.count(PostLike.id))
+        select(func.coalesce(func.count(PostLike.id),0))
         .where(PostLike.post_id == Post.id)
         .scalar_subquery()
     )
@@ -180,10 +191,10 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
         select(Post.id.label("id"),
                func.count(EngagementLog.id).label("engagement_count")
                )
-               .join(EngagementLog, Post.id == EngagementLog.post_id)
+               .outerjoin(EngagementLog, Post.id == EngagementLog.post_id)
                .where(Post.public == True, Post.is_published == True)
                .group_by(Post.id)
-               .order_by(func.count(EngagementLog.id).desc())
+               .order_by(func.coalesce(func.count(EngagementLog.id),0).desc())
                .limit(k)
                .subquery()
     )
@@ -201,7 +212,8 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
             func.array_agg(PostImage.json_metadata,
                            order_by=PostImage.order_index
                            ).label("images"),
-            likes_subquery.label("total_likes")
+            likes_subquery.label("total_likes"),
+            existing_like.label("is_liked")
 
     )
     .join(top_posts_subquery, Post.id == top_posts_subquery.c.id )
