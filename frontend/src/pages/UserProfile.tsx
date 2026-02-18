@@ -92,6 +92,7 @@ const UserProfile: React.FC = () => {
      
 
   const handleLikeToggle = (postId: number, isLiked: boolean) => {
+    
     setProfile(prevProfile => {
       if (!prevProfile) return prevProfile;
 
@@ -102,6 +103,7 @@ const UserProfile: React.FC = () => {
             if (post.post_id === postId) {
               return {
                 ...post,
+                is_liked: isLiked,
                 total_likes: isLiked ? post.total_likes + 1 : post.total_likes - 1
 
               };

@@ -41,6 +41,7 @@ export type Post = {
   is_published: boolean;
   type: string;
   updated_at: string;
+  is_liked: boolean;
 };
 
 export type ProfileResponse = {

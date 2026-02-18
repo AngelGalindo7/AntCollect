@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Post } from './Types';
 import { fetchWithAuth } from '../utils/api';
 /**
@@ -40,8 +40,16 @@ interface PostCardProps {
 const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClick, onLikeToggle }) => {
   
 
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(post.total_likes);
+  const [isLiked, setIsLiked] = useState(post.is_liked);
+  const [likeCount, setLikeCount] = useState(post.total_likes || 0);
+  
+  console.log("is_liked " , post.is_liked)
+  console.log("")
+  
+//useEffect(() => {
+ // setIsLiked(post.is_liked);
+ // setLikeCount(post.total_likes || 0);
+ //, [post.post_id]);
 
 
   const handleClick = () => {
@@ -50,22 +58,25 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
 
   const handleLikeClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-
+    
+    const previousLikedState = isLiked;
+    const previousLikeCount = likeCount;
   
 
 
-  
+  console.log("Previous liked state:", previousLikedState);
   const newLikedState= !isLiked;
   setIsLiked(newLikedState);
+  console.log("New liked state:", newLikedState);
 
   setLikeCount(prev => newLikedState ? prev + 1 : prev -1);
 
-  onLikeToggle?.(post.post_id, newLikedState);
+  //onLikeToggle?.(post.post_id, newLikedState);
   
   
     try {
 
-      console.log("post id being liked:", post.post_id);
+      //console.log("post id being liked:", post.post_id);
       const API_BASE = "http://localhost:8000";
       const response = await fetchWithAuth(`${API_BASE}/posts/like_image`, {
         method: "POST",
@@ -80,16 +91,22 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
         })
       });
 
-      if (!response.ok) {
-        // If API fails, revert the optimistic update
-        setIsLiked(!newLikedState);
-        setLikeCount(prev => newLikedState ? prev - 1 : prev + 1);
-        console.error("Failed to update like status");
+
+      const data = await response.json()
+      const expectedStatus = newLikedState ? "Liked" : "Unliked";
+
+      if (!response.ok || data.message !== expectedStatus) {
+      setIsLiked(previousLikedState);
+      setLikeCount(previousLikeCount);
+      
+    }
+      else{
+        onLikeToggle?.(post.post_id, newLikedState);
       }
-    } catch (error) {
+    }catch (error) {
       // If API fails, revert the optimistic update
-      setIsLiked(!newLikedState);
-      setLikeCount(prev => newLikedState ? prev - 1 : prev + 1);
+      setIsLiked(previousLikedState);
+      setLikeCount(previousLikeCount);
       console.error("Error calling like API:", error);
     }
   };
