@@ -81,6 +81,7 @@ class PostBase(BaseModel):
     updated_at: datetime
     images: List[Optional[ImageMetadata]] # List of strings from array_agg
     total_likes: int
+    is_liked: Optional[bool] = None  # Only included if user is authenticated
 
 class PostWithEngagement(PostBase):
     total_engagement: int
@@ -115,3 +116,6 @@ class GetUserByIdRequest(BaseModel):
 
 class GetUserByUsernameRequest(BaseModel):
     username: str
+
+class LikeImageRequest(BaseModel):
+    post_id: int
