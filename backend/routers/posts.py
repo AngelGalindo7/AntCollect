@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select, desc
 from backend.database import get_db
-from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType
+from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType, MediaAsset
 from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
 from ..utils.files import save_upload_file, get_file_size, delete_file, process_and_save_image
 from ..utils.auth import authenthicate_access_token
@@ -217,15 +217,20 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), user: UserSearch =
             Post.updated_at,
             top_posts_subquery.c.engagement_count.label("total_engagement"),
             #consider wrapping in array_remove to eliminate null values
-            func.array_agg(PostImage.json_metadata,
-                           order_by=PostImage.order_index
-                           ).label("images"),
+            func.array_agg(
+                MediaAsset.json_metadata,
+                order_by=PostImage.order_index
+                ).label("images"),
+            #func.array_agg(PostImage.json_metadata,
+            #               order_by=PostImage.order_index
+            #               ).label("images"),
             likes_subquery.label("total_likes"),
             existing_like_subquery.label("is_liked")
 
     )
     .join(top_posts_subquery, Post.id == top_posts_subquery.c.id )
     .outerjoin(PostImage, Post.id == PostImage.post_id)
+    .outerjoin(MediaAsset, PostImage.asset_id == MediaAsset.id)
     .group_by(Post.id,top_posts_subquery.c.engagement_count)
     .order_by(top_posts_subquery.c.engagement_count.desc())
     )

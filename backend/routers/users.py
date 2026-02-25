@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
 from ..database import get_db
-from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog
+from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset
 from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,authenthicate_access_token
 from typing import List
@@ -249,13 +249,18 @@ def retrieve_user(
             Post.type,
             Post.updated_at,
             func.array_agg(
-                PostImage.json_metadata,
+                MediaAsset.json_metadata,
                 order_by=PostImage.order_index
             ).label("images"),
+            #func.array_agg(
+            #    PostImage.json_metadata,
+            #    order_by=PostImage.order_index
+            #).label("images"),
             likes_subquery.label("total_likes"),
             existing_like_subquery.label("is_liked")
         )
         .outerjoin(PostImage, Post.id == PostImage.post_id)
+        .outerjoin(MediaAsset, PostImage.asset_id == MediaAsset.id)
         .group_by(Post.id)
         .order_by(Post.updated_at.desc())
     )
@@ -301,13 +306,18 @@ def retrieve_user_likes(
             Post.type,
             Post.updated_at,
             func.array_agg(
-                PostImage.file_metadata,
-                order_by=PostImage.order_index
-            ).label("images"),
-            likes_subquery.label("total_likes")
+            MediaAsset.json_metadata,
+            order_by=PostImage.order_index
+        ).label("images"),
+            #func.array_agg(
+            #    PostImage.file_metadata,
+            #    order_by=PostImage.order_index
+            #).label("images"),
+            #likes_subquery.label("total_likes")
         )
         .join(PostLike, Post.id == PostLike.post_id)
         .outerjoin(PostImage, Post.id == PostImage.post_id)
+        .outerjoin(MediaAsset, MediaAsset.id == PostImage.asset_id)
         .group_by(Post.id)
     )
 
