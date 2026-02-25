@@ -4,7 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select, desc
 from backend.database import get_db
 from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType
-from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest
+from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
 from ..utils.files import save_upload_file, get_file_size, delete_file, process_and_save_image
 from ..utils.auth import authenthicate_access_token
 
@@ -114,10 +114,10 @@ def like_image(
         )
         .first()
     )
-    print(f"Existing like: {existing_like}")
+    #print(f"Existing like: {existing_like}")
 
     if existing_like:
-        print(f"OKay delete?")
+        #print(f"OKay delete?")
         db.delete(existing_like)
         db.commit()
         return {
@@ -157,7 +157,7 @@ def like_image(
             }
 
 @router.get("/top")
-def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
+def get_top_posts(k: int = 10, db: Session = Depends(get_db), user: UserSearch = Depends(authenthicate_access_token)):
 
 
     # top_posts = (
@@ -172,14 +172,22 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
     #     .all()
     # )
 
-
+    """
     existing_like = (
         db.query(PostLike)
         .filter(
             PostLike.user_id==user.user_id,
-            PostLike.post_id==request.post_id
+            PostLike.post_id==Post.post_id
         )
         .first()
+    )"""
+    existing_like_subquery = (
+    select(func.count(PostLike.id))
+    .where(
+        PostLike.post_id == Post.id,
+        PostLike.user_id == user.user_id  # current user from auth token
+    )
+    .scalar_subquery()
     )
 
     likes_subquery = (
@@ -213,7 +221,7 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
                            order_by=PostImage.order_index
                            ).label("images"),
             likes_subquery.label("total_likes"),
-            existing_like.label("is_liked")
+            existing_like_subquery.label("is_liked")
 
     )
     .join(top_posts_subquery, Post.id == top_posts_subquery.c.id )
@@ -223,8 +231,7 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db)):
     )
 
     results = db.execute(final_query).all()
-
-
+    
     # return [
     #     {
     #         "post_id": post.id,
