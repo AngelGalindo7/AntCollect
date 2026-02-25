@@ -16,6 +16,10 @@ from backend.models.post import (
 
 )
 
+from backend.models.media_assets import (
+    MediaAsset,
+)
+
 from backend.models.auth import RefreshToken
 
 __all__ = [
@@ -28,7 +32,8 @@ __all__ = [
     "CommentLike",
     "EngagementLog",
     "EngagementType",
-    "RefreshToken"
+    "RefreshToken",
+    "MediaAsset"
 
 ]
 
