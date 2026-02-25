@@ -44,6 +44,10 @@ export type Post = {
   is_liked: boolean;
 };
 
+export interface PostWithEngagement extends PostBase {
+  total_engagement: number;
+
+}
 export type ProfileResponse = {
   user_id: number;
   posts: Post[];
@@ -65,4 +69,11 @@ export interface PostImageProps {
 export interface PostGridProps {
   profileData: ProfileResponse;
   // Future: Add onPostClick, loading, error, etc.
+}
+
+export interface TopPostsResponse {
+  total_returned: int,
+  k_value: int,
+  posts: PostWithEngagement[];
+
 }
