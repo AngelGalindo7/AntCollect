@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
 import PostGridLayout from "./PostGridLayout";
 import Search from "./Search";
-import type { Post } from "./Types";
+import type { Post, TopPostResponse, PostWithEngagement } from "./Types";
 import { fetchWithAuth } from "../utils/api";
 
 const API_BASE = "http://localhost:8000";
 
 const HomePage: React.FC = () => {
     const [loading, setLoading] = useState(false);
-    const [posts, setPosts] = useState<Post[]>([]);
+    const [posts, setPosts] = useState<PostWithEngagement[]>([]);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -24,23 +24,8 @@ const HomePage: React.FC = () => {
                 if (!res.ok) {
                 throw new Error(`Failed to load feed: ${res.status}`);
         }
-                const rawData = await res.json();
-                
-                // DEBUG LOG: See exactly what the API returns
-
-                // Check if the API returns an array directly, or an object like { posts: [...] }
-                let postsArray: any[] = [];
-                
-                
-                if (Array.isArray(rawData)) {
-                    postsArray = rawData;
-                } else if (rawData.posts && Array.isArray(rawData.posts)) {
-                    postsArray = rawData.posts;
-                } else {
-                    setPosts([]);
-                    return;
-                }
-
+                const data: TopPostResponse  = await res.json();
+                //console.log(data)
 
                 //const transformedPosts = postsArray.map((post: any) => ({
                 //    ...post,
@@ -53,8 +38,8 @@ const HomePage: React.FC = () => {
                 //    }),
                 //}));
                 const transformedData = {
-				        ...rawData,
-				        posts: rawData.posts.map((post) => ({
+				        ...data,
+				        posts: data.posts.map((post) => ({
 					      ...post,
 					      image_paths: post.images
                 .filter(img => img && img.paths?.medium)
@@ -62,7 +47,7 @@ const HomePage: React.FC = () => {
                   })),
                   };
                         
-                setPosts(transformedData);
+                setPosts(transformedData.posts);
 
               } catch (err) {
                 console.error("Error fetching home posts:", err);
@@ -76,7 +61,7 @@ const HomePage: React.FC = () => {
     }, []);
 
     // Placeholder for post interaction
-    const handlePostClick = (post: Post, imageIndex: number) => {
+    const handlePostClick = (post: PostWithEngagement, imageIndex: number) => {
         console.log(`Clicked post ${post.post_id}, image index: ${imageIndex}`);
         // Add navigation logic here, e.g., navigate(`/post/${post.post_id}`)
     };
@@ -84,8 +69,8 @@ const HomePage: React.FC = () => {
 
     const handleLikeToggle = (postId: number, isLiked: boolean) => {
         // Update the posts array with the new like count
-        setiPosts(prevPosts => 
-            prevPosts.map(post => {
+        setPosts((prevPosts) => 
+            prevPosts.map((post) => {
                 if (post.post_id === postId) {
                     // If liked, increment count; if unliked, decrement count
                     return {
