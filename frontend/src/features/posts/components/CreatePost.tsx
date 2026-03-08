@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { fetchWithAuth } from '../utils/api';
+import { fetchWithAuth } from '@/shared/api/api';
 const API_BASE = "http://localhost:8000";
 
 enum PostType {

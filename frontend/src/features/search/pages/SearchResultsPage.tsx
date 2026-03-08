@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import PostGridLayout from "./PostGridLayout";
-import type { Post } from "./Types";
-import Search from './Search';
-import { fetchWithAuth } from "../utils/api";
+import PostGridLayout from "@/features/posts/components/PostGridLayout";
+import type { Post } from "@/shared/types/Types";
+import Search from '@/features/search/components/Search';
+import { fetchWithAuth } from "@/shared/api/api";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 const API_BASE = "http://localhost:8000";
