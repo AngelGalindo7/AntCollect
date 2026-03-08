@@ -12,10 +12,11 @@ function App(){
   return (
     <BrowserRouter>
     <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<HomePage />} />
         <Route path="/Login" element={<LogIn />} />
         <Route path="/CreateAccount" element={<SignUp />}/>
+
+      <Route element={<Layout />}>
+        <Route path="/" element={<HomePage />} />
         <Route path="/:username" element={<UserProfile />} caseSensitive/>
         <Route path="/create-post" element={<CreatePost />} />
         <Route path="/search" element={<SearchResultsPage />} />
