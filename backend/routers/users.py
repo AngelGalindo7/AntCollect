@@ -199,11 +199,12 @@ def _search_posts(query: str, limit: int, db: Session) -> List[PostWithEngagemen
             Post.type,
             Post.updated_at,
             top_search_posts_subquery.c.engagement_count.label("total_engagement"),
-            func.array_agg(PostImage.json_metadata).label("images"),
+            func.array_agg(MediaAsset.json_metadata, order_by=PostImage.order_index).label("images"),
             likes_subquery.label("total_likes")
         )
         .join(top_search_posts_subquery, Post.id == top_search_posts_subquery.c.id)
         .outerjoin(PostImage, Post.id == PostImage.post_id)
+        .outerjoin(MediaAsset, PostImage.asset_id == MediaAsset.id)
         .group_by(Post.id, top_search_posts_subquery.c.engagement_count)
         .order_by(top_search_posts_subquery.c.engagement_count.desc())
     ).all()
