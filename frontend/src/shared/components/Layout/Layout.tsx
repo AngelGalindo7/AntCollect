@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { SideBar } from './SideBar';
 import { useUIStore } from '@/shared/store/useUIStore';
 import CreatePost from '@/features/posts/components/CreatePost';
+import { useUnreadCount } from '@/features/messaging/index';
 
 const Layout: React.FC = () => {
   //const navigate = useNavigate();
@@ -11,12 +12,12 @@ const Layout: React.FC = () => {
   //const handleNavigateHome = () => {
   //  navigate('/Home');
   //};
-
+  const unreadCount = useUnreadCount();
   return (
     <div className="flex h-screen overflow-hidden">
       
 
-      <SideBar />
+      <SideBar unreadCount={unreadCount} />
 
       {/* Main content area */}
       <main className="flex-1 bg-gray-100 overflow-auto">
