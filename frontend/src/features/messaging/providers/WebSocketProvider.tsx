@@ -16,6 +16,7 @@ const WS_URL = import.meta.env.VITE_WS_URL;
 interface WebSocketContextValue {
   sendMessage: (conversationId: string, content: string, clientMessageId: string) => void;
   sendTyping: (conversationId: string) => void;
+  sendReadAck: (conversationId: string, messageId: string) => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextValue | null>(null);
@@ -44,11 +45,12 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
       body: JSON.stringify({ conversationId, messageId }),
     });
   }, []); 
-  const { handleFrame } = useSocketFrameHandler(sendReadAck);
 
-  const handleFrameRef = useRef(handleFrame);
-  //const sendReadAckRef = useRef(sendReadAck);
-  useEffect(() => { handleFrameRef.current = handleFrame; });
+  
+  const handlers = useSocketFrameHandler(sendReadAck);
+  const handlersRef = useRef(handlers);
+
+  useEffect(() => { handlersRef.current = handlers; });
   //useEffect(() => { sendReadAckRef.current = sendReadAck; });
   useEffect(() => {
 
@@ -56,7 +58,6 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
 
     const client = new Client({
       brokerURL: WS_URL,
-
       heartbeatIncoming: 10_000,
       heartbeatOutgoing: 10_000,
       reconnectDelay: 5_000,
@@ -65,17 +66,32 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
         console.log("Connected")
         client.subscribe('/user/queue/messages', (frame) => {
           try {
-            const payload: WebSocketFrame = JSON.parse(frame.body);
-            handleFrameRef.current(payload);
+            handlersRef.current.handleInboundMessage(JSON.parse(frame.body));
           } catch {
             console.error('[WS] Failed to parse frame', frame.body);
           }
+        });
+        client.subscribe('/user/queue/ack', (frame) => {
+          try {
+        handlersRef.current.handleAck(JSON.parse(frame.body));
+          } catch {
+            console.error('[WS] Failed to parse ack frame', frame.body);
+          }
+        });
+
+        client.subscribe('/user/queue/events', (frame) => {
+          try {
+         handlersRef.current.handleEvent(JSON.parse(frame.body));
+          } catch {
+            console.error('[WS] Failed to parse event frame', frame.body);
+        }
         });
 
            sendSyncPayload(client);
       },
 
       onDisconnect: () => {
+        console.log('[WS] Disconnected');
       },
 
       onStompError: (frame) => {
@@ -111,19 +127,13 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
   }, []);
 
   return (
-    <WebSocketContext.Provider value={{ sendMessage, sendTyping }}>
+    <WebSocketContext.Provider value={{ sendMessage, sendTyping, sendReadAck }}>
       {children}
     </WebSocketContext.Provider>
   );
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
 
-/**
- * After (re)connecting, ask the server to reconcile unread counts for all
- * conversations since our last read message. The backend responds with a
- * SYNC_RESPONSE frame handled in useSocketFrameHandler.
- */
 function sendSyncPayload(client: Client) {
   const { conversations } = useConversationStore.getState();
   client.publish({
