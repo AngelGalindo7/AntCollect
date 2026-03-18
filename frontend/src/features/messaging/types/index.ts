@@ -49,6 +49,20 @@ export interface Message {
   status: MessageStatus;
 }
 
+
+export interface AckPayload {
+  status: 'ok' | 'error';
+  clientMessageId: string;
+  message: Message | null;
+  error: string | null;
+}
+
+export type EventPayload =
+  | { type: 'EDIT';   messageId: string; message: Message }
+  | { type: 'DELETE'; messageId: string }
+  | { type: 'READ';   messageId: string; readByUserId: string };
+
+
 export type WebSocketFrame =
   | { type: 'NEW_MESSAGE'; message: Message; conversationPreview: Conversation }
   | { type: 'MESSAGE_ACK'; clientMessageId: string; messageId: string; conversationId: string; timeSent: string }
