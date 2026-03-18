@@ -67,6 +67,7 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
     setQuery('');
     setUserResults([]);
   }
+  const upsertConversation = useConversationStore((s) => s.upsertConversation);
 
   async function handleSelectUser(user: UserResult) {
     const existing = useConversationStore.getState().conversations.find(
@@ -86,14 +87,26 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
         credentials: 'include',
         body: JSON.stringify({ 
         
-          userIds: [Number(localStorage.getItem('userId')), user.id], 
+          userIds: [user.id], 
           isGroup: false,
           groupName: null
 
 
         }),
       });
+
+      if (res.status === 409) {
+          const data = await res.json();
+          const existingId = data.message.split(': ')[1];
+          onSelectConversation(existingId);
+          handleClear();
+          return;
+        }
+      if (!res.ok) throw new Error('Failed to create conversation');
       const data = await res.json();
+
+      upsertConversation(data);
+
       onSelectConversation(data.conversationId);
       handleClear();
     } catch {
