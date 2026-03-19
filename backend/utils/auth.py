@@ -5,8 +5,12 @@ import jwt
 from fastapi import HTTPException, Depends, Request
 from backend.schemas import AccessRequest, UserSearch
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from dotenv import load_dotenv
+import os
 
-SECRET_KEY = "a_super_secret_key"
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
 security = HTTPBearer(auto_error=False) #Reads the "Authorization: Bearer <token> header"
 
 
