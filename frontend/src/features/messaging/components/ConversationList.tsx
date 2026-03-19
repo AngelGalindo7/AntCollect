@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useConversationStore } from '../store/conversationStore';
 import { ConversationCell } from './ConversationCell';
 import { ConversationSearch } from './ConversationSearch';
+import { fetchWithAuth } from '@/shared/api/api';
 
 const API_BASE = import.meta.env.VITE_API_URL;
-console.log('API_BASE:', API_BASE);
 interface ConversationListProps {
   onSelectConversation: (conversationId: string) => void;
 }
@@ -17,10 +17,11 @@ export function ConversationList({ onSelectConversation }: ConversationListProps
   const {data, isLoading, isError } = useQuery({
     queryKey: ['conversations'],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/conversations`, {
+      const res = await fetchWithAuth(`${API_BASE}/conversations`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to fetch conversations');
+      console.log('Fetched conversations:', await res.clone().json()); // Log the raw response data
       return res.json();
     }, 
   });
@@ -62,9 +63,9 @@ export function ConversationList({ onSelectConversation }: ConversationListProps
     <div className="flex flex-col">
       {conversations.map((c) => (
         <ConversationCell
-          key={c.id}
+          key={c.conversationId}
           conversation={c}
-          onClick={() => onSelectConversation(c.id)}
+          onClick={() => onSelectConversation(c.conversationId)}
         />
       ))}
     </div>
