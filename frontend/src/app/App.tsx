@@ -7,6 +7,7 @@ import HomePage from '@/features/feed/pages/HomePage';
 import SearchResultsPage from '@/features/search/pages/SearchResultsPage';
 import CreatePost from '@/features/posts/components/CreatePost';
 import Layout from '@/shared/components/Layout/Layout';
+import ChatPage from '@/features/messaging/pages/ChatPage';
 
 function App(){
   return (
@@ -20,6 +21,7 @@ function App(){
         <Route path="/:username" element={<UserProfile />} caseSensitive/>
         <Route path="/create-post" element={<CreatePost />} />
         <Route path="/search" element={<SearchResultsPage />} />
+        <Route path="/messages/:conversationId" element={<ChatPage />} /> 
         </Route>
     </Routes>
     </BrowserRouter>
