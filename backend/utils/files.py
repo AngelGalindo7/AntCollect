@@ -3,7 +3,6 @@ import shutil
 from fastapi import UploadFile, HTTPException
 from typing import List, Dict
 from PIL import Image
-import magic
 import io
 import uuid
 UPLOAD_BASE_DIR = "Uploads"
