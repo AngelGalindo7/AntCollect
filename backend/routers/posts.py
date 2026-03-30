@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select, desc
 from backend.database import get_db
 from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType, MediaAsset
+from backend.models.media_assets import AssetStatus
 from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
 from ..utils.files import save_upload_file, get_file_size, delete_file, process_and_save_image
 from ..utils.auth import authenthicate_access_token
@@ -46,31 +47,27 @@ def upload_post(
             image_data = process_and_save_image(image, user_id)
             all_created_files.extend(image_data["paths"].values())
             
-            variants = {}
-            
-            """for size_name in ["thumbnail", "medium", "original"]:
-                variants[size_name] = {
-                    "path": image_data["paths"][size_name],
-                    "size_bytes": image_data["sizes"][size_name],
-                    "width": image_data["dimensions"][size_name]["width"],
-                    "height": image_data["dimensions"][size_name]["height"]
-                 }"""
-            
-            order_index = i+1
+            asset = MediaAsset(
+                uploader_id=user_id,
+                file_url=image_data["paths"]["original"],
+                json_metadata={
+                    "paths": {
+                        "thumbnail": image_data["paths"]["thumbnail"],
+                        "medium":    image_data["paths"]["medium"],
+                        "original":  image_data["paths"]["original"]
+                    },
+                    "original_width":  image_data["dimensions"]["original"]["width"],
+                    "original_height": image_data["dimensions"]["original"]["height"]
+                },
+                status=AssetStatus.ATTACHED
+            )
+            db.add(asset)
+            db.flush()
+
             post_image = PostImage(
                 post_id=post.id,
-                order_index=order_index,
-                filename=image.filename,
-                json_metadata={
-                        "paths": {
-                            "thumbnail": image_data["paths"]["thumbnail"],
-                            "medium": image_data["paths"]["medium"],
-                            "original": image_data["paths"]["original"]
-                        },
-                        "original_width": image_data["dimensions"]["original"]["width"],
-                        "original_height": image_data["dimensions"]["original"]["height"]
-                    } 
-
+                order_index=i + 1,
+                asset_id=asset.id
             )
             image_records.append(post_image)
         
