@@ -104,6 +104,7 @@ class UserProfileResponse(BaseModel):
 
     user_id: int
     avatar_path: Optional[str] = None
+    is_owner: bool
     posts: List[PostBase]
 
 class UserPostLikesResponse(BaseModel):

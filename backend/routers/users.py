@@ -283,6 +283,7 @@ def retrieve_user(
     return UserProfileResponse(
         user_id=target_user.id,
         avatar_path=target_user.avatar_path,
+        is_owner=is_owner,
         posts=[PostBase.model_validate(row) for row in results]
     )
 
