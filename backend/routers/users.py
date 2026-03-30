@@ -282,6 +282,7 @@ def retrieve_user(
     results = db.execute(posts_query).all()
     return UserProfileResponse(
         user_id=target_user.id,
+        avatar_path=target_user.avatar_path,
         posts=[PostBase.model_validate(row) for row in results]
     )
 
@@ -398,6 +399,7 @@ def update_bio(
         )
 """
 
+#test existing 
 @router.post("/update-avatar")
 def update_avatar(
         

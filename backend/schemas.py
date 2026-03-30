@@ -103,6 +103,7 @@ class UserProfileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     user_id: int
+    avatar_path: Optional[str] = None
     posts: List[PostBase]
 
 class UserPostLikesResponse(BaseModel):
