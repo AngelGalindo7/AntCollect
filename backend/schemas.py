@@ -121,3 +121,14 @@ class GetUserByUsernameRequest(BaseModel):
 
 class LikeImageRequest(BaseModel):
     post_id: int
+
+class UserMeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    username: str
+    email: str
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_path: Optional[str] = None
+    is_private: bool
+    default_post_public: bool

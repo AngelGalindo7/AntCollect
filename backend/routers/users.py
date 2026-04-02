@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,authenthicate_access_token
 from typing import List
 
@@ -16,6 +16,17 @@ router = APIRouter(
     prefix="/users",
     tags=["Users"]
     )
+
+
+@router.get("/me", response_model=UserMeResponse)
+def get_me(
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token)
+):
+    db_user = db.query(User).filter(User.id == user.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return db_user
 
 
 @router.post("/create-user", response_model = UserResponse)
