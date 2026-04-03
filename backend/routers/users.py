@@ -1,12 +1,13 @@
-from fastapi import Depends, HTTPException, APIRouter, Request, File, Form,UploadFile
+from fastapi import Depends, HTTPException, APIRouter, Request, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse
-from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token,authenthicate_access_token
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, ChangePasswordRequest
+from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token
+from ..utils.files import process_and_save_image, _cleanup_files
 from typing import List
 
 ACCESS_TOKEN_MAX_AGE = 2 * 60  # 31 minutes
@@ -27,6 +28,74 @@ def get_me(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
+
+
+@router.patch("/me/profile", response_model=UserMeResponse)
+def update_profile(
+    updates: UpdateProfileRequest,
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token)
+):
+    db_user = db.query(User).filter(User.id == user.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if updates.username is not None and updates.username != db_user.username:
+        existing = db.query(User).filter(User.username == updates.username).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Username already taken")
+        db_user.username = updates.username
+
+    if updates.bio is not None:
+        db_user.bio = updates.bio
+
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+@router.post("/me/avatar", response_model=AvatarUpdateResponse)
+def update_avatar(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token)
+):
+    db_user = db.query(User).filter(User.id == user.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    old_avatar_path = db_user.avatar_path
+    result = process_and_save_image(file, user.user_id)
+    new_avatar_path = result["paths"]["thumbnail"]
+
+    db_user.avatar_path = new_avatar_path
+    db.commit()
+
+    if old_avatar_path and old_avatar_path != new_avatar_path:
+        _cleanup_files([old_avatar_path])
+
+    return AvatarUpdateResponse(avatar_path=new_avatar_path)
+
+
+@router.post("/me/password")
+def change_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token)
+):
+    db_user = db.query(User).filter(User.id == user.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not verify_password(payload.current_password, db_user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    if len(payload.new_password) < 8:
+        raise HTTPException(status_code=422, detail="New password must be at least 8 characters")
+
+    db_user.password_hash = hash_password(payload.new_password)
+    db.commit()
+    return {"message": "Password updated successfully"}
 
 
 @router.post("/create-user", response_model = UserResponse)
