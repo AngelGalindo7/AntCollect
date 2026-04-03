@@ -8,6 +8,7 @@ import SearchResultsPage from '@/features/search/pages/SearchResultsPage';
 import CreatePost from '@/features/posts/components/CreatePost';
 import Layout from '@/shared/components/Layout/Layout';
 import ChatPage from '@/features/messaging/pages/ChatPage';
+import SettingsPage from '@/features/settings/pages/SettingsPage';
 
 function App(){
   return (
@@ -18,10 +19,11 @@ function App(){
 
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/:username" element={<UserProfile />} caseSensitive/>
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/create-post" element={<CreatePost />} />
         <Route path="/search" element={<SearchResultsPage />} />
-        <Route path="/messages/:conversationId" element={<ChatPage />} /> 
+        <Route path="/messages/:conversationId" element={<ChatPage />} />
+        <Route path="/:username" element={<UserProfile />} caseSensitive/>
         </Route>
     </Routes>
     </BrowserRouter>
