@@ -127,8 +127,16 @@ class UserMeResponse(BaseModel):
     id: int
     username: str
     email: str
-    display_name: Optional[str] = None
     bio: Optional[str] = None
     avatar_path: Optional[str] = None
-    is_private: bool
-    default_post_public: bool
+
+class UpdateProfileRequest(BaseModel):
+    username: Optional[str] = None
+    bio: Optional[str] = None
+
+class AvatarUpdateResponse(BaseModel):
+    avatar_path: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
