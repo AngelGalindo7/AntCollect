@@ -1,9 +1,9 @@
 import { create } from 'zustand';
 
 interface UIState {
-  isCreatePostOpen: boolean;
+  isCreatePostModalOpen: boolean;
   openCreatePostModal: () => void;
-  closeCreatePostModal: () => void; 
+  closeCreatePostModal: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({

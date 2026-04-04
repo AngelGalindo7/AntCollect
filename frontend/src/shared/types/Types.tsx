@@ -42,11 +42,11 @@ export type Post = {
   type: string;
   updated_at: string;
   is_liked: boolean;
+  images?: { paths: { medium: string; original: string } }[];
 };
 
-export interface PostWithEngagement extends PostBase {
+export interface PostWithEngagement extends Post {
   total_engagement: number;
-
 }
 export type ProfileResponse = {
   user_id: number;
@@ -77,8 +77,7 @@ export interface PostGridProps {
 }
 
 export interface TopPostsResponse {
-  total_returned: int,
-  k_value: int,
+  total_returned: number;
+  k_value: number;
   posts: PostWithEngagement[];
-
 }
