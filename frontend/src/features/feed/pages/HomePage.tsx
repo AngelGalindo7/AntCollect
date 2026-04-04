@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import Search from "@/features/search/components/Search";
-import type { Post, TopPostResponse, PostWithEngagement } from "@/shared/types/Types";
+import type { TopPostsResponse, PostWithEngagement } from "@/shared/types/Types";
 import { fetchWithAuth } from "@/shared/api/api";
 
 const API_BASE = "http://localhost:8000";
@@ -24,7 +24,7 @@ const HomePage: React.FC = () => {
                 if (!res.ok) {
                 throw new Error(`Failed to load feed: ${res.status}`);
         }
-                const data: TopPostResponse  = await res.json();
+                const data: TopPostsResponse = await res.json();
                 //console.log(data)
 
                 //const transformedPosts = postsArray.map((post: any) => ({
