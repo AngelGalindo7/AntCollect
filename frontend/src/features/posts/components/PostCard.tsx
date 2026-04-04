@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import type { Post } from '@/shared/types/Types';
 import { fetchWithAuth } from '@/shared/api/api';
 /**

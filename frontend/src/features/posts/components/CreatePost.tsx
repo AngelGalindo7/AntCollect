@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { fetchWithAuth } from '@/shared/api/api';
 const API_BASE = "http://localhost:8000";
 
-enum PostType {
-
-  LOOKING_FOR = "looking_for",
-  COLLECTION = "collection",
-  TRADING ="trading"
-}
+const PostType = {
+  LOOKING_FOR: "looking_for",
+  COLLECTION: "collection",
+  TRADING: "trading",
+} as const;
+type PostType = typeof PostType[keyof typeof PostType];
 
 interface CreatePostProps {
   onSuccess?: () => void;

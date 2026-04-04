@@ -1,6 +1,6 @@
 import React from 'react';
 import PostCard from './PostCard';
-import type { Post } from './Types';
+import type { Post } from '@/shared/types/Types';
 
 /**
  * PostGridLayout Component
