@@ -50,6 +50,11 @@ export interface PostWithEngagement extends PostBase {
 }
 export type ProfileResponse = {
   user_id: number;
+  username: string;
+  bio: string | null;
+  avatar_path: string | null;
+  sticker_count: number;
+  is_owner: boolean;
   posts: Post[];
 };
 
