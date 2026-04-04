@@ -134,11 +134,11 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0 }) => {
       <h2 className="text-base font-semibold text-gray-900">Messages</h2>
     </div>
     <ConversationSearch
-      onSelectConversation={(id) => { /* open chat — TBD */ }}
+      onSelectConversation={(_id) => { /* open chat — TBD */ }}
     />
     <div className="flex-1 overflow-y-auto">
       <ConversationList
-        onSelectConversation={(id) => { /* open chat — TBD */ }}
+        onSelectConversation={(_id) => { /* open chat — TBD */ }}
       />
     </div>
   </div>
