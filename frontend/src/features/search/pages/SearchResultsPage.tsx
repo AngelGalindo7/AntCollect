@@ -59,7 +59,7 @@ const SearchResultsPage: React.FC = () => {
           ...data,
           posts: data.posts.map((post) => ({
             ...post,
-            image_paths: post.images
+            image_paths: (post.images ?? [])
               .filter(img => img && img.paths?.medium)
               .map((img) => `${API_BASE}/${img.paths.original}`),
           })),

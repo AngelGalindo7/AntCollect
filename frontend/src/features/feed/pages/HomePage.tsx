@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import Search from "@/features/search/components/Search";
-import type { TopPostsResponse, PostWithEngagement } from "@/shared/types/Types";
+import type { Post, TopPostsResponse, PostWithEngagement } from "@/shared/types/Types";
 import { fetchWithAuth } from "@/shared/api/api";
 
 const API_BASE = "http://localhost:8000";
@@ -41,7 +41,7 @@ const HomePage: React.FC = () => {
 				        ...data,
 				        posts: data.posts.map((post) => ({
 					      ...post,
-					      image_paths: post.images
+					      image_paths: (post.images ?? [])
                 .filter(img => img && img.paths?.medium)
                 .map((img) => `${API_BASE}/${img.paths.original}`),
                   })),
@@ -61,7 +61,7 @@ const HomePage: React.FC = () => {
     }, []);
 
     // Placeholder for post interaction
-    const handlePostClick = (post: PostWithEngagement, imageIndex: number) => {
+    const handlePostClick = (post: Post, imageIndex: number) => {
         console.log(`Clicked post ${post.post_id}, image index: ${imageIndex}`);
         // Add navigation logic here, e.g., navigate(`/post/${post.post_id}`)
     };
