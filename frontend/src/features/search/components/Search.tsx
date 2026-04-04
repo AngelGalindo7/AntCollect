@@ -10,13 +10,6 @@ interface UserResult {
   username: string;
   profile_image?: string;
 }
-interface SearchResponse {
-  id: number;
-  username: string;
-  email?: string;
-  // Add other user fields as needed
-}
-
 interface QuickSearchResponse {
   query: string;
   users: UserResult[];
