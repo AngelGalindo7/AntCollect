@@ -50,6 +50,7 @@ jobs:
           DB_HOST: localhost
           DB_PORT: 5432
           DB_NAME: antcollect_test
+          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
   messaging:
