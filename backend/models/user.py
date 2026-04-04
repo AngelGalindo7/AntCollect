@@ -16,4 +16,5 @@ class User(Base):
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'),nullable=False)
     avatar_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     bio: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    sticker_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     
