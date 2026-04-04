@@ -49,6 +49,9 @@ def update_profile(
     if updates.bio is not None:
         db_user.bio = updates.bio
 
+    if updates.sticker_count is not None:
+        db_user.sticker_count = updates.sticker_count
+
     db.commit()
     db.refresh(db_user)
     return db_user
@@ -364,7 +367,10 @@ def retrieve_user(
     results = db.execute(posts_query).all()
     return UserProfileResponse(
         user_id=target_user.id,
+        username=target_user.username,
+        bio=target_user.bio,
         avatar_path=target_user.avatar_path,
+        sticker_count=target_user.sticker_count,
         is_owner=is_owner,
         posts=[PostBase.model_validate(row) for row in results]
     )
