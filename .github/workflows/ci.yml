@@ -45,7 +45,11 @@ jobs:
       - name: Run pytest
         run: pytest
         env:
-          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: antcollect_test
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
   messaging:
