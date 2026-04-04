@@ -103,7 +103,10 @@ class UserProfileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     user_id: int
+    username: str
+    bio: Optional[str] = None
     avatar_path: Optional[str] = None
+    sticker_count: int
     is_owner: bool
     posts: List[PostBase]
 
@@ -133,6 +136,7 @@ class UserMeResponse(BaseModel):
 class UpdateProfileRequest(BaseModel):
     username: Optional[str] = None
     bio: Optional[str] = None
+    sticker_count: Optional[int] = None
 
 class AvatarUpdateResponse(BaseModel):
     avatar_path: str
