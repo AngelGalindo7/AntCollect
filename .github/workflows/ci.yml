@@ -73,7 +73,7 @@ jobs:
           cache: maven
 
       - name: Run tests
-        run: ./mvnw test -Dspring.profiles.active=test
+        run: mvn test -Dspring.profiles.active=test
         working-directory: messaging-service
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
