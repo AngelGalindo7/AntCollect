@@ -72,6 +72,7 @@ export function useSocketFrameHandler(sendReadAck: SendReadAck) {
   }
 
   function handleEvent(payload: EventPayload) {
+    const msgStore = useMessageStore.getState();
     switch (payload.type) {
       case 'EDIT': {
         const conversationId = String(payload.message.conversationId);

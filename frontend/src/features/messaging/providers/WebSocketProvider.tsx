@@ -1,15 +1,14 @@
-import React, {
+import {
   createContext,
   useContext,
   useEffect,
   useRef,
   useCallback,
-  ReactNode,
 } from 'react';
+import type { ReactNode } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useConversationStore } from '../store/conversationStore';
 import { useSocketFrameHandler } from '../hooks/useSocketFrameHandler';
-import type { WebSocketFrame } from '../types';
 
 const WS_URL = import.meta.env.VITE_WS_URL;
 

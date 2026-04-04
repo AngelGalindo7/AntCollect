@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useConversationStore } from '../store/conversationStore';
 import { ConversationCell } from './ConversationCell';
-import { ConversationSearch } from './ConversationSearch';
 import { fetchWithAuth } from '@/shared/api/api';
 
 const API_BASE = import.meta.env.VITE_API_URL;
