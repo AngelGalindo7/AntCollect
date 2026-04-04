@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useUIStore } from '@/shared/store/useUIStore';
+import { fetchWithAuth } from '@/shared/api/api';
 import { ConversationList } from '@/features/messaging/components/ConversationList';
 import { ConversationSearch } from '@/features/messaging/components/ConversationSearch';
+
+const API_BASE = 'http://localhost:8000';
+
+interface UserMe {
+  username: string;
+  avatar_path: string | null;
+}
 interface SideBarProps {
   unreadCount?: number;
 }
@@ -10,6 +19,20 @@ interface SideBarProps {
 export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0 }) => {
   const openCreatePostModal = useUIStore((state) => state.openCreatePostModal);
   const [messagesOpen, setMessagesOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const { data: me } = useQuery<UserMe>({
+    queryKey: ['me'],
+    queryFn: () =>
+      fetchWithAuth(`${API_BASE}/users/me`).then((r) => {
+        if (!r.ok) throw new Error('Failed to load user');
+        return r.json();
+      }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const avatarUrl = me?.avatar_path ? `${API_BASE}/${me.avatar_path}` : null;
+  const initials = me ? me.username.slice(0, 2).toUpperCase() : '?';
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
     `w-full px-2 py-3 flex items-center justify-center transition-colors duration-200 ${
       isActive ? 'text-gray-900 font-bold' : 'text-gray-500'
@@ -83,6 +106,22 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0 }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </NavLink>
+
+        <div className="flex-1" />
+
+        <button
+          onClick={() => me && navigate(`/${me.username}`)}
+          className="w-full px-2 py-3 flex items-center justify-center"
+          title={me ? `Go to your profile (@${me.username})` : 'Profile'}
+        >
+          <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white text-xs font-semibold shrink-0 ring-2 ring-transparent hover:ring-blue-400 transition-all">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="your profile" className="w-full h-full object-cover" />
+            ) : (
+              initials
+            )}
+          </div>
+        </button>
       </nav>
     </aside>
     <div
