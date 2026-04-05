@@ -1,4 +1,5 @@
 import bcrypt
+import secrets
 from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
 import jwt
@@ -32,11 +33,16 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return token
 
 def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
-    to_encode = {"sub" : str(data["sub"])}
     issued_at = datetime.now(timezone.utc)
-    expires_at = issued_at+ (expires_delta or timedelta(days = 10))
+    expires_at = issued_at + (expires_delta or timedelta(days=10))
 
-    payload = {"sub":str(data["sub"]),"exp": expires_at,"type": "refresh"}
+    # jti (JWT ID) makes every token unique even when issued in the same second
+    payload = {
+        "sub": str(data["sub"]),
+        "exp": expires_at,
+        "type": "refresh",
+        "jti": secrets.token_hex(16),
+    }
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
     token_info = {"issued_at":issued_at, "expires_at":expires_at,"token":token}
