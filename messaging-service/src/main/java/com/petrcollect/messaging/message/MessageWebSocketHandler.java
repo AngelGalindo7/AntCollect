@@ -20,6 +20,8 @@ import java.util.concurrent.Executors;
 
 import com.petrcollect.messaging.conversation.ConversationParticipant;
 import com.petrcollect.messaging.conversation.ConversationParticipantRepository;
+import com.petrcollect.messaging.user.User;
+import com.petrcollect.messaging.user.UserRepository;
 import com.petrcollect.messaging.websocket.SessionRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +55,7 @@ public class MessageWebSocketHandler {
     private final SessionRegistry sessionRegistry;
     private final ConversationParticipantRepository participantRepository;
     private final SimpMessagingTemplate messaging;
+    private final UserRepository userRepository;
 
     /**
      * Per-session state: executor + userId + registeredAt timestamp.
@@ -65,11 +68,13 @@ public class MessageWebSocketHandler {
     public MessageWebSocketHandler(MessageService messageService,
                                    SessionRegistry sessionRegistry,
                                    ConversationParticipantRepository participantRepository,
-                                   SimpMessagingTemplate messaging) {
+                                   SimpMessagingTemplate messaging,
+                                   UserRepository userRepository) {
         this.messageService = messageService;
         this.sessionRegistry = sessionRegistry;
         this.participantRepository = participantRepository;
         this.messaging = messaging;
+        this.userRepository = userRepository;
     }
 
     // ── Lifecycle events ──────────────────────────────────────────────────────
@@ -183,20 +188,22 @@ public class MessageWebSocketHandler {
         state.executor().submit(() -> {
             try {
                 Message saved = messageService.sendMessage(req, senderId);
+                MessageResponse dto = toWebSocketMessage(saved, req.conversationId());
                 // Ack back to sender
                 messaging.convertAndSendToUser(
                         senderId.toString(), DEST_ACK,
-                        AckPayload.success(req.clientMessageId(), saved)
+                        AckPayload.success(req.clientMessageId(), dto)
                 );
                 // Fan-out to all online participants except the sender
                 fanOutToParticipants(req.conversationId(), senderId,
-                        DEST_MESSAGES, saved);
+                        DEST_MESSAGES, new InboundMessagePayload(dto));
 
             } catch (MessageService.DuplicateMessageException dup) {
                 // Idempotent retry — return existing message, same shape as success
                 messaging.convertAndSendToUser(
                         senderId.toString(), DEST_ACK,
-                        AckPayload.success(req.clientMessageId(), dup.getExisting())
+                        AckPayload.success(req.clientMessageId(),
+                                toWebSocketMessage(dup.getExisting(), req.conversationId()))
                 );
             } catch (Exception e) {
                 log.error("sendMessage failed for userId={}", senderId, e);
@@ -318,6 +325,31 @@ public class MessageWebSocketHandler {
         }
     }
 
+    /**
+     * Converts a persisted {@link Message} entity to the {@link MessageResponse} DTO
+     * the frontend expects. The conversationId is passed explicitly to avoid a
+     * LazyInitializationException when accessing the lazy {@code conversation} proxy
+     * outside the transaction that saved the entity.
+     */
+    private MessageResponse toWebSocketMessage(Message m, Long conversationId) {
+        User sender = userRepository.findById(m.getSender()).orElse(null);
+        return new MessageResponse(
+                m.getClientMessageId().toString(),
+                String.valueOf(m.getMessageId()),
+                String.valueOf(conversationId),
+                String.valueOf(m.getSender()),
+                sender != null ? sender.getUsername() : "Unknown",
+                sender != null ? sender.getAvatarPath() : null,
+                m.getContent(),
+                m.getContentType().name().toLowerCase(),
+                m.getTimeSent().toString(),
+                m.getEditedAt() != null ? m.getEditedAt().toString() : null,
+                null,   // replyTo — not supported in initial send
+                null,   // deletedAt
+                "sent"
+        );
+    }
+
     /** Extracts userId from the STOMP session attributes (set by JwtHandshakeInterceptor). */
     private Long extractUserId(StompHeaderAccessor accessor) {
         if (accessor == null) return null;
@@ -358,12 +390,16 @@ public class MessageWebSocketHandler {
                                  ExecutorService executor,
                                  long registeredAt) {}
 
-    /** Outbound ack payload sent to the sender after a send attempt. */
+    /**
+     * Outbound ack payload sent to the sender after a send attempt.
+     * Uses {@link MessageResponse} so the frontend receives the same shape
+     * as the REST history endpoint — all IDs as strings, no nested entities.
+     */
     public record AckPayload(String status,
                               java.util.UUID clientMessageId,
-                              Message message,
+                              MessageResponse message,
                               String error) {
-        static AckPayload success(java.util.UUID clientMessageId, Message message) {
+        static AckPayload success(java.util.UUID clientMessageId, MessageResponse message) {
             return new AckPayload("ok", clientMessageId, message, null);
         }
 
@@ -371,6 +407,13 @@ public class MessageWebSocketHandler {
             return new AckPayload("error", clientMessageId, null, error);
         }
     }
+
+    /**
+     * Wrapper for messages fanned out to conversation participants.
+     * The frontend's handleInboundMessage expects {@code { message: Message }},
+     * so the DTO must be nested under a "message" key.
+     */
+    public record InboundMessagePayload(MessageResponse message) {}
 
     /** Outbound event payload for edit / delete / read-receipt broadcasts. */
     public record EventPayload(String type,
