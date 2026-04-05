@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
-import type { Post, ProfileResponse } from "@/shared/types/Types";
+import type { Folder, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import Search from "@/features/search/components/Search";
 import { fetchWithAuth } from "@/shared/api/api";
 import { useParams } from "react-router-dom";
@@ -21,6 +21,7 @@ const UserProfile: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState<TabValue>("collection");
+  const [folders, setFolders] = useState<Folder[]>([]);
 
   // Avatar upload state
   const [uploading, setUploading] = useState(false);
@@ -31,19 +32,24 @@ const UserProfile: React.FC = () => {
   const [stickerDraft, setStickerDraft] = useState<number>(0);
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchAll = async () => {
       setLoading(true);
       try {
-        const res = await fetchWithAuth(`${API_BASE}/users/get_user_`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ username: String(username) }),
-        });
+        const [profileRes, foldersRes] = await Promise.all([
+          fetchWithAuth(`${API_BASE}/users/get_user_`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ username: String(username) }),
+          }),
+          fetchWithAuth(`${API_BASE}/folders/user/${username}`, {
+            credentials: "include",
+          }),
+        ]);
 
-        if (!res.ok) throw new Error(`Failed to load profile: ${res.status}`);
+        if (!profileRes.ok) throw new Error(`Failed to load profile: ${profileRes.status}`);
 
-        const data: ProfileResponse = await res.json();
+        const data: ProfileResponse = await profileRes.json();
         const transformedData: ProfileResponse = {
           ...data,
           posts: data.posts.map((post) => ({
@@ -54,6 +60,11 @@ const UserProfile: React.FC = () => {
           })),
         };
         setProfile(transformedData);
+
+        if (foldersRes.ok) {
+          const folderData: Folder[] = await foldersRes.json();
+          setFolders(folderData);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -61,7 +72,7 @@ const UserProfile: React.FC = () => {
       }
     };
 
-    fetchProfile();
+    fetchAll();
   }, [username, refreshKey]);
 
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,6 +164,11 @@ const UserProfile: React.FC = () => {
 
   const filteredPosts = profile.posts.filter((p) => p.type === activeTab);
 
+  const gridItems: GridItem[] = [
+    ...folders.map((f): GridItem => ({ kind: 'folder', data: f })),
+    ...filteredPosts.map((p): GridItem => ({ kind: 'post', data: p })),
+  ];
+
   return (
     <div className="w-full">
       {/* ── Section 1: Profile header bar ── */}
@@ -241,10 +257,10 @@ const UserProfile: React.FC = () => {
                   )}
                 </div>
 
-                {/* Folders stat (visual placeholder) */}
+                {/* Folders stat */}
                 <div className="flex flex-col items-center bg-gray-50 rounded-lg px-4 py-2 min-w-18">
                   <span className="text-xs text-gray-500 mb-1">Folders</span>
-                  <span className="text-lg font-semibold text-gray-900">0</span>
+                  <span className="text-lg font-semibold text-gray-900">{folders.length}</span>
                 </div>
               </div>
             </div>
@@ -278,9 +294,9 @@ const UserProfile: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Section 2: Post grid ── */}
+      {/* ── Section 3: Mixed grid (folders first, then filtered posts) ── */}
       <PostGridLayout
-        posts={filteredPosts}
+        items={gridItems}
         onPostClick={handlePostClick}
         onLikeToggle={handleLikeToggle}
       />
