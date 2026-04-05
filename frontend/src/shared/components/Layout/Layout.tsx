@@ -1,14 +1,14 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { SideBar } from './SideBar';
 import { useUIStore } from '@/shared/store/useUIStore';
 import CreatePost from '@/features/posts/components/CreatePost';
+import CreateMenu from '@/features/create/components/CreateMenu';
 import { useUnreadCount } from '@/features/messaging/index';
 
 const Layout: React.FC = () => {
-  //const navigate = useNavigate();
-  //const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
-  const { isCreatePostModalOpen, closeCreatePostModal } = useUIStore();
+  const navigate = useNavigate();
+  const { isCreateMenuOpen, closeCreateMenu, openCreatePostModal, isCreatePostModalOpen, closeCreatePostModal } = useUIStore();
   //const handleNavigateHome = () => {
   //  navigate('/Home');
   //};
@@ -25,6 +25,15 @@ const Layout: React.FC = () => {
           <Outlet />
         </div>
       </main>
+
+      {/* Create Menu Overlay */}
+      {isCreateMenuOpen && (
+        <CreateMenu
+          onSelectPost={openCreatePostModal}
+          onSelectFolder={() => { closeCreateMenu(); navigate('/create-folder'); }}
+          onClose={closeCreateMenu}
+        />
+      )}
 
       {/* Create Post Modal Overlay */}
       {isCreatePostModalOpen && (
