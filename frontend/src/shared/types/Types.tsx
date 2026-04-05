@@ -81,3 +81,19 @@ export interface TopPostsResponse {
   k_value: number;
   posts: PostWithEngagement[];
 }
+
+export interface Folder {
+  id: number;
+  user_id: number;
+  name: string;
+  description: string | null;
+  cover_post_id: number | null;
+  is_public: boolean;
+  post_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type GridItem =
+  | { kind: 'folder'; data: Folder }
+  | { kind: 'post'; data: Post };
