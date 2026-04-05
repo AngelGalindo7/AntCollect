@@ -22,6 +22,8 @@ from backend.models.media_assets import (
 
 from backend.models.auth import RefreshToken
 
+from backend.models.folder import Folder, FolderPost
+
 __all__ = [
     "Base",
     "User",
@@ -33,7 +35,8 @@ __all__ = [
     "EngagementLog",
     "EngagementType",
     "RefreshToken",
-    "MediaAsset"
-
+    "MediaAsset",
+    "Folder",
+    "FolderPost",
 ]
 
