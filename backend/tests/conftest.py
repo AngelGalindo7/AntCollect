@@ -1,4 +1,5 @@
 import os
+import uuid
 
 import pytest
 import pytest_asyncio
@@ -41,13 +42,26 @@ async def client(db: Session):
     app.dependency_overrides.clear()
 
 
+@pytest.fixture
+def test_credentials() -> dict:
+    """Fresh credentials for each test — rolled back by the db fixture."""
+    suffix = uuid.uuid4().hex[:8]
+    return {
+        "username": f"testauth_{suffix}",
+        "email": f"testauth_{suffix}@example.com",
+        "password": "TestPass1234!",
+    }
+
+
 @pytest_asyncio.fixture
-async def auth_client(client: AsyncClient):
+async def auth_client(client: AsyncClient, test_credentials: dict):
+    """Create a unique test user, log in, and return the authenticated client."""
+    await client.post("/users/create-user", json=test_credentials)
     await client.post(
         "/users/login",
         json={
-            "email": os.getenv("TEST_USER_EMAIL"),
-            "password": os.getenv("TEST_USER_PASSWORD"),
+            "email": test_credentials["email"],
+            "password": test_credentials["password"],
         },
     )
     return client
