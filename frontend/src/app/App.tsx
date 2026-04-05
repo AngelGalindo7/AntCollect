@@ -9,6 +9,7 @@ import CreatePost from '@/features/posts/components/CreatePost';
 import Layout from '@/shared/components/Layout/Layout';
 import ChatPage from '@/features/messaging/pages/ChatPage';
 import SettingsPage from '@/features/settings/pages/SettingsPage';
+import CreateFolder from '@/features/create/pages/CreateFolder';
 
 function App(){
   return (
@@ -21,6 +22,7 @@ function App(){
         <Route path="/" element={<HomePage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/create-post" element={<CreatePost />} />
+        <Route path="/create-folder" element={<CreateFolder />} />
         <Route path="/search" element={<SearchResultsPage />} />
         <Route path="/messages/:conversationId" element={<ChatPage />} />
         <Route path="/:username" element={<UserProfile />} caseSensitive/>
