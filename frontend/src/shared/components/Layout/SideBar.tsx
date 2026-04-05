@@ -17,7 +17,7 @@ interface SideBarProps {
 }
 
 export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0 }) => {
-  const openCreatePostModal = useUIStore((state) => state.openCreatePostModal);
+  const openCreateMenu = useUIStore((state) => state.openCreateMenu);
   const [messagesOpen, setMessagesOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -81,9 +81,9 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0 }) => {
 
 
         <button
-          onClick={openCreatePostModal}
+          onClick={openCreateMenu}
           className={iconButtonClass}
-          title="Create Post"
+          title="Create"
         >
           <svg
             className="w-6 h-6"
