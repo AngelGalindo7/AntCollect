@@ -39,6 +39,9 @@ export default function ChatPage() {
     isLoading: messagesLoading,
     isError:   messagesError,
     refetch:   refetchMessages,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   } = useMessages(safeId);
 
   // ── Conversation metadata ──────────────────────────────────────────────────
@@ -184,6 +187,9 @@ export default function ChatPage() {
           <MessageList
             conversationId={conversationId}
             currentUserId={currentUserId}
+            fetchNextPage={fetchNextPage}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
           />
         )}
       </div>
@@ -220,7 +226,7 @@ function MessageSkeleton() {
           className={`flex items-end gap-2 ${item.isOwn ? 'flex-row-reverse' : 'flex-row'}`}
         >
           {!item.isOwn && (
-            <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse flex-shrink-0" />
+            <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse shrink-0" />
           )}
           <div className={`h-9 rounded-2xl bg-gray-200 animate-pulse ${item.width}`} />
         </div>
