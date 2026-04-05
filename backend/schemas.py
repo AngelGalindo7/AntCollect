@@ -144,3 +144,44 @@ class AvatarUpdateResponse(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+class FolderCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    is_public: bool = True
+
+
+class FolderUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    cover_post_id: Optional[int] = None
+    is_public: Optional[bool] = None
+
+
+class FolderResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    user_id: int
+    name: str
+    description: Optional[str] = None
+    cover_post_id: Optional[int] = None
+    is_public: bool
+    created_at: datetime
+    updated_at: datetime
+    post_count: int = 0
+
+
+class AddPostToFolderRequest(BaseModel):
+    post_id: int
+
+
+class FolderWithPostsResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    user_id: int
+    name: str
+    description: Optional[str] = None
+    cover_post_id: Optional[int] = None
+    is_public: bool
+    posts: List[PostBase]
