@@ -1,6 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/antcollect_test
+    username: ${MESSAGING_DB_USER:testuser}
+    password: ${MESSAGING_DB_PASSWORD:testpassword}
 
 app:
   jwt:
