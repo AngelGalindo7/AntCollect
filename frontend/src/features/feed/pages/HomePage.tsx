@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import Search from "@/features/search/components/Search";
-import type { Post, TopPostsResponse, PostWithEngagement } from "@/shared/types/Types";
+import type { Post, TopPostsResponse, PostWithEngagement, GridItem } from "@/shared/types/Types";
 import { fetchWithAuth } from "@/shared/api/api";
 
 const API_BASE = "http://localhost:8000";
@@ -123,7 +123,7 @@ const HomePage: React.FC = () => {
             {/* Posts Grid Layout */}
             {posts.length > 0 ? (
                 <PostGridLayout
-                posts={posts}
+                items={posts.map((p): GridItem => ({ kind: 'post', data: p }))}
                 onPostClick={handlePostClick}
                 onLikeToggle={handleLikeToggle}
                 />
