@@ -20,8 +20,15 @@ export function AppProviders({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleStorage = () => setIsAuthenticated(!!localStorage.getItem('userId'));
+    // 'storage' fires when another tab changes localStorage.
+    // 'auth:login' is dispatched by LogIn.tsx after same-tab login because
+    // the browser does NOT fire 'storage' for same-window localStorage writes.
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    window.addEventListener('auth:login', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('auth:login', handleStorage);
+    };
   }, []);
 
   return (
