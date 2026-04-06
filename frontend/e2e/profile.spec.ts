@@ -1,0 +1,50 @@
+import { test, expect } from '@playwright/test';
+
+// Uses the project-level storageState (authenticated).
+// All own-profile tests navigate to /${TEST_USERNAME}.
+
+test('own profile renders the avatar upload button', async ({ page }) => {
+  await page.goto(`/${process.env.TEST_USERNAME}`);
+  // UserProfile.tsx renders this button only when profile.is_owner is true.
+  await expect(page.getByRole('button', { name: 'Upload avatar' })).toBeVisible();
+});
+
+test('sticker count is inline-editable', async ({ page }) => {
+  await page.goto(`/${process.env.TEST_USERNAME}`);
+
+  // Locate the stats box that contains the "Stickers" label, then find the
+  // value span inside it (the numeric count, distinct from the Folders count).
+  const stickersBox = page
+    .locator('div')
+    .filter({ has: page.locator('span', { hasText: 'Stickers' }) })
+    .first();
+  const stickerValue = stickersBox
+    .locator('span')
+    .filter({ hasText: /^\d+$/ });
+
+  await stickerValue.click();
+
+  // After click, UserProfile replaces the span with an <input type="number">.
+  const stickerInput = page.locator('input[type="number"]');
+  await expect(stickerInput).toBeVisible();
+
+  await stickerInput.fill('42');
+  await stickerInput.press('Enter');
+
+  // Input disappears; span shows the committed value.
+  await expect(stickerInput).not.toBeVisible();
+  await expect(stickersBox.locator('span').filter({ hasText: /^\d+$/ })).toHaveText('42');
+});
+
+test('visiting a different user profile shows no avatar upload button', async ({ page }) => {
+  await page.goto(`/${process.env.TEST_OTHER_USERNAME}`);
+  await expect(page.getByRole('button', { name: 'Upload avatar' })).not.toBeVisible();
+});
+
+test('clicking a folder card navigates to /folders/:folderId', async ({ page }) => {
+  await page.goto(`/${process.env.TEST_USERNAME}`);
+  // FolderCard is the only component that renders a circular badge with text "F"
+  // (class bg-purple-700). Clicking anywhere inside the card triggers navigation.
+  await page.locator('[class*="bg-purple-700"]').first().click();
+  await expect(page).toHaveURL(/\/folders\/\d+/);
+});
