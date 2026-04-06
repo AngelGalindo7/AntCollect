@@ -44,7 +44,10 @@ export async function fetchWithAuth(
 
         response = await fetch(url, config);
     } else {
-        //window.location.href = "/"; // Redirect to login page
+        localStorage.removeItem("username");
+        localStorage.removeItem("userId");
+        localStorage.removeItem("email");
+        window.location.href = "/Login";
         throw new Error("Session expired. Please log in again.");
     }
 }
