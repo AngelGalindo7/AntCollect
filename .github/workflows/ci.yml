@@ -83,6 +83,8 @@ jobs:
         working-directory: messaging-service
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          MESSAGING_DB_USER: ${{ secrets.MESSAGING_DB_USER }}
+          MESSAGING_DB_PASSWORD: ${{ secrets.MESSAGING_DB_PASSWORD }}
 
   frontend:
     runs-on: ubuntu-latest
