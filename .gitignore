@@ -1,14 +1,33 @@
+# Python
 __pycache__/
 *.pyc
-
+.pytest_cache/
+venv/
 antcollect/
 
+# Environment / secrets
 .env
+frontend/e2e/.env.test
+messaging-service/src/main/resources/application*.yml
 
-.DS_Store
+# Java build output
+messaging-service/target/
 
+# Uploads (user-generated content)
 Uploads/
 
-requirements.txt
+# Logs
+*.log
 
+# Local dev notes
+postgresqlsetup.txt
+requirements.txt
 table_creation.txt
+
+# Dev-only session references (never commit)
+CLAUDE.md
+PROJECT_MAP.md
+docs/
+
+# OS
+.DS_Store

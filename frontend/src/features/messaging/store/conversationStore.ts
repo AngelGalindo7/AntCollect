@@ -1,19 +1,25 @@
 import { create } from 'zustand';
 import type { Conversation } from '../types';
 
+// Module-level map so timeouts don't pollute Zustand state.
+const typingTimeouts: Record<string, ReturnType<typeof setTimeout>> = {};
+
 interface ConversationStore {
   conversations: Conversation[];
   totalUnread: number;
+  typingUsers: Record<string, string | null>;
 
   setConversations: (conversations: Conversation[]) => void;
   upsertConversation: (conversation: Conversation) => void;
   incrementUnread: (conversationId: string) => void;
   markConversationRead: (conversationId: string) => void;
+  setTyping: (conversationId: string, username: string) => void;
 }
 
 export const useConversationStore = create<ConversationStore>((set) => ({
   conversations: [],
   totalUnread: 0,
+  typingUsers: {},
 
   setConversations: (conversations) =>
     set({
@@ -68,6 +74,16 @@ export const useConversationStore = create<ConversationStore>((set) => ({
         totalUnread: updated.reduce((sum, c) => sum + c.unreadCount, 0),
       };
     }),
+
+  setTyping: (conversationId, username) => {
+    if (typingTimeouts[conversationId]) clearTimeout(typingTimeouts[conversationId]);
+    typingTimeouts[conversationId] = setTimeout(() => {
+      useConversationStore.setState((s) => ({
+        typingUsers: { ...s.typingUsers, [conversationId]: null },
+      }));
+    }, 3000);
+    set((s) => ({ typingUsers: { ...s.typingUsers, [conversationId]: username } }));
+  },
 }));
 
 export function useUnreadCount() {
