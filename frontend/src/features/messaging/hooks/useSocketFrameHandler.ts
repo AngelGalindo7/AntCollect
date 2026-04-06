@@ -167,5 +167,12 @@ export function useSocketFrameHandler(sendReadAck: SendReadAck) {
     }
   }
 
-  return { handleInboundMessage, handleAck, handleEvent };
+  function handleTyping(payload: { conversationId: string; userId: string; username: string }) {
+    const currentUserId = localStorage.getItem('userId');
+    // Don't show the indicator for the current user's own typing events.
+    if (payload.userId === currentUserId) return;
+    useConversationStore.getState().setTyping(payload.conversationId, payload.username);
+  }
+
+  return { handleInboundMessage, handleAck, handleEvent, handleTyping };
 }
