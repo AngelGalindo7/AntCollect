@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -42,6 +43,9 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
 
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((req, res, authEx) ->
+                        res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized")))
             .addFilterBefore(
                 new JwtAuthFilter(jwtService),
                 UsernamePasswordAuthenticationFilter.class
