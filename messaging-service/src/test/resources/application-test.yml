@@ -3,6 +3,8 @@ spring:
     url: jdbc:postgresql://localhost:5432/antcollect_test
     username: ${MESSAGING_DB_USER:testuser}
     password: ${MESSAGING_DB_PASSWORD:testpassword}
+  flyway:
+    locations: classpath:db/migration,classpath:db/testdata
 
 app:
   jwt:
