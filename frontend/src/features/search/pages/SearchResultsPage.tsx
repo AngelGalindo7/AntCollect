@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
-import type { Post } from "@/shared/types/Types";
+import type { Post, GridItem } from "@/shared/types/Types";
 import Search from '@/features/search/components/Search';
 import { fetchWithAuth } from "@/shared/api/api";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -169,7 +169,7 @@ const SearchResultsPage: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-900">Posts</h2>
             </div>
           </div>
-          <PostGridLayout posts={results.posts} onPostClick={handlePostClick} />
+          <PostGridLayout items={results.posts.map((p): GridItem => ({ kind: 'post', data: p }))} onPostClick={handlePostClick} />
         </>
       ) : (
         results && results.users.length === 0 && (
