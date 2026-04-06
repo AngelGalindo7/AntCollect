@@ -38,7 +38,9 @@ const LogIn: React.FC = () => {
 
           localStorage.setItem("userId", data.user.id.toString());
           localStorage.setItem("email", data.user.email);
-          localStorage.setItem("username", data.user.username);        }
+          localStorage.setItem("username", data.user.username);
+          window.dispatchEvent(new Event('auth:login'));
+        }
         
         setSuccess("Redirecting ...");
         navigate(`/${data.user.username}`);
