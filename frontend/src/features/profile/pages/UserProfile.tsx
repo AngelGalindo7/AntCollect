@@ -3,7 +3,7 @@ import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import type { Folder, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import Search from "@/features/search/components/Search";
 import { fetchWithAuth } from "@/shared/api/api";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 const API_BASE = "http://localhost:8000";
 
@@ -17,6 +17,7 @@ const TABS: { label: string; value: TabValue }[] = [
 
 const UserProfile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -125,6 +126,10 @@ const UserProfile: React.FC = () => {
 
   const handlePostClick = (post: Post, imageIndex: number) => {
     console.log(`Clicked post ${post.post_id}, image index: ${imageIndex}`);
+  };
+
+  const handleFolderClick = (folder: Folder) => {
+    navigate(`/folders/${folder.id}`);
   };
 
   const handleLikeToggle = (postId: number, isLiked: boolean) => {
@@ -299,6 +304,7 @@ const UserProfile: React.FC = () => {
         items={gridItems}
         onPostClick={handlePostClick}
         onLikeToggle={handleLikeToggle}
+        onFolderClick={handleFolderClick}
       />
     </div>
   );
