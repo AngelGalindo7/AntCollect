@@ -33,6 +33,7 @@ def create_folder(
         name=payload.name,
         description=payload.description,
         is_public=payload.is_public,
+        folder_type=payload.folder_type,
     )
     db.add(folder)
     db.flush()
@@ -52,6 +53,7 @@ def create_folder(
             Folder.description,
             Folder.cover_post_id,
             Folder.is_public,
+            Folder.folder_type,
             Folder.created_at,
             Folder.updated_at,
             post_count_subquery.label("post_count"),
@@ -86,6 +88,7 @@ def list_user_folders(
         Folder.description,
         Folder.cover_post_id,
         Folder.is_public,
+        Folder.folder_type,
         Folder.created_at,
         Folder.updated_at,
         post_count_subquery.label("post_count"),
@@ -158,6 +161,7 @@ def get_folder(
         description=folder.description,
         cover_post_id=folder.cover_post_id,
         is_public=folder.is_public,
+        folder_type=folder.folder_type,
         posts=[PostBase.model_validate(row) for row in post_rows],
     )
 
@@ -186,6 +190,8 @@ def update_folder(
         if not cover_post or cover_post.user_id != user.user_id:
             raise HTTPException(status_code=404, detail="Cover post not found or not owned by you")
         folder.cover_post_id = payload.cover_post_id
+    if payload.folder_type is not None:
+        folder.folder_type = payload.folder_type
 
     db.commit()
     db.refresh(folder)
@@ -203,6 +209,7 @@ def update_folder(
             Folder.description,
             Folder.cover_post_id,
             Folder.is_public,
+            Folder.folder_type,
             Folder.created_at,
             Folder.updated_at,
             post_count_subquery.label("post_count"),
