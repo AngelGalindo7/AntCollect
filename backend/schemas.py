@@ -189,3 +189,40 @@ class FolderWithPostsResponse(BaseModel):
     is_public: bool
     folder_type: str
     posts: List[PostBase]
+
+
+class TradeRequestType(str, Enum):
+    WANT_TO_TRADE = "WANT_TO_TRADE"
+    HAVE_WHAT_YOU_NEED = "HAVE_WHAT_YOU_NEED"
+
+
+class TradeRequestStatus(str, Enum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    DECLINED = "DECLINED"
+    EXPIRED = "EXPIRED"
+
+
+class CreateTradeRequest(BaseModel):
+    target_post_id: int
+    recipient_id: int
+    request_type: TradeRequestType
+    offered_folder_id: Optional[int] = None
+
+
+class TradeRequestResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    requester_id: int
+    requester_username: str
+    requester_avatar: Optional[str] = None
+    recipient_id: int
+    target_post_id: int
+    post_caption: str
+    post_thumbnail: Optional[str] = None
+    request_type: TradeRequestType
+    offered_folder_id: Optional[int] = None
+    offered_folder_name: Optional[str] = None
+    status: TradeRequestStatus
+    created_at: datetime
