@@ -29,7 +29,7 @@ def save_upload_file(file: UploadFile) -> str:
 
     #TODO: Add exception for large file
 
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+    file_path = os.path.join(UPLOAD_BASE_DIR, file.filename)
 
     try:
         with open(file_path, "wb") as buffer:
