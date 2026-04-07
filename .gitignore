@@ -8,7 +8,6 @@ antcollect/
 # Environment / secrets
 .env
 frontend/e2e/.env.test
-messaging-service/src/main/resources/application*.yml
 
 # Java build output
 messaging-service/target/
