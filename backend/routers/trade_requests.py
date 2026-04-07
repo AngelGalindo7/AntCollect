@@ -1,4 +1,8 @@
-from fastapi import Depends, HTTPException, APIRouter
+import logging
+import os
+
+import httpx
+from fastapi import BackgroundTasks, Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
@@ -14,6 +18,39 @@ from ..schemas import (
     UserSearch,
 )
 from ..utils.auth import authenthicate_access_token
+
+logger = logging.getLogger(__name__)
+
+_MESSAGING_INTERNAL_URL = os.getenv("MESSAGING_INTERNAL_URL", "http://localhost:8080")
+_INTERNAL_SECRET = os.getenv("INTERNAL_SERVICE_SECRET", "")
+
+
+def _notify_trade_request(trade: TradeRequestResponse) -> None:
+    """Fire-and-forget HTTP call to the messaging service to push a STOMP trade-event frame."""
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            client.post(
+                f"{_MESSAGING_INTERNAL_URL}/internal/trade-notify",
+                json={
+                    "recipient_id": trade.recipient_id,
+                    "id": trade.id,
+                    "requester_id": trade.requester_id,
+                    "requester_username": trade.requester_username,
+                    "requester_avatar": trade.requester_avatar,
+                    "target_post_id": trade.target_post_id,
+                    "post_caption": trade.post_caption,
+                    "post_thumbnail": trade.post_thumbnail,
+                    "request_type": trade.request_type,
+                    "offered_folder_id": trade.offered_folder_id,
+                    "offered_folder_name": trade.offered_folder_name,
+                    "status": trade.status,
+                    "created_at": trade.created_at.isoformat(),
+                },
+                headers={"X-Internal-Secret": _INTERNAL_SECRET},
+            )
+    except Exception:
+        logger.warning("Trade notification to messaging service failed", exc_info=True)
+
 
 router = APIRouter(
     prefix="/trade-requests",
@@ -79,6 +116,7 @@ def _build_response(
 @router.post("", response_model=TradeRequestResponse, status_code=201)
 def create_trade_request(
     payload: CreateTradeRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: UserSearch = Depends(authenthicate_access_token),
 ):
@@ -144,7 +182,9 @@ def create_trade_request(
         )
     db.refresh(trade)
 
-    return _build_response(trade, db)
+    response = _build_response(trade, db)
+    background_tasks.add_task(_notify_trade_request, response)
+    return response
 
 
 @router.get("/inbox", response_model=List[TradeRequestResponse])
