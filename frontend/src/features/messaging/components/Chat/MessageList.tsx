@@ -2,6 +2,7 @@ import { useRef, useEffect, useLayoutEffect } from 'react';
 import { useMessageStore } from '../../store/messageStore';
 import { useConversationStore } from '../../store/conversationStore';
 import type { Message, MessageStatus } from '../../types';
+import PostEmbedCard from './PostEmbedCard';
 
 interface MessageListProps {
   conversationId: string;
@@ -258,6 +259,8 @@ function MessageBubble({ message, isOwn, isGrouped }: MessageBubbleProps) {
         >
           {message.deletedAt ? (
             <span className="italic text-xs opacity-60">This message was deleted</span>
+          ) : message.contentType === 'post_reference' || message.contentType === 'trade_context' ? (
+            <PostEmbedCard content={message.content} contentType={message.contentType} isOwn={isOwn} />
           ) : (
             message.content
           )}
