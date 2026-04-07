@@ -1,6 +1,7 @@
 import { useRef, useEffect, useLayoutEffect } from 'react';
 import { useMessageStore } from '../../store/messageStore';
-import type { Message } from '../../types';
+import { useConversationStore } from '../../store/conversationStore';
+import type { Message, MessageStatus } from '../../types';
 
 interface MessageListProps {
   conversationId: string;
@@ -20,27 +21,22 @@ export default function MessageList({
   const messages = useMessageStore(
     (s) => s.messagesByConversation[conversationId] ?? []
   );
+  const typingUser = useConversationStore(
+    (s) => s.typingUsers[conversationId] ?? null
+  );
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
 
-  // Saved before older messages are prepended so we can restore visual position.
   const savedScrollHeightRef = useRef(0);
-  // True until the first non-empty render — causes an instant jump to bottom.
   const isInitialLoadRef = useRef(true);
 
-  // Capture scrollHeight the moment a pagination fetch starts, before any DOM change.
   useEffect(() => {
     if (isFetchingNextPage) {
       savedScrollHeightRef.current = scrollContainerRef.current?.scrollHeight ?? 0;
     }
   }, [isFetchingNextPage]);
 
-  // Runs synchronously after every paint caused by messages.length changing.
-  // Three cases, evaluated in priority order:
-  //   1. Older page was prepended  → keep visual position stable
-  //   2. Initial load              → jump to bottom without animation
-  //   3. New message appended      → scroll to bottom only if already near it
   useLayoutEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -63,9 +59,15 @@ export default function MessageList({
     }
   }, [messages.length]);
 
-  // Intersection Observer fires fetchNextPage when the top sentinel enters view.
-  // Re-creates when hasNextPage or isFetchingNextPage change so the guard
-  // condition inside always reflects current state.
+  // Scroll to bottom when typing indicator appears so it's always visible.
+  useLayoutEffect(() => {
+    if (!typingUser) return;
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom < 200) el.scrollTop = el.scrollHeight;
+  }, [typingUser]);
+
   useEffect(() => {
     const sentinel = topSentinelRef.current;
     const container = scrollContainerRef.current;
@@ -73,9 +75,7 @@ export default function MessageList({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !isFetchingNextPage) {
-          fetchNextPage();
-        }
+        if (entry.isIntersecting && !isFetchingNextPage) fetchNextPage();
       },
       { root: container, threshold: 0 }
     );
@@ -95,7 +95,6 @@ export default function MessageList({
   return (
     <div ref={scrollContainerRef} className="flex flex-col gap-0 p-4 overflow-y-auto h-full">
 
-      {/* Sentinel — scrolling to the top triggers upward pagination */}
       <div ref={topSentinelRef} className="h-px shrink-0" />
 
       {isFetchingNextPage && (
@@ -108,22 +107,105 @@ export default function MessageList({
         const isOwn = message.sender === currentUserId;
         const prev = index > 0 ? messages[index - 1] : null;
 
-        // Grouped: same sender and sent within 60 seconds of the previous bubble.
-        // Grouped bubbles skip the avatar and get tighter vertical spacing.
         const isGrouped =
           prev !== null &&
           prev.sender === message.sender &&
           new Date(message.timeSent).getTime() - new Date(prev.timeSent).getTime() < 60_000;
 
+        const prevDateStr = prev ? toDateString(prev.timeSent) : null;
+        const thisDateStr = toDateString(message.timeSent);
+        const showDateSeparator = prevDateStr !== thisDateStr;
+
         return (
-          <MessageBubble
-            key={message.clientMessageId}
-            message={message}
-            isOwn={isOwn}
-            isGrouped={isGrouped}
-          />
+          <div key={message.clientMessageId}>
+            {showDateSeparator && <DateSeparator isoDate={message.timeSent} />}
+            <MessageBubble
+              message={message}
+              isOwn={isOwn}
+              isGrouped={isGrouped}
+            />
+          </div>
         );
       })}
+
+      {typingUser && <TypingIndicator username={typingUser} />}
+    </div>
+  );
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+function toDateString(iso: string) {
+  return new Date(iso).toDateString();
+}
+
+function formatDateLabel(iso: string): string {
+  const date = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString([], { month: 'long', day: 'numeric', year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
+}
+
+// ── DateSeparator ──────────────────────────────────────────────────────────────
+
+function DateSeparator({ isoDate }: { isoDate: string }) {
+  return (
+    <div className="flex items-center gap-3 my-3 shrink-0">
+      <div className="flex-1 h-px bg-gray-200" />
+      <span className="text-xs text-gray-400 font-medium">{formatDateLabel(isoDate)}</span>
+      <div className="flex-1 h-px bg-gray-200" />
+    </div>
+  );
+}
+
+// ── DeliveryIcon ───────────────────────────────────────────────────────────────
+// Single check = sent, double check = delivered, blue double = read.
+
+function DeliveryIcon({ status }: { status: MessageStatus }) {
+  if (status === 'sending' || status === 'failed') return null;
+
+  if (status === 'read') {
+    return (
+      <svg className="w-3.5 h-3.5 text-blue-300 shrink-0" fill="currentColor" viewBox="0 0 16 16">
+        <path d="M1 8.5l3.5 3.5 6.5-7M5 8.5l3.5 3.5 6.5-7" stroke="currentColor" strokeWidth="1.2" fill="none" />
+      </svg>
+    );
+  }
+
+  if (status === 'delivered') {
+    return (
+      <svg className="w-3.5 h-3.5 text-white/60 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.4" viewBox="0 0 16 16">
+        <path d="M1 8.5l3.5 3.5 6.5-7M5 8.5l3.5 3.5 6.5-7" />
+      </svg>
+    );
+  }
+
+  // sent
+  return (
+    <svg className="w-3.5 h-3.5 text-white/60 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.4" viewBox="0 0 16 16">
+      <path d="M2 8l4 4 8-8" />
+    </svg>
+  );
+}
+
+// ── TypingIndicator ────────────────────────────────────────────────────────────
+
+function TypingIndicator({ username }: { username: string }) {
+  return (
+    <div className="flex items-end gap-2 mt-2 shrink-0">
+      <div className="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs font-semibold shrink-0">
+        {username.charAt(0).toUpperCase()}
+      </div>
+      <div className="flex items-center gap-1 bg-gray-100 rounded-2xl rounded-bl-sm px-3 py-2">
+        <span className="text-[10px] text-gray-400 mr-1">{username} is typing</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
+      </div>
     </div>
   );
 }
@@ -137,14 +219,14 @@ interface MessageBubbleProps {
 }
 
 function MessageBubble({ message, isOwn, isGrouped }: MessageBubbleProps) {
+  const time = new Date(message.timeSent).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
   return (
     <div
       className={`flex items-end gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'} ${
         isGrouped ? 'mt-0.5' : 'mt-2'
       }`}
     >
-      {/* Avatar column — always rendered for inbound messages to preserve alignment.
-          Empty when grouped so the bubble stays left-aligned with the one above it. */}
       {!isOwn && (
         <div className="w-7 h-7 shrink-0">
           {!isGrouped && (
@@ -163,21 +245,29 @@ function MessageBubble({ message, isOwn, isGrouped }: MessageBubbleProps) {
         </div>
       )}
 
-      <div
-        className={[
-          'px-3 py-2 rounded-2xl text-sm max-w-xs lg:max-w-md wrap-break-word',
-          isOwn
-            ? 'bg-blue-500 text-white rounded-br-sm'
-            : 'bg-gray-100 text-gray-900 rounded-bl-sm',
-          message.status === 'failed'  ? 'opacity-50' : '',
-          message.status === 'sending' ? 'opacity-70' : '',
-        ].join(' ')}
-      >
-        {message.deletedAt ? (
-          <span className="italic text-xs opacity-60">This message was deleted</span>
-        ) : (
-          message.content
-        )}
+      <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-xs lg:max-w-md`}>
+        <div
+          className={[
+            'px-3 py-2 rounded-2xl text-sm wrap-break-word',
+            isOwn
+              ? 'bg-blue-500 text-white rounded-br-sm'
+              : 'bg-gray-100 text-gray-900 rounded-bl-sm',
+            message.status === 'failed'  ? 'opacity-50' : '',
+            message.status === 'sending' ? 'opacity-70' : '',
+          ].join(' ')}
+        >
+          {message.deletedAt ? (
+            <span className="italic text-xs opacity-60">This message was deleted</span>
+          ) : (
+            message.content
+          )}
+        </div>
+
+        {/* Timestamp + delivery status */}
+        <div className={`flex items-center gap-1 mt-0.5 ${isOwn ? 'flex-row-reverse' : ''}`}>
+          <span className="text-[10px] text-gray-400">{time}</span>
+          {isOwn && <DeliveryIcon status={message.status} />}
+        </div>
       </div>
     </div>
   );
