@@ -13,6 +13,7 @@ class Folder(Base):
     description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     cover_post_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("posts.id", ondelete="SET NULL"), nullable=True)
     is_public: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    folder_type: Mapped[str] = mapped_column(String(20), nullable=False, server_default=text("'collection'"))
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
     updated_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=text("CURRENT_TIMESTAMP"), nullable=False)
 
