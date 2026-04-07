@@ -2,7 +2,7 @@
 // JavaScript cannot safely represent 64-bit integers as number — always string.
 
 export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
-export type ContentType = 'text' | 'image' | 'video' | 'audio' | 'file';
+export type ContentType = 'text' | 'image' | 'video' | 'audio' | 'file' | 'post_reference' | 'trade_context';
 
 export interface LastMessagePreview {
   content: string;
