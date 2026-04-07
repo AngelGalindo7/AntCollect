@@ -169,8 +169,10 @@ const UserProfile: React.FC = () => {
 
   const filteredPosts = profile.posts.filter((p) => p.type === activeTab);
 
+  const filteredFolders = folders.filter((f) => f.folder_type === activeTab);
+
   const gridItems: GridItem[] = [
-    ...(activeTab === 'collection' ? folders.map((f): GridItem => ({ kind: 'folder', data: f })) : []),
+    ...filteredFolders.map((f): GridItem => ({ kind: 'folder', data: f })),
     ...filteredPosts.map((p): GridItem => ({ kind: 'post', data: p })),
   ];
 
