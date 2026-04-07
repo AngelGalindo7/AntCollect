@@ -54,7 +54,14 @@ export function ConversationList({ onSelectConversation, activeConversationId }:
     );
   }
 
-  if (conversations.length === 0) {
+  // Prefer the Zustand store (contains real-time WebSocket upserts + locally created
+  // conversations). Fall back to the raw query data to avoid an empty-state flash:
+  // useEffect seeds the store AFTER render, so on the first render after a successful
+  // fetch, conversations === [] even though data has arrived. Using data as the fallback
+  // prevents "No conversations yet" from flashing before the store is seeded.
+  const displayList = conversations.length > 0 ? conversations : (data ?? []);
+
+  if (displayList.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-32 gap-2 px-6 text-center">
         <p className="text-sm text-gray-400">No conversations yet.</p>
@@ -65,7 +72,7 @@ export function ConversationList({ onSelectConversation, activeConversationId }:
 
   return (
     <div className="flex flex-col">
-      {conversations.map((c) => (
+      {displayList.map((c) => (
         <ConversationCell
           key={c.conversationId}
           conversation={c}
