@@ -49,8 +49,8 @@ def _build_response(
             .scalars()
             .first()
         )
-        if first_image and first_image.json_metadata:
-            paths = first_image.json_metadata.get("paths", {})
+        if first_image and first_image.asset and first_image.asset.json_metadata:
+            paths = first_image.asset.json_metadata.get("paths", {})
             post_thumbnail = paths.get("thumbnail")
 
     offered_folder_name: str | None = None
