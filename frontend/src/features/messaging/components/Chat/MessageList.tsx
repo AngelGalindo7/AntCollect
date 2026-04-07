@@ -4,6 +4,8 @@ import { useConversationStore } from '../../store/conversationStore';
 import type { Message, MessageStatus } from '../../types';
 import PostEmbedCard from './PostEmbedCard';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 interface MessageListProps {
   conversationId: string;
   currentUserId: string;
@@ -233,7 +235,7 @@ function MessageBubble({ message, isOwn, isGrouped }: MessageBubbleProps) {
           {!isGrouped && (
             message.senderAvatar ? (
               <img
-                src={message.senderAvatar}
+                src={`${BACKEND_URL}/${message.senderAvatar}`}
                 alt={message.senderName}
                 className="w-7 h-7 rounded-full object-cover"
               />

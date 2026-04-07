@@ -171,7 +171,7 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
                     className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-left"
                   >
                     {avatar ? (
-                      <img src={avatar} alt="" className="w-8 h-8 rounded-full object-cover bg-gray-200" />
+                      <img src={`${BACKEND_URL}/${avatar}`} alt="" className="w-8 h-8 rounded-full object-cover bg-gray-200" />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-blue-400 flex items-center justify-center text-white text-xs font-semibold shrink-0">
                         {name.charAt(0).toUpperCase()}
