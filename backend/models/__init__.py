@@ -24,6 +24,8 @@ from backend.models.auth import RefreshToken
 
 from backend.models.folder import Folder, FolderPost
 
+from backend.models.trade_request import TradeRequest
+
 __all__ = [
     "Base",
     "User",
@@ -38,5 +40,6 @@ __all__ = [
     "MediaAsset",
     "Folder",
     "FolderPost",
+    "TradeRequest",
 ]
 
