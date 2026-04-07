@@ -150,6 +150,7 @@ class FolderCreate(BaseModel):
     name: str
     description: Optional[str] = None
     is_public: bool = True
+    folder_type: str = 'collection'
 
 
 class FolderUpdate(BaseModel):
@@ -157,6 +158,7 @@ class FolderUpdate(BaseModel):
     description: Optional[str] = None
     cover_post_id: Optional[int] = None
     is_public: Optional[bool] = None
+    folder_type: Optional[str] = None
 
 
 class FolderResponse(BaseModel):
@@ -167,6 +169,7 @@ class FolderResponse(BaseModel):
     description: Optional[str] = None
     cover_post_id: Optional[int] = None
     is_public: bool
+    folder_type: str
     created_at: datetime
     updated_at: datetime
     post_count: int = 0
@@ -184,4 +187,5 @@ class FolderWithPostsResponse(BaseModel):
     description: Optional[str] = None
     cover_post_id: Optional[int] = None
     is_public: bool
+    folder_type: str
     posts: List[PostBase]
