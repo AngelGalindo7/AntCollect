@@ -1,4 +1,6 @@
 spring:
+  config:
+    import: optional:file:../.env[.properties]
   datasource:
     url: jdbc:postgresql://localhost:5432/antcollect
     username: ${MESSAGING_DB_USER}
