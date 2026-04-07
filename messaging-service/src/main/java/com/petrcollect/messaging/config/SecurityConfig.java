@@ -37,9 +37,9 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**").permitAll()
-
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/ws-test.html").permitAll()
+                .requestMatchers("/internal/**").permitAll()
                 .anyRequest().authenticated()
             )
 
