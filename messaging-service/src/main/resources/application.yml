@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/antcollect
+    username: ${MESSAGING_DB_USER}
+    password: ${MESSAGING_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: petrcollect_messaging
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    schemas: petrcollect_messaging
+    default-schema: petrcollect_messaging
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    algorithm: HS256
+    expiration: 1200
+logging:
+  level:
+    com.petrcollect.messaging: DEBUG
+    org.springframework.web: DEBUG
+server:
+  error:
+    include-message: always
+    include-stacktrace: always
