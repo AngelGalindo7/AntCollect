@@ -7,7 +7,6 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import { Client } from '@stomp/stompjs';
-import { useConversationStore } from '../store/conversationStore';
 import { useSocketFrameHandler } from '../hooks/useSocketFrameHandler';
 
 const WS_URL = import.meta.env.VITE_WS_URL;
@@ -90,8 +89,6 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
             console.error('[WS] Failed to parse event frame', frame.body);
           }
         });
-
-           sendSyncPayload(client);
       },
 
       onDisconnect: () => {
@@ -136,18 +133,4 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
       {children}
     </WebSocketContext.Provider>
   );
-}
-
-
-function sendSyncPayload(client: Client) {
-  const { conversations } = useConversationStore.getState();
-  client.publish({
-    destination: '/app/sync',
-    body: JSON.stringify({
-      conversations: conversations.map((c) => ({
-        conversationId: c.conversationId,
-        lastReadMessageId: c.lastReadMessageId,
-      })),
-    }),
-  });
 }
