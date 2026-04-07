@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
-import type { Folder, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
+import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import Search from "@/features/search/components/Search";
 import { fetchWithAuth } from "@/shared/api/api";
 import { useParams, useNavigate } from "react-router-dom";
@@ -176,6 +176,9 @@ const UserProfile: React.FC = () => {
     ...filteredPosts.map((p): GridItem => ({ kind: 'post', data: p })),
   ];
 
+  // activeTab values match FolderType exactly: 'collection' | 'looking_for' | 'trading'
+  const tabFolderType: FolderType = activeTab;
+
   return (
     <div className="w-full">
       {/* ── Section 1: Profile header bar ── */}
@@ -307,6 +310,8 @@ const UserProfile: React.FC = () => {
         onPostClick={handlePostClick}
         onLikeToggle={handleLikeToggle}
         onFolderClick={handleFolderClick}
+        folderType={tabFolderType}
+        postOwnerId={profile.user_id}
       />
     </div>
   );

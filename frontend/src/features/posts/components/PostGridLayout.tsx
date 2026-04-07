@@ -1,7 +1,7 @@
 import React from 'react';
 import PostCard from './PostCard';
 import FolderCard from '@/features/create/components/FolderCard';
-import type { GridItem, Post, Folder } from '@/shared/types/Types';
+import type { GridItem, Post, Folder, FolderType } from '@/shared/types/Types';
 
 /**
  * PostGridLayout
@@ -19,6 +19,8 @@ interface PostGridLayoutProps {
   onPostClick?: (post: Post, imageIndex: number) => void;
   onLikeToggle?: (postId: number, isLiked: boolean) => void;
   onFolderClick?: (folder: Folder) => void;
+  folderType?: FolderType;
+  postOwnerId?: number;
 }
 
 const PostGridLayout: React.FC<PostGridLayoutProps> = ({
@@ -26,6 +28,8 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
   onPostClick,
   onLikeToggle,
   onFolderClick,
+  folderType,
+  postOwnerId,
 }) => {
   if (!items || items.length === 0) {
     return (
@@ -67,6 +71,8 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
             imageIndex={0}
             onClick={onPostClick}
             onLikeToggle={onLikeToggle}
+            folderType={folderType}
+            postOwnerId={postOwnerId}
           />
         );
     }
