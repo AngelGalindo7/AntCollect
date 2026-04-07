@@ -15,10 +15,11 @@ test.describe('username change', () => {
 
   // Restore the original username after the test so auth.json stays valid
   // and other specs that navigate to /${TEST_USERNAME} continue to work.
-  test.afterEach(async ({ page }) => {
-    await page.request.patch('http://localhost:8000/users/me/profile', {
+  test.afterEach(async ({ request }) => {
+    const res = await request.patch('http://localhost:8000/users/me/profile', {
       data: { username: process.env.TEST_USERNAME },
     });
+    if (!res.ok()) throw new Error(`Username restore failed (${res.status()}): ${await res.text()}`);
   });
 
   test('username change persists after page reload', async ({ page }) => {

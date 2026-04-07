@@ -3,6 +3,25 @@ import { test, expect } from '@playwright/test';
 // Uses the project-level storageState (authenticated).
 // All own-profile tests navigate to /${TEST_USERNAME}.
 
+// The CI seed step creates users but no folders, so we create one here and
+// clean it up afterwards to keep the DB in the same state.
+let seedFolderId: number;
+
+test.beforeAll(async ({ request }) => {
+  const res = await request.post('http://localhost:8000/folders', {
+    data: { name: 'CI Test Folder', folder_type: 'collection' },
+  });
+  if (!res.ok()) throw new Error(`Failed to create seed folder: ${res.status()} ${await res.text()}`);
+  const body = await res.json();
+  seedFolderId = body.id;
+});
+
+test.afterAll(async ({ request }) => {
+  if (seedFolderId) {
+    await request.delete(`http://localhost:8000/folders/${seedFolderId}`);
+  }
+});
+
 test('own profile renders the avatar upload button', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
   // UserProfile.tsx renders this button only when profile.is_owner is true.

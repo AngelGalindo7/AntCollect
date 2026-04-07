@@ -1,6 +1,10 @@
 import { chromium } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load credentials before globalSetup runs (config loads them too, but
 // globalSetup may run in a separate process depending on Playwright version).
