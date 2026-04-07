@@ -10,7 +10,7 @@ from ..utils.auth import hash_password, verify_password, create_access_token, cr
 from ..utils.files import process_and_save_image, _cleanup_files
 from typing import List
 
-ACCESS_TOKEN_MAX_AGE = 2 * 60  # 31 minutes
+ACCESS_TOKEN_MAX_AGE = 30 * 60  # 30 minutes — matches JWT expiry in create_access_token
 REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60  # 30 days
 
 router = APIRouter(

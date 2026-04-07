@@ -14,7 +14,7 @@ router = APIRouter(
     tags=["Auth"],
 )
 
-ACCESS_TOKEN_MAX_AGE = 1 * 60 # 31 minutes
+ACCESS_TOKEN_MAX_AGE = 30 * 60  # 30 minutes — matches JWT expiry in create_access_token
 REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60  # 30 days
 
 
