@@ -80,10 +80,15 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
 
         client.subscribe('/user/queue/events', (frame) => {
           try {
-         handlersRef.current.handleEvent(JSON.parse(frame.body));
+            const payload = JSON.parse(frame.body);
+            if (payload.type === 'TYPING') {
+              handlersRef.current.handleTyping(payload);
+            } else {
+              handlersRef.current.handleEvent(payload);
+            }
           } catch {
             console.error('[WS] Failed to parse event frame', frame.body);
-        }
+          }
         });
 
            sendSyncPayload(client);
