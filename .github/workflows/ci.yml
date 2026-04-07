@@ -158,7 +158,7 @@ jobs:
       # ── Database setup ────────────────────────────────────────────────────
       - name: Create messaging DB user
         run: |
-          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h localhost -U ${{ secrets.DB_USER }} \
+          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h localhost -U ${{ secrets.DB_USER }} -d postgres \
             -c "CREATE USER ${{ secrets.MESSAGING_DB_USER }} WITH SUPERUSER PASSWORD '${{ secrets.MESSAGING_DB_PASSWORD }}';"
         # SUPERUSER is safe here — this is a throwaway CI container.
         # It lets Flyway create the petrcollect_messaging schema without extra grants.
@@ -219,14 +219,14 @@ jobs:
       # ── Seed test users ───────────────────────────────────────────────────
       - name: Seed test users
         env:
-          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
-          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
           TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
           TEST_OTHER_USERNAME: ${{ secrets.TEST_OTHER_USERNAME }}
         run: |
           curl -sf -X POST http://localhost:8000/users/create-user \
             -H "Content-Type: application/json" \
-            -d "{\"username\":\"$TEST_USERNAME\",\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}"
+            -d "{\"username\":\"$TEST_USERNAME\",\"email\":\"$TEST_USER_EMAIL\",\"password\":\"$TEST_USER_PASSWORD\"}"
           curl -sf -X POST http://localhost:8000/users/create-user \
             -H "Content-Type: application/json" \
             -d "{\"username\":\"$TEST_OTHER_USERNAME\",\"email\":\"ci_other@test.internal\",\"password\":\"CIOtherPass123!\"}"
@@ -240,8 +240,8 @@ jobs:
         run: npx playwright test --config=e2e/playwright.config.ts
         working-directory: frontend
         env:
-          TEST_EMAIL: ${{ secrets.TEST_EMAIL }}
-          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
           TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
           TEST_OTHER_USERNAME: ${{ secrets.TEST_OTHER_USERNAME }}
 
