@@ -82,6 +82,8 @@ export interface TopPostsResponse {
   posts: PostWithEngagement[];
 }
 
+export type FolderType = 'collection' | 'looking_for' | 'trading';
+
 export interface Folder {
   id: number;
   user_id: number;
@@ -89,6 +91,7 @@ export interface Folder {
   description: string | null;
   cover_post_id: number | null;
   is_public: boolean;
+  folder_type: FolderType;
   post_count: number;
   created_at: string;
   updated_at: string;
