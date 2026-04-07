@@ -89,6 +89,14 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
             console.error('[WS] Failed to parse event frame', frame.body);
           }
         });
+
+        client.subscribe('/user/queue/trade-events', (frame) => {
+          try {
+            handlersRef.current.handleTradeEvent(JSON.parse(frame.body));
+          } catch {
+            console.error('[WS] Failed to parse trade event frame', frame.body);
+          }
+        });
       },
 
       onDisconnect: () => {

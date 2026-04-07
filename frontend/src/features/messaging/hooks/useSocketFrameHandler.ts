@@ -2,7 +2,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { InfiniteData } from '@tanstack/react-query';
 import { useConversationStore } from '../store/conversationStore';
 import { useMessageStore } from '../store/messageStore';
+import { useTradeRequestStore } from '@/features/trading/store/tradeRequestStore';
 import type { AckPayload, EventPayload, Message } from '../types';
+import type { TradeRequest } from '@/features/trading/types';
 
 // Mirrors MessagesPage in useMessages.ts — kept local to avoid a circular import.
 interface MessagesPage {
@@ -174,5 +176,13 @@ export function useSocketFrameHandler(sendReadAck: SendReadAck) {
     useConversationStore.getState().setTyping(payload.conversationId, payload.username);
   }
 
-  return { handleInboundMessage, handleAck, handleEvent, handleTyping };
+  function handleTradeEvent(payload: TradeRequest) {
+    useTradeRequestStore.getState().appendRequest(payload);
+    queryClient.setQueryData<number>(
+      ['trade-requests', 'inbox-count'],
+      (old = 0) => old + 1,
+    );
+  }
+
+  return { handleInboundMessage, handleAck, handleEvent, handleTyping, handleTradeEvent };
 }
