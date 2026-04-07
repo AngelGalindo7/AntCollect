@@ -5,30 +5,30 @@ import { ConversationCell } from './ConversationCell';
 import { fetchWithAuth } from '@/shared/api/api';
 
 const API_BASE = import.meta.env.VITE_API_URL;
+
 interface ConversationListProps {
   onSelectConversation: (conversationId: string) => void;
+  activeConversationId?: string | null;
 }
 
-export function ConversationList({ onSelectConversation }: ConversationListProps) {
+export function ConversationList({ onSelectConversation, activeConversationId }: ConversationListProps) {
   const conversations = useConversationStore((s) => s.conversations);
   const setConversations = useConversationStore((s) => s.setConversations);
 
-  const {data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ['conversations'],
     queryFn: async () => {
       const res = await fetchWithAuth(`${API_BASE}/conversations`, {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to fetch conversations');
-      console.log('Fetched conversations:', await res.clone().json()); // Log the raw response data
       return res.json();
-    }, 
+    },
   });
+
   useEffect(() => {
-  if (data) {
-    setConversations(data); // data is already the array
-  }
-}, [data]);
+    if (data) setConversations(data);
+  }, [data, setConversations]);
 
   if (isLoading) {
     return (
@@ -55,7 +55,12 @@ export function ConversationList({ onSelectConversation }: ConversationListProps
   }
 
   if (conversations.length === 0) {
-    return null;
+    return (
+      <div className="flex flex-col items-center justify-center h-32 gap-2 px-6 text-center">
+        <p className="text-sm text-gray-400">No conversations yet.</p>
+        <p className="text-xs text-gray-400">Search for a person above to start one.</p>
+      </div>
+    );
   }
 
   return (
@@ -64,6 +69,7 @@ export function ConversationList({ onSelectConversation }: ConversationListProps
         <ConversationCell
           key={c.conversationId}
           conversation={c}
+          isActive={c.conversationId === activeConversationId}
           onClick={() => onSelectConversation(c.conversationId)}
         />
       ))}
@@ -72,4 +78,3 @@ export function ConversationList({ onSelectConversation }: ConversationListProps
 }
 
 export default ConversationList;
-
