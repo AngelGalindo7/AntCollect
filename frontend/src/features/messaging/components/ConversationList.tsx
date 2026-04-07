@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useConversationStore } from '../store/conversationStore';
 import { ConversationCell } from './ConversationCell';
 import { fetchWithAuth } from '@/shared/api/api';
+import type { Conversation } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL;
 
@@ -22,7 +23,7 @@ export function ConversationList({ onSelectConversation, activeConversationId }:
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to fetch conversations');
-      return res.json();
+      return res.json() as Promise<Conversation[]>;
     },
   });
 
