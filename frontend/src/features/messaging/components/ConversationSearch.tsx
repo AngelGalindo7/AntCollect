@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useConversationStore } from '../store/conversationStore';
 import { fetchWithAuth } from '@/shared/api/api';
 
-const API_BASE = 'http://localhost:8000';
-const API_MESSAGING_BASE = import.meta.env.VITE_API_URL;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;   // FastAPI :8000
+const API_BASE    = import.meta.env.VITE_API_URL;        // messaging service :8080
 interface UserResult {
   id: number;
   username: string;
@@ -41,7 +41,7 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
     debounceTimeout.current = setTimeout(async () => {
       try {
         setLoading(true);
-        const res = await fetchWithAuth(`${API_BASE}/users/search_user`, {
+        const res = await fetchWithAuth(`${BACKEND_URL}/users/search_user`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -81,7 +81,7 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
     }
 
     try {
-      const res = await fetchWithAuth(`${API_MESSAGING_BASE}/conversations`, {
+      const res = await fetchWithAuth(`${API_BASE}/conversations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -146,22 +146,26 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
               <p className="px-3 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">
                 Conversations
               </p>
-              {matchedConversations.map((c) => (
-                <button
-                  key={c.conversationId}
-                  onClick={() => { onSelectConversation(c.conversationId); handleClear(); }}
-                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-left"
-                >
-                  <img
-                    src={c.isGroup ? (c.groupAvatar ?? '') : c.participantAvatar}
-                    alt=""
-                    className="w-8 h-8 rounded-full object-cover bg-gray-200"
-                  />
-                  <span className="text-sm text-gray-800">
-                    {c.isGroup ? c.groupName : c.participantName}
-                  </span>
-                </button>
-              ))}
+              {matchedConversations.map((c) => {
+                const name = (c.isGroup ? c.groupName : c.participantName) ?? '?';
+                const avatar = c.isGroup ? c.groupAvatar : c.participantAvatar;
+                return (
+                  <button
+                    key={c.conversationId}
+                    onClick={() => { onSelectConversation(c.conversationId); handleClear(); }}
+                    className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-left"
+                  >
+                    {avatar ? (
+                      <img src={avatar} alt="" className="w-8 h-8 rounded-full object-cover bg-gray-200" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-blue-400 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+                        {name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="text-sm text-gray-800">{name}</span>
+                  </button>
+                );
+              })}
             </>
           )}
 
@@ -176,12 +180,16 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
                   onClick={() => handleSelectUser(u)}
                   className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-left"
                 >
-                  {u.profile_image && (
+                  {u.profile_image ? (
                     <img
                       src={u.profile_image}
                       alt={u.username}
                       className="w-8 h-8 rounded-full object-cover bg-gray-200"
                     />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-blue-400 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+                      {u.username.charAt(0).toUpperCase()}
+                    </div>
                   )}
                   <span className="text-sm text-gray-800">{u.username}</span>
                 </button>
