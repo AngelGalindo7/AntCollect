@@ -8,7 +8,7 @@ const API_BASE    = import.meta.env.VITE_API_URL;        // messaging service :8
 interface UserResult {
   id: number;
   username: string;
-  profile_image?: string;
+  avatar_path?: string;
 }
 
 interface ConversationSearchProps {
@@ -19,6 +19,7 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
   const [query, setQuery] = useState('');
   const [userResults, setUserResults] = useState<UserResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(false);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
@@ -70,10 +71,12 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
     setQuery('');
     setUserResults([]);
     setCreateError(false);
+    setCreating(false);
   }
   const upsertConversation = useConversationStore((s) => s.upsertConversation);
 
   async function handleSelectUser(user: UserResult) {
+    if (creating) return;
     setCreateError(false);
 
     const existing = useConversationStore.getState().conversations.find(
@@ -86,6 +89,7 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
       return;
     }
 
+    setCreating(true);
     try {
       const res = await fetchWithAuth(`${API_BASE}/conversations`, {
         method: 'POST',
@@ -95,8 +99,10 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
       });
 
       if (res.status === 409) {
-        const data = await res.json();
-        const existingId = data.message.split(': ')[1];
+        // Conversation already exists — extract its id from the error body and navigate
+        const body = await res.json();
+        const existingId = String(body.message).split(': ')[1];
+        if (!existingId) throw new Error('409 body missing conversation id');
         onSelectConversation(existingId);
         handleClear();
         return;
@@ -114,6 +120,7 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
       handleClear();
     } catch (err) {
       console.error('Failed to create conversation', err);
+      setCreating(false);
       setCreateError(true);
     }
   }
@@ -186,11 +193,12 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
                 <button
                   key={u.id}
                   onClick={() => handleSelectUser(u)}
-                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-left"
+                  disabled={creating}
+                  className="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-left disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {u.profile_image ? (
+                  {u.avatar_path ? (
                     <img
-                      src={u.profile_image}
+                      src={`${BACKEND_URL}/${u.avatar_path}`}
                       alt={u.username}
                       className="w-8 h-8 rounded-full object-cover bg-gray-200"
                     />
@@ -200,6 +208,7 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
                     </div>
                   )}
                   <span className="text-sm text-gray-800">{u.username}</span>
+                  {creating && <span className="ml-auto text-xs text-gray-400">Opening…</span>}
                 </button>
               ))}
             </>
