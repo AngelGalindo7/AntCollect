@@ -1,7 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchWithAuth } from '@/shared/api/api';
-import type { Post } from '@/shared/types/Types';
+import type { FolderType, Post } from '@/shared/types/Types';
+
+const FOLDER_TYPES: { value: FolderType; label: string }[] = [
+  { value: 'collection', label: 'Collection' },
+  { value: 'looking_for', label: 'Looking For' },
+  { value: 'trading', label: 'Trading Away' },
+];
 
 const API_BASE = 'http://localhost:8000';
 
@@ -10,6 +16,7 @@ const CreateFolder: React.FC = () => {
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
+  const [folderType, setFolderType] = useState<FolderType>('collection');
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [loadingPosts, setLoadingPosts] = useState(true);
@@ -76,7 +83,7 @@ const CreateFolder: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name: trimmed, description: null, is_public: true }),
+        body: JSON.stringify({ name: trimmed, description: null, is_public: true, folder_type: folderType }),
       });
       if (!createRes.ok) throw new Error('Failed to create folder');
       const folder = await createRes.json();
@@ -138,6 +145,27 @@ const CreateFolder: React.FC = () => {
             maxLength={80}
           />
           {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+        </div>
+      </div>
+
+      {/* Folder type selector */}
+      <div className="mb-8">
+        <p className="text-sm font-medium text-gray-700 mb-3">Folder type</p>
+        <div className="flex gap-3">
+          {FOLDER_TYPES.map((ft) => (
+            <button
+              key={ft.value}
+              type="button"
+              onClick={() => setFolderType(ft.value)}
+              className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                folderType === ft.value
+                  ? 'bg-purple-600 border-purple-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-600 hover:border-purple-400 hover:text-purple-600'
+              }`}
+            >
+              {ft.label}
+            </button>
+          ))}
         </div>
       </div>
 
