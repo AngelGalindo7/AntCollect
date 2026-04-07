@@ -2,10 +2,19 @@ import type { Conversation } from '../types';
 
 interface ConversationCellProps {
   conversation: Conversation;
+  isActive?: boolean;
   onClick: () => void;
 }
 
-export function ConversationCell({ conversation, onClick }: ConversationCellProps) {
+function InitialsAvatar({ name, className }: { name: string; className: string }) {
+  return (
+    <div className={`${className} rounded-full bg-blue-400 flex items-center justify-center text-white font-semibold`}>
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+export function ConversationCell({ conversation, isActive = false, onClick }: ConversationCellProps) {
   const displayName = conversation.isGroup
     ? conversation.groupName
     : conversation.participantName;
@@ -39,14 +48,20 @@ export function ConversationCell({ conversation, onClick }: ConversationCellProp
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left"
+      className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${
+        isActive ? 'bg-blue-50' : 'hover:bg-gray-50'
+      }`}
     >
       <div className="relative shrink-0">
-        <img
-          src={displayAvatar ?? ''}
-          alt=""
-          className="w-10 h-10 rounded-full object-cover bg-gray-200"
-        />
+        {displayAvatar ? (
+          <img
+            src={displayAvatar}
+            alt=""
+            className="w-10 h-10 rounded-full object-cover bg-gray-200"
+          />
+        ) : (
+          <InitialsAvatar name={displayName ?? '?'} className="w-10 h-10 text-sm" />
+        )}
       </div>
 
       <div className="flex-1 min-w-0">
@@ -64,7 +79,7 @@ export function ConversationCell({ conversation, onClick }: ConversationCellProp
         <div className="flex items-center justify-between gap-2 mt-0.5">
           <p className="text-xs truncate flex-1">{renderLastMessage()}</p>
           {conversation.unreadCount > 0 && (
-            <span className="shrink-0 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
+            <span className="shrink-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
               {conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}
             </span>
           )}
