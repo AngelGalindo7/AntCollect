@@ -194,7 +194,7 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
       - name: Start messaging service
-        run: mvn -q spring-boot:run -Dspring-boot.run.profiles=test &
+        run: mvn spring-boot:run -Dspring-boot.run.profiles=test > /tmp/messaging.log 2>&1 &
         working-directory: messaging-service
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -211,7 +211,10 @@ jobs:
 
       - name: Wait for messaging service
         run: timeout 300 bash -c 'until nc -z localhost 8080; do sleep 10; done'
-        # Spring Boot compile + startup can take several minutes on a cold Maven cache.
+
+      - name: Dump messaging log on failure
+        if: failure()
+        run: cat /tmp/messaging.log || true
 
       - name: Wait for Vite
         run: timeout 60 bash -c 'until curl -sf http://localhost:5173/; do sleep 2; done'
@@ -223,13 +226,14 @@ jobs:
           TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
           TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
           TEST_OTHER_USERNAME: ${{ secrets.TEST_OTHER_USERNAME }}
+          TEST_OTHER_PASSWORD: ${{ secrets.TEST_OTHER_PASSWORD }}
         run: |
           curl -sf -X POST http://localhost:8000/users/create-user \
             -H "Content-Type: application/json" \
             -d "{\"username\":\"$TEST_USERNAME\",\"email\":\"$TEST_USER_EMAIL\",\"password\":\"$TEST_USER_PASSWORD\"}"
           curl -sf -X POST http://localhost:8000/users/create-user \
             -H "Content-Type: application/json" \
-            -d "{\"username\":\"$TEST_OTHER_USERNAME\",\"email\":\"ci_other@test.internal\",\"password\":\"CIOtherPass123!\"}"
+            -d "{\"username\":\"$TEST_OTHER_USERNAME\",\"email\":\"ci_other@test.internal\",\"password\":\"$TEST_OTHER_PASSWORD\"}"
 
       # ── Playwright ────────────────────────────────────────────────────────
       - name: Install Playwright browsers
