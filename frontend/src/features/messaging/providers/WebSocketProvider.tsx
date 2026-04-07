@@ -13,7 +13,7 @@ import { useSocketFrameHandler } from '../hooks/useSocketFrameHandler';
 const WS_URL = import.meta.env.VITE_WS_URL;
 
 interface WebSocketContextValue {
-  sendMessage: (conversationId: string, content: string, clientMessageId: string) => void;
+  sendMessage: (conversationId: string, content: string, clientMessageId: string, contentType?: string) => void;
   sendTyping: (conversationId: string) => void;
   sendReadAck: (conversationId: string, messageId: string) => void;
 }
@@ -116,10 +116,11 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
     conversationId: string,
     content: string,
     clientMessageId: string,
+    contentType: string = 'text',
   ) => {
     clientRef.current?.publish({
       destination: '/app/send',
-      body: JSON.stringify({ clientMessageId, conversationId, content, contentType: 'text' }),
+      body: JSON.stringify({ clientMessageId, conversationId, content, contentType }),
     });
   }, []);
 
