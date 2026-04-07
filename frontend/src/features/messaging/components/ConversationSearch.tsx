@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useConversationStore } from '../store/conversationStore';
 import { fetchWithAuth } from '@/shared/api/api';
 
@@ -18,7 +19,9 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
   const [query, setQuery] = useState('');
   const [userResults, setUserResults] = useState<UserResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [createError, setCreateError] = useState(false);
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
+  const queryClient = useQueryClient();
 
   const conversations = useConversationStore((s) => s.conversations);
 
@@ -66,10 +69,13 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
   function handleClear() {
     setQuery('');
     setUserResults([]);
+    setCreateError(false);
   }
   const upsertConversation = useConversationStore((s) => s.upsertConversation);
 
   async function handleSelectUser(user: UserResult) {
+    setCreateError(false);
+
     const existing = useConversationStore.getState().conversations.find(
       (c) => !c.isGroup && c.participantId === String(user.id)
     );
@@ -85,32 +91,30 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ 
-        
-          userIds: [user.id], 
-          isGroup: false,
-          groupName: null
-
-
-        }),
+        body: JSON.stringify({ userIds: [user.id], isGroup: false, groupName: null }),
       });
 
       if (res.status === 409) {
-          const data = await res.json();
-          const existingId = data.message.split(': ')[1];
-          onSelectConversation(existingId);
-          handleClear();
-          return;
-        }
-      if (!res.ok) throw new Error('Failed to create conversation');
+        const data = await res.json();
+        const existingId = data.message.split(': ')[1];
+        onSelectConversation(existingId);
+        handleClear();
+        return;
+      }
+
+      if (!res.ok) throw new Error(`Failed to create conversation: ${res.status}`);
+
       const data = await res.json();
-
       upsertConversation(data);
-
+      // Invalidate so the ConversationList refetches fresh data when it next mounts.
+      // Without this, the stale TanStack cache (pre-creation) overwrites the upserted
+      // conversation when the inline panel's ConversationList mounts after navigation.
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
       onSelectConversation(data.conversationId);
       handleClear();
-    } catch {
-      console.error('Failed to create conversation');
+    } catch (err) {
+      console.error('Failed to create conversation', err);
+      setCreateError(true);
     }
   }
 
@@ -137,6 +141,10 @@ export function ConversationSearch({ onSelectConversation }: ConversationSearchP
           </button>
         )}
       </div>
+
+      {createError && (
+        <p className="mt-1 text-xs text-red-500 px-1">Couldn't open conversation. Try again.</p>
+      )}
 
       {showResults && (
         <div className="absolute left-3 right-3 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-100 z-30 overflow-hidden">
