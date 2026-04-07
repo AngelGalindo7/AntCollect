@@ -62,6 +62,20 @@ class JwtHandshakeInterceptorTest {
     }
 
     @Test
+    void connect_withInvalidToken_upgradeRejected() {
+        WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
+        headers.add("Cookie", "access_token=not.a.valid.jwt");
+        headers.add("Origin", "http://localhost:5173");
+
+        assertThrows(ExecutionException.class, () ->
+                stompClient
+                        .connectAsync("ws://localhost:" + port + "/ws", headers,
+                                new StompSessionHandlerAdapter() {})
+                        .get(5, TimeUnit.SECONDS)
+        );
+    }
+
+    @Test
     void connect_noCookie_upgradeRejected() {
         WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
         headers.add("Origin", "http://localhost:5173");
