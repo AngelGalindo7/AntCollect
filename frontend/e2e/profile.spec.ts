@@ -31,12 +31,13 @@ test('own profile renders the avatar upload button', async ({ page }) => {
 test('sticker count is inline-editable', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
 
-  // Locate the stats box that contains the "Stickers" label, then find the
-  // value span inside it (the numeric count, distinct from the Folders count).
+  // Target the individual stat box (flex-col) containing the "Stickers" label.
+  // Using div.flex-col avoids matching the outer flex container that holds both
+  // stat boxes, which would make the numeric span filter ambiguous once a folder
+  // exists (Folders count is also a digit).
   const stickersBox = page
-    .locator('div')
-    .filter({ has: page.locator('span', { hasText: 'Stickers' }) })
-    .first();
+    .locator('div.flex-col')
+    .filter({ has: page.locator('span', { hasText: 'Stickers' }) });
   const stickerValue = stickersBox
     .locator('span')
     .filter({ hasText: /^\d+$/ });
