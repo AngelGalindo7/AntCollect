@@ -7,10 +7,10 @@ import path from 'path';
 dotenv.config({ path: path.join(__dirname, '../.env.test') });
 
 async function globalSetup() {
-  const email = process.env.TEST_EMAIL;
-  const password = process.env.TEST_PASSWORD;
+  const email = process.env.TEST_USER_EMAIL;
+  const password = process.env.TEST_USER_PASSWORD;
   if (!email || !password) {
-    throw new Error('TEST_EMAIL and TEST_PASSWORD must be set in e2e/.env.test');
+    throw new Error('TEST_USER_EMAIL and TEST_USER_PASSWORD must be set in e2e/.env.test');
   }
 
   const browser = await chromium.launch();
