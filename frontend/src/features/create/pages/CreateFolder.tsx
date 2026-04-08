@@ -28,12 +28,16 @@ const CreateFolder: React.FC = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    const username = localStorage.getItem('username');
-    if (!username) return;
-
     const fetchPosts = async () => {
       setLoadingPosts(true);
       try {
+        let username = localStorage.getItem('username');
+        if (!username) {
+          const meRes = await fetchWithAuth(`${API_BASE}/users/me`, { credentials: 'include' });
+          if (!meRes.ok) throw new Error('Not authenticated');
+          const me = await meRes.json();
+          username = me.username;
+        }
         const res = await fetchWithAuth(`${API_BASE}/users/get_user_`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -47,7 +51,7 @@ const CreateFolder: React.FC = () => {
           image_paths:
             post.images
               ?.filter((img: any) => img?.paths?.medium)
-              .map((img: any) => `${API_BASE}/${img.paths.original}`) ?? [],
+              .map((img: any) => img.paths.original) ?? [],
         }));
         setPosts(transformed);
       } catch (err) {
