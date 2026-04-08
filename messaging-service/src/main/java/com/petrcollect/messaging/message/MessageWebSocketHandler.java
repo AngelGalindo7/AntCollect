@@ -66,6 +66,9 @@ public class MessageWebSocketHandler {
      */
     private final ConcurrentHashMap<String, SessionState> sessionStates =
             new ConcurrentHashMap<>();
+    /** Secondary index: userId → SessionState. Kept in sync with sessionStates. O(1) lookup by userId. */
+    private final ConcurrentHashMap<Long, SessionState> stateByUserId =
+            new ConcurrentHashMap<>();
 
     public MessageWebSocketHandler(MessageService messageService,
                                    SessionRegistry sessionRegistry,
@@ -130,6 +133,12 @@ public class MessageWebSocketHandler {
 
         long registeredAt = System.currentTimeMillis();
 
+        // Cache user identity once at connect — avoids a DB hit on every outbound message DTO
+        User user = userRepository.findById(userId).orElse(null);
+        UserSummary userSummary = user != null
+                ? new UserSummary(user.getUsername(), user.getAvatarPath())
+                : UserSummary.unknown();
+
         // Register as online — overwrites any stale entry for this userId
         sessionRegistry.register(userId, sessionId); // session handle not needed by registry for STOMP
 
@@ -139,7 +148,9 @@ public class MessageWebSocketHandler {
             return t;
         });
 
-        sessionStates.put(sessionId, new SessionState(userId, executor, registeredAt));
+        SessionState state = new SessionState(userId, executor, registeredAt, userSummary);
+        sessionStates.put(sessionId, state);
+        stateByUserId.put(userId, state);
         log.debug("WebSocket connected: userId={} sessionId={}", userId, sessionId);
     }
 
@@ -160,7 +171,9 @@ public class MessageWebSocketHandler {
         SessionState state = sessionStates.remove(sessionId);
         if (state == null) return;
 
-        // Guarded remove — only evicts if registeredAt still matches
+        // Guarded removes — only evict if this session is still the active one for this user.
+        // If the user reconnected first, a newer entry already replaced these, so we skip.
+        stateByUserId.remove(state.userId(), state);
         sessionRegistry.remove(state.userId(), state.registeredAt());
 
         connectionLimiter.disconnect(state.userId());
@@ -194,7 +207,7 @@ public class MessageWebSocketHandler {
         state.executor().submit(() -> {
             try {
                 Message saved = messageService.sendMessage(req, senderId);
-                MessageResponse dto = toWebSocketMessage(saved, req.conversationId());
+                MessageResponse dto = toWebSocketMessage(saved, req.conversationId(), state.userSummary());
                 // Ack back to sender
                 messaging.convertAndSendToUser(
                         senderId.toString(), DEST_ACK,
@@ -209,7 +222,7 @@ public class MessageWebSocketHandler {
                 messaging.convertAndSendToUser(
                         senderId.toString(), DEST_ACK,
                         AckPayload.success(req.clientMessageId(),
-                                toWebSocketMessage(dup.getExisting(), req.conversationId()))
+                                toWebSocketMessage(dup.getExisting(), req.conversationId(), state.userSummary()))
                 );
             } catch (Exception e) {
                 log.error("sendMessage failed for userId={}", senderId, e);
@@ -337,15 +350,14 @@ public class MessageWebSocketHandler {
      * LazyInitializationException when accessing the lazy {@code conversation} proxy
      * outside the transaction that saved the entity.
      */
-    private MessageResponse toWebSocketMessage(Message m, Long conversationId) {
-        User sender = userRepository.findById(m.getSender()).orElse(null);
+    private MessageResponse toWebSocketMessage(Message m, Long conversationId, UserSummary sender) {
         return new MessageResponse(
                 m.getClientMessageId().toString(),
                 String.valueOf(m.getMessageId()),
                 String.valueOf(conversationId),
                 String.valueOf(m.getSender()),
-                sender != null ? sender.getUsername() : "Unknown",
-                sender != null ? sender.getAvatarPath() : null,
+                sender.username(),
+                sender.avatarPath(),
                 m.getContent(),
                 m.getContentType().name().toLowerCase(),
                 m.getTimeSent().toString(),
@@ -370,12 +382,9 @@ public class MessageWebSocketHandler {
         return Long.parseLong(principal.getName());
     }
 
-    /** Returns the SessionState for a user, logging a warning if it is missing. */
+    /** Returns the SessionState for a user via the O(1) userId index. */
     private SessionState getState(Long userId) {
-        return sessionStates.values().stream()
-                .filter(s -> s.userId().equals(userId))
-                .findFirst()
-                .orElse(null);
+        return stateByUserId.get(userId);
     }
 
     /** Loads the sender of a message — used for read-receipt routing. */
@@ -394,7 +403,13 @@ public class MessageWebSocketHandler {
      */
     private record SessionState(Long userId,
                                  ExecutorService executor,
-                                 long registeredAt) {}
+                                 long registeredAt,
+                                 UserSummary userSummary) {}
+
+    /** Immutable snapshot of the fields needed to build message DTOs — populated once at connect. */
+    private record UserSummary(String username, String avatarPath) {
+        static UserSummary unknown() { return new UserSummary("Unknown", null); }
+    }
 
     /**
      * Outbound ack payload sent to the sender after a send attempt.
