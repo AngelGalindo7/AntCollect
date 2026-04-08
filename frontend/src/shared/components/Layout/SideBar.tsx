@@ -129,8 +129,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
   const initials = me ? me.username.slice(0, 2).toUpperCase() : '?';
 
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `w-full px-2 py-3 flex items-center justify-center transition-colors duration-200 ${
-      isActive ? 'text-gray-900 font-bold' : 'text-gray-500'
+    `w-full px-2 py-3 flex items-center justify-center transition-colors duration-200 ${isActive ? 'text-gray-900 font-bold' : 'text-gray-500'
     }`;
 
   const iconButtonClass = 'w-full px-2 py-3 mt-4 flex items-center justify-center text-gray-500 transition-colors duration-200';
@@ -220,9 +219,8 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
       {/* Messages slide-out panel — only shown on non-chat routes */}
       {!isChatRoute && (
         <div
-          className={`absolute left-20 top-0 h-full bg-white border-r border-gray-200 transition-all duration-200 overflow-hidden z-10 ${
-            messagesOpen ? 'w-80' : 'w-0'
-          }`}
+          className={`absolute left-20 top-0 h-full bg-white border-r border-gray-200 transition-all duration-200 overflow-hidden z-10 ${messagesOpen ? 'w-80' : 'w-0'
+            }`}
         >
           <div className="w-80 h-full flex flex-col">
             <div className="p-4 border-b border-gray-100 shrink-0">
@@ -242,9 +240,8 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
 
       {/* Trade requests slide-out panel */}
       <div
-        className={`absolute left-20 top-0 h-full bg-white border-r border-gray-200 transition-all duration-200 overflow-hidden z-10 ${
-          tradeRequestsOpen ? 'w-80' : 'w-0'
-        }`}
+        className={`absolute left-20 top-0 h-full bg-white border-r border-gray-200 transition-all duration-200 overflow-hidden z-10 ${tradeRequestsOpen ? 'w-80' : 'w-0'
+          }`}
       >
         <div className="w-80 h-full flex flex-col">
           <div className="p-4 border-b border-gray-100 shrink-0 flex items-center gap-2">
@@ -312,7 +309,6 @@ interface TradeRequestCardProps {
 }
 
 function TradeRequestCard({ request, onAccept, onDecline }: TradeRequestCardProps) {
-  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
   const thumbnailUrl = request.post_thumbnail ?? null;
   const avatarUrl = request.requester_avatar ?? null;
 
