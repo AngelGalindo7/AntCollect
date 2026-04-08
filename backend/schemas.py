@@ -1,10 +1,10 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 from typing import List, Optional
 from enum import Enum
-from datetime import datetime 
+from datetime import datetime
 class UserCreate(BaseModel):
-    username: str
-    password: str
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=8)
     email: EmailStr
 
 class UserSearch(BaseModel):
@@ -134,9 +134,9 @@ class UserMeResponse(BaseModel):
     avatar_path: Optional[str] = None
 
 class UpdateProfileRequest(BaseModel):
-    username: Optional[str] = None
-    bio: Optional[str] = None
-    sticker_count: Optional[int] = None
+    username: Optional[str] = Field(default=None, min_length=3, max_length=50)
+    bio: Optional[str] = Field(default=None, max_length=500)
+    sticker_count: Optional[int] = Field(default=None, ge=0, le=10_000)
 
 class AvatarUpdateResponse(BaseModel):
     avatar_path: str
@@ -168,6 +168,7 @@ class FolderResponse(BaseModel):
     name: str
     description: Optional[str] = None
     cover_post_id: Optional[int] = None
+    avatar_path: Optional[str] = None
     is_public: bool
     folder_type: str
     created_at: datetime
@@ -186,6 +187,7 @@ class FolderWithPostsResponse(BaseModel):
     name: str
     description: Optional[str] = None
     cover_post_id: Optional[int] = None
+    avatar_path: Optional[str] = None
     is_public: bool
     folder_type: str
     posts: List[PostBase]
@@ -218,6 +220,8 @@ class TradeRequestResponse(BaseModel):
     requester_username: str
     requester_avatar: Optional[str] = None
     recipient_id: int
+    recipient_username: str
+    recipient_avatar: Optional[str] = None
     target_post_id: int
     post_caption: str
     post_thumbnail: Optional[str] = None
