@@ -26,8 +26,10 @@ class MediaAsset(Base):
 
     file_url: Mapped[str] = mapped_column(
         String(1024),
-        nullable=False,                          
+        nullable=False,
     )
+
+    s3_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     json_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
