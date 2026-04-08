@@ -6,7 +6,7 @@ import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 interface UserResult {
   id: number;
   username: string;
-  profile_image?: string;
+  avatar_path?: string;
 }
 interface QuickSearchResponse {
   query: string;
@@ -193,9 +193,9 @@ return (
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f5f5f5"}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
             >
-            {user.profile_image && (
+            {user.avatar_path && (
                     <img 
-                      src={user.profile_image} 
+                      src={user.avatar_path} 
                       alt={user.username}
                       style={{ width: "32px", height: "32px", borderRadius: "50%" }}
                     />
