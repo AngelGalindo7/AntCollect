@@ -1,7 +1,5 @@
 import type { Conversation } from '../types';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
 interface ConversationCellProps {
   conversation: Conversation;
   isActive?: boolean;
@@ -57,7 +55,7 @@ export function ConversationCell({ conversation, isActive = false, onClick }: Co
       <div className="relative shrink-0">
         {displayAvatar ? (
           <img
-            src={`${BACKEND_URL}/${displayAvatar}`}
+            src={displayAvatar}
             alt=""
             className="w-10 h-10 rounded-full object-cover bg-gray-200"
           />
