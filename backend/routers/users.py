@@ -1,3 +1,5 @@
+import os
+
 from fastapi import Depends, HTTPException, APIRouter, Request, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -184,7 +186,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,
+        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
         samesite="lax",
         max_age=ACCESS_TOKEN_MAX_AGE,
         path="/"
@@ -193,7 +195,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         key="refresh_token",
         value=refresh_token_data["token"],
         httponly=True,
-        secure=False,
+        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
         samesite="lax",
         max_age=REFRESH_TOKEN_MAX_AGE,
         path="/"

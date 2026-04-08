@@ -1,3 +1,5 @@
+import os
+
 from fastapi import Depends, HTTPException, APIRouter, Request
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
@@ -29,7 +31,7 @@ def _cookie_response(content: dict, access_token: str, refresh_token:str):
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,
+        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
         samesite="lax",
         max_age=ACCESS_TOKEN_MAX_AGE,
         path="/"
@@ -38,7 +40,7 @@ def _cookie_response(content: dict, access_token: str, refresh_token:str):
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False,
+        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
         samesite="lax",
         max_age=REFRESH_TOKEN_MAX_AGE,
         path="/"
