@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, APIRouter
+from fastapi import Depends, HTTPException, APIRouter, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
@@ -13,6 +13,8 @@ from ..schemas import (
     PostBase,
 )
 from ..utils.auth import authenthicate_access_token
+from ..utils.files import process_and_save_image, delete_file
+from ..utils.rate_limit import limiter, get_user_or_ip_key
 from ..schemas import UserSearch
 from typing import List
 
@@ -52,6 +54,7 @@ def create_folder(
             Folder.name,
             Folder.description,
             Folder.cover_post_id,
+            Folder.avatar_path,
             Folder.is_public,
             Folder.folder_type,
             Folder.created_at,
@@ -87,6 +90,7 @@ def list_user_folders(
         Folder.name,
         Folder.description,
         Folder.cover_post_id,
+        Folder.avatar_path,
         Folder.is_public,
         Folder.folder_type,
         Folder.created_at,
@@ -160,6 +164,7 @@ def get_folder(
         name=folder.name,
         description=folder.description,
         cover_post_id=folder.cover_post_id,
+        avatar_path=folder.avatar_path,
         is_public=folder.is_public,
         folder_type=folder.folder_type,
         posts=[PostBase.model_validate(row) for row in post_rows],
@@ -208,6 +213,53 @@ def update_folder(
             Folder.name,
             Folder.description,
             Folder.cover_post_id,
+            Folder.avatar_path,
+            Folder.is_public,
+            Folder.folder_type,
+            Folder.created_at,
+            Folder.updated_at,
+            post_count_subquery.label("post_count"),
+        ).where(Folder.id == folder.id)
+    ).one()
+    return FolderResponse.model_validate(row)
+
+
+@router.post("/{folder_id}/avatar", response_model=FolderResponse)
+@limiter.limit("5/hour", key_func=get_user_or_ip_key)
+def upload_folder_avatar(
+    request: Request,
+    folder_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token),
+):
+    folder = db.query(Folder).filter(Folder.id == folder_id).first()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    if folder.user_id != user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    old_avatar = folder.avatar_path
+    result = process_and_save_image(file, user.user_id)
+    folder.avatar_path = result["paths"]["thumbnail"]
+    db.commit()
+
+    if old_avatar:
+        delete_file(old_avatar)
+
+    post_count_subquery = (
+        select(func.count(FolderPost.id))
+        .where(FolderPost.folder_id == folder.id)
+        .scalar_subquery()
+    )
+    row = db.execute(
+        select(
+            Folder.id,
+            Folder.user_id,
+            Folder.name,
+            Folder.description,
+            Folder.cover_post_id,
+            Folder.avatar_path,
             Folder.is_public,
             Folder.folder_type,
             Folder.created_at,
