@@ -110,18 +110,13 @@ const PostCard: React.FC<PostCardProps> = ({
     }
   };
 
-  const getPostTypeLetter = (type: string) => type.charAt(0).toUpperCase();
-
   return (
     <div className="relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-      {/* Top: caption + type badge */}
-      <div className="px-3 py-2 bg-white border-b border-gray-200 flex items-start justify-between">
-        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 flex-1 pr-2">
+      {/* Top: caption */}
+      <div className="px-3 py-2 bg-white border-b border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">
           {post.caption || 'Untitled Post'}
         </h3>
-        <div className="shrink-0 w-7 h-7 rounded-full bg-gray-800 text-white flex items-center justify-center text-xs font-bold">
-          {getPostTypeLetter(post.type)}
-        </div>
       </div>
 
       {/* Image */}
