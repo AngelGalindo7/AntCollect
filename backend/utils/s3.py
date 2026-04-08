@@ -11,18 +11,23 @@ _s3_client = None
 def _get_client():
     global _s3_client
     if _s3_client is None:
+        endpoint_url = os.getenv("AWS_ENDPOINT_URL")
+        # For LocalStack, we often need to provide dummy credentials
         _s3_client = boto3.client(
             "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION"),
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID", "test"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY", "test"),
+            region_name=os.getenv("AWS_REGION", "us-east-1"),
+            endpoint_url=endpoint_url,
         )
     return _s3_client
 
 
 def upload_image_bytes(key: str, image_bytes: bytes, content_type: str) -> str:
     bucket = os.getenv("AWS_S3_BUCKET")
-    region = os.getenv("AWS_REGION")
+    region = os.getenv("AWS_REGION", "us-east-1")
+    endpoint_url = os.getenv("AWS_ENDPOINT_URL")
+    
     try:
         _get_client().put_object(
             Bucket=bucket,
@@ -32,6 +37,12 @@ def upload_image_bytes(key: str, image_bytes: bytes, content_type: str) -> str:
         )
     except ClientError as e:
         raise HTTPException(status_code=500, detail=f"S3 upload failed: {e}")
+    
+    # If using LocalStack/Custom Endpoint, return path-style URL
+    if endpoint_url:
+        return f"{endpoint_url.rstrip('/')}/{bucket}/{key}"
+    
+    # Standard AWS S3 URL
     return f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
 
 
@@ -47,10 +58,21 @@ def delete_s3_object(key: str) -> None:
 
 
 def s3_key_from_url(url: str) -> str | None:
-    if not url.startswith("https://"):
+    if not url.startswith("https://") and not url.startswith("http://"):
         return None
+        
     parsed = urlparse(url)
-    # path starts with '/', strip it to get the key
+    endpoint_url = os.getenv("AWS_ENDPOINT_URL")
+    bucket = os.getenv("AWS_S3_BUCKET")
+
+    # If LocalStack URL: http://localhost:4566/bucket/key
+    if endpoint_url and url.startswith(endpoint_url):
+        path = parsed.path.lstrip("/")
+        if path.startswith(f"{bucket}/"):
+            return path[len(bucket)+1:]
+        return path
+
+    # Standard AWS URL: https://bucket.s3.region.amazonaws.com/key
     key = parsed.path.lstrip("/")
     if not key:
         return None
