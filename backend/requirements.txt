@@ -14,3 +14,5 @@ boto3
 pytest
 pytest-asyncio
 httpx
+slowapi
+limits

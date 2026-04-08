@@ -1,6 +1,7 @@
 import os
 
 from fastapi import Depends, HTTPException, APIRouter, Request, File, Form, UploadFile
+from ..utils.rate_limit import limiter, get_real_ip, get_user_or_ip_key
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -60,7 +61,9 @@ def update_profile(
 
 
 @router.post("/me/avatar", response_model=AvatarUpdateResponse)
+@limiter.limit("5/hour", key_func=get_user_or_ip_key)
 def update_avatar(
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     user: UserSearch = Depends(authenthicate_access_token)
@@ -83,7 +86,9 @@ def update_avatar(
 
 
 @router.post("/me/password")
+@limiter.limit("5/hour", key_func=get_user_or_ip_key)
 def change_password(
+    request: Request,
     payload: ChangePasswordRequest,
     db: Session = Depends(get_db),
     user: UserSearch = Depends(authenthicate_access_token)
@@ -104,7 +109,9 @@ def change_password(
 
 
 @router.post("/create-user", response_model = UserResponse)
+@limiter.limit("3/hour", key_func=get_real_ip)
 def create_user(
+    request: Request,
     user:UserCreate,
     db: Session = Depends(get_db)
 ):  
@@ -135,7 +142,8 @@ def create_user(
     return new_user
 
 @router.post("/login")
-def login(user: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("5/minute;20/hour", key_func=get_real_ip)
+def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
 
 

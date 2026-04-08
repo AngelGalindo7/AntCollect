@@ -2,10 +2,19 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 
 from .routers import auth, users, posts, folders, trade_requests
+from .utils.rate_limit import limiter
 
 app = FastAPI()
+app.state.limiter = limiter
+
+async def _rate_limit_handler(request, exc):
+    return JSONResponse({"detail": "Too many requests"}, status_code=429)
+
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 
 _allowed = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
 origins = [o.strip() for o in _allowed.split(",")]

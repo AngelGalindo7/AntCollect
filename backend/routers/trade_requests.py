@@ -2,7 +2,7 @@ import logging
 import os
 
 import httpx
-from fastapi import BackgroundTasks, Depends, HTTPException, APIRouter
+from fastapi import BackgroundTasks, Depends, HTTPException, APIRouter, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
@@ -18,6 +18,7 @@ from ..schemas import (
     UserSearch,
 )
 from ..utils.auth import authenthicate_access_token
+from ..utils.rate_limit import limiter, get_user_or_ip_key
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +115,9 @@ def _build_response(
 
 
 @router.post("", response_model=TradeRequestResponse, status_code=201)
+@limiter.limit("20/hour", key_func=get_user_or_ip_key)
 def create_trade_request(
+    request: Request,
     payload: CreateTradeRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),

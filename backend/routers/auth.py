@@ -3,6 +3,7 @@ import os
 from fastapi import Depends, HTTPException, APIRouter, Request
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
+from ..utils.rate_limit import limiter, get_real_ip
 
 from ..database import get_db
 from backend.models import RefreshToken, User
@@ -49,6 +50,7 @@ def _cookie_response(content: dict, access_token: str, refresh_token:str):
 
 # TODO Add token to httpcookie/local memory in the frontend
 @router.post("/refresh-token")
+@limiter.limit("10/minute", key_func=get_real_ip)
 def refresh_token(
     request: Request,
     db: Session = Depends(get_db),

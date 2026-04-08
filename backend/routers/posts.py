@@ -1,4 +1,4 @@
-from fastapi import UploadFile, File, Depends, Form, HTTPException, APIRouter
+from fastapi import UploadFile, File, Depends, Form, HTTPException, APIRouter, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select, desc
@@ -8,6 +8,7 @@ from backend.models.media_assets import AssetStatus
 from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
 from ..utils.files import delete_file, process_and_save_image
 from ..utils.auth import authenthicate_access_token
+from ..utils.rate_limit import limiter, get_user_or_ip_key
 
 router = APIRouter(
     prefix="/posts",
@@ -18,7 +19,9 @@ router = APIRouter(
 
 #TODO Add a ban table in postgresql and check if user_id is not banned
 @router.post("/upload-post")
+@limiter.limit("10/hour", key_func=get_user_or_ip_key)
 def upload_post(
+    request: Request,
     caption: str=Form(...),
     post_type: str=Form(...),
     is_published: bool = Form(True),
