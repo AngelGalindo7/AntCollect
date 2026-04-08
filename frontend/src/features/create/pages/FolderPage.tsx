@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchWithAuth } from '@/shared/api/api';
 import PostGridLayout from '@/features/posts/components/PostGridLayout';
@@ -18,6 +18,7 @@ interface FolderDetail {
   name: string;
   description: string | null;
   cover_post_id: number | null;
+  avatar_path: string | null;
   is_public: boolean;
   folder_type: FolderType;
   posts: Post[];
@@ -26,9 +27,15 @@ interface FolderDetail {
 const FolderPage: React.FC = () => {
   const { folderId } = useParams<{ folderId: string }>();
   const navigate = useNavigate();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
   const [folder, setFolder] = useState<FolderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const currentUserId = parseInt(localStorage.getItem('userId') ?? '0', 10);
+  const isOwner = !!folder && folder.user_id === currentUserId;
 
   useEffect(() => {
     const fetchFolder = async () => {
@@ -64,6 +71,31 @@ const FolderPage: React.FC = () => {
     if (folderId) fetchFolder();
   }, [folderId]);
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !folder) return;
+
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetchWithAuth(`${API_BASE}/folders/${folder.id}/avatar`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      const updated = await res.json();
+      setFolder((prev) => prev ? { ...prev, avatar_path: updated.avatar_path } : prev);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setUploadingAvatar(false);
+      // reset so the same file can be re-selected
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -86,7 +118,7 @@ const FolderPage: React.FC = () => {
   const coverPost = folder.cover_post_id
     ? folder.posts.find((p) => p.post_id === folder.cover_post_id)
     : null;
-  const coverImageUrl = coverPost?.image_paths?.[0] ?? null;
+  const coverImageUrl = folder.avatar_path ?? coverPost?.image_paths?.[0] ?? null;
 
   const gridItems: GridItem[] = folder.posts.map((p): GridItem => ({ kind: 'post', data: p }));
 
@@ -95,14 +127,46 @@ const FolderPage: React.FC = () => {
       {/* ── Folder header ── */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-8 py-6 flex items-start gap-6">
-          {/* Cover image or placeholder */}
-          <div className="shrink-0 w-24 h-24 rounded-lg overflow-hidden bg-purple-50 flex items-center justify-center">
-            {coverImageUrl ? (
-              <img src={coverImageUrl} alt={folder.name} className="w-full h-full object-cover" />
-            ) : (
-              <svg className="w-12 h-12 text-purple-300" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-              </svg>
+          {/* Avatar / cover image */}
+          <div className="shrink-0 relative group/avatar w-24 h-24">
+            <div className="w-24 h-24 rounded-lg overflow-hidden bg-purple-50 flex items-center justify-center">
+              {coverImageUrl ? (
+                <img src={coverImageUrl} alt={folder.name} className="w-full h-full object-cover" />
+              ) : (
+                <svg className="w-12 h-12 text-purple-300" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                </svg>
+              )}
+            </div>
+
+            {isOwner && (
+              <>
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute inset-0 rounded-lg bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center disabled:cursor-not-allowed"
+                  aria-label="Upload folder avatar"
+                >
+                  {uploadingAvatar ? (
+                    <svg className="w-6 h-6 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  )}
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+              </>
             )}
           </div>
 
