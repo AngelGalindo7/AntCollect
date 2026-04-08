@@ -13,7 +13,7 @@ const FolderCard: React.FC<FolderCardProps> = ({ folder, onClick }) => {
       className="cursor-pointer group"
       onClick={() => onClick?.(folder)}
     >
-      <div className="relative">
+      <div className="relative z-0">
         {/* Tab — same fill as body, bordered on 3 sides (no bottom).
             z-10 so its background covers the body's top-left border beneath it,
             creating a seamless folder-tab silhouette. */}
