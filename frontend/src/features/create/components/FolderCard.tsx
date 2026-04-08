@@ -9,6 +9,7 @@ interface FolderCardProps {
 const FolderCard: React.FC<FolderCardProps> = ({ folder, onClick }) => {
   return (
     <div
+      data-testid="folder-card"
       className="cursor-pointer group"
       onClick={() => onClick?.(folder)}
     >
