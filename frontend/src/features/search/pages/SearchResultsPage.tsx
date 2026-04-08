@@ -6,9 +6,9 @@ import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
 interface SearchUser {
-  user_id: number;
+  id: number;
   username: string;
-  profile_picture?: string;
+  avatar_path?: string;
   post_count?: number;
 }
 
@@ -59,7 +59,7 @@ const SearchResultsPage: React.FC = () => {
             ...post,
             image_paths: (post.images ?? [])
               .filter(img => img && img.paths?.medium)
-              .map((img) => `${API_BASE}/${img.paths.original}`),
+              .map((img) => img.paths.original),
           })),
         };
 
@@ -127,14 +127,14 @@ const SearchResultsPage: React.FC = () => {
             <div className="space-y-3">
               {results.users.map((user) => (
                 <div
-                  key={user.user_id}
+                  key={user.id}
                   onClick={() => handleUserClick(user.username)}
                   className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
                 >
                   <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                    {user.profile_picture ? (
+                    {user.avatar_path ? (
                       <img
-                        src={`${API_BASE}/${user.profile_picture}`}
+                        src={user.avatar_path}
                         alt={user.username}
                         className="w-full h-full object-cover"
                       />
