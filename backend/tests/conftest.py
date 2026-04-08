@@ -1,5 +1,6 @@
 import os
 import uuid
+from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
@@ -11,6 +12,21 @@ from sqlalchemy.orm import Session
 load_dotenv()
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
+
+_FAKE_S3_URL = "https://test-bucket.s3.us-east-1.amazonaws.com/posts/1/original/test.jpg"
+
+
+@pytest.fixture(autouse=True, scope="session")
+def mock_s3():
+    """
+    Replace the boto3 S3 client with a mock for all tests.
+    upload_image_bytes returns a deterministic fake S3 URL.
+    delete_s3_object is a no-op.
+    This prevents any test from requiring real AWS credentials.
+    """
+    with patch("backend.utils.s3.upload_image_bytes", return_value=_FAKE_S3_URL) as mock_upload, \
+         patch("backend.utils.s3.delete_s3_object", return_value=None) as mock_delete:
+        yield {"upload": mock_upload, "delete": mock_delete}
 
 from backend.database import get_db  # noqa: E402
 from backend.main import app  # noqa: E402
