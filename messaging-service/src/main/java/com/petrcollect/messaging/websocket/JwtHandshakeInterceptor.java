@@ -39,9 +39,12 @@ import java.util.Map;
 public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
     private final JwtService jwtService;
+    private final WebSocketConnectionLimiter connectionLimiter;
 
-    public JwtHandshakeInterceptor(JwtService jwtService) {
+    public JwtHandshakeInterceptor(JwtService jwtService,
+                                   WebSocketConnectionLimiter connectionLimiter) {
         this.jwtService = jwtService;
+        this.connectionLimiter = connectionLimiter;
     }
 
     @Override
@@ -67,6 +70,10 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
     }
                         if (jwtService.isValid(token)) {
                             Long userId = jwtService.extractUserId(token);
+                            if (!connectionLimiter.tryConnect(userId)) {
+                                response.setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
+                                return false;
+                            }
                             attributes.put("userId", userId); // Still goes to attributes
                             return true; // Success!
                         }

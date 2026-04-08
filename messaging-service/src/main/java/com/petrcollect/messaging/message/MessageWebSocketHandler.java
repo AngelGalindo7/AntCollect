@@ -23,6 +23,7 @@ import com.petrcollect.messaging.conversation.ConversationParticipantRepository;
 import com.petrcollect.messaging.user.User;
 import com.petrcollect.messaging.user.UserRepository;
 import com.petrcollect.messaging.websocket.SessionRegistry;
+import com.petrcollect.messaging.websocket.WebSocketConnectionLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +57,7 @@ public class MessageWebSocketHandler {
     private final ConversationParticipantRepository participantRepository;
     private final SimpMessagingTemplate messaging;
     private final UserRepository userRepository;
+    private final WebSocketConnectionLimiter connectionLimiter;
 
     /**
      * Per-session state: executor + userId + registeredAt timestamp.
@@ -69,12 +71,14 @@ public class MessageWebSocketHandler {
                                    SessionRegistry sessionRegistry,
                                    ConversationParticipantRepository participantRepository,
                                    SimpMessagingTemplate messaging,
-                                   UserRepository userRepository) {
+                                   UserRepository userRepository,
+                                   WebSocketConnectionLimiter connectionLimiter) {
         this.messageService = messageService;
         this.sessionRegistry = sessionRegistry;
         this.participantRepository = participantRepository;
         this.messaging = messaging;
         this.userRepository = userRepository;
+        this.connectionLimiter = connectionLimiter;
     }
 
     // ── Lifecycle events ──────────────────────────────────────────────────────
@@ -158,6 +162,8 @@ public class MessageWebSocketHandler {
 
         // Guarded remove — only evicts if registeredAt still matches
         sessionRegistry.remove(state.userId(), state.registeredAt());
+
+        connectionLimiter.disconnect(state.userId());
 
         // Drain the queue — do NOT call shutdownNow()
         state.executor().shutdown();
