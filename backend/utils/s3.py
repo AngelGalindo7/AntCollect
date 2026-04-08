@@ -27,7 +27,8 @@ def upload_image_bytes(key: str, image_bytes: bytes, content_type: str) -> str:
     bucket = os.getenv("AWS_S3_BUCKET")
     region = os.getenv("AWS_REGION", "us-east-1")
     endpoint_url = os.getenv("AWS_ENDPOINT_URL")
-    
+    cf_domain = os.getenv("CLOUDFRONT_DOMAIN")
+
     try:
         _get_client().put_object(
             Bucket=bucket,
@@ -37,12 +38,15 @@ def upload_image_bytes(key: str, image_bytes: bytes, content_type: str) -> str:
         )
     except ClientError as e:
         raise HTTPException(status_code=500, detail=f"S3 upload failed: {e}")
-    
-    # If using LocalStack/Custom Endpoint, return path-style URL
+
+    # LocalStack / custom endpoint — path-style URL, no CloudFront
     if endpoint_url:
         return f"{endpoint_url.rstrip('/')}/{bucket}/{key}"
-    
-    # Standard AWS S3 URL
+
+    # Production: prefer CloudFront when configured
+    if cf_domain:
+        return f"https://{cf_domain}/{key}"
+
     return f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
 
 
@@ -60,19 +64,25 @@ def delete_s3_object(key: str) -> None:
 def s3_key_from_url(url: str) -> str | None:
     if not url.startswith("https://") and not url.startswith("http://"):
         return None
-        
+
     parsed = urlparse(url)
     endpoint_url = os.getenv("AWS_ENDPOINT_URL")
+    cf_domain = os.getenv("CLOUDFRONT_DOMAIN")
     bucket = os.getenv("AWS_S3_BUCKET")
 
-    # If LocalStack URL: http://localhost:4566/bucket/key
+    # LocalStack URL: http://localhost:4566/bucket/key
     if endpoint_url and url.startswith(endpoint_url):
         path = parsed.path.lstrip("/")
         if path.startswith(f"{bucket}/"):
-            return path[len(bucket)+1:]
+            return path[len(bucket) + 1:]
         return path
 
-    # Standard AWS URL: https://bucket.s3.region.amazonaws.com/key
+    # CloudFront URL: https://cf-domain/key
+    if cf_domain and parsed.netloc == cf_domain:
+        key = parsed.path.lstrip("/")
+        return key if key else None
+
+    # Standard AWS S3 URL: https://bucket.s3.region.amazonaws.com/key
     key = parsed.path.lstrip("/")
     if not key:
         return None
