@@ -63,8 +63,8 @@ test('visiting a different user profile shows no avatar upload button', async ({
 
 test('clicking a folder card navigates to /folders/:folderId', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
-  // FolderCard is the only component that renders a circular badge with text "F"
-  // (class bg-purple-700). Clicking anywhere inside the card triggers navigation.
-  await page.locator('[class*="bg-purple-700"]').first().click();
+  // FolderCard renders data-testid="folder-card" on its outer div.
+  // Clicking anywhere inside the card triggers navigation.
+  await page.locator('[data-testid="folder-card"]').first().click();
   await expect(page).toHaveURL(/\/folders\/\d+/);
 });

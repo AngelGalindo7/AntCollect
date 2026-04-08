@@ -9,7 +9,8 @@ test('/settings?tab=profile loads with current username pre-filled', async ({ pa
   // Scope to the settings card (.max-w-2xl) to avoid matching the Search
   // input that the layout renders in the sidebar on every page.
   const usernameInput = page.locator('.max-w-2xl input[type="text"]');
-  await expect(usernameInput).toHaveValue(process.env.TEST_USERNAME!);
+  // ProfileTab fetches /users/me before rendering the input; allow 15 s for CI.
+  await expect(usernameInput).toHaveValue(process.env.TEST_USERNAME!, { timeout: 15_000 });
 });
 
 test.describe('username change', () => {
@@ -28,6 +29,8 @@ test.describe('username change', () => {
     await page.goto('/settings?tab=profile');
 
     const usernameInput = page.locator('.max-w-2xl input[type="text"]');
+    // Wait for ProfileTab's /users/me query before interacting; allow 15 s for CI.
+    await expect(usernameInput).toBeVisible({ timeout: 15_000 });
     await usernameInput.clear();
     await usernameInput.fill(newUsername);
     await page.getByRole('button', { name: 'Save changes' }).click();
@@ -38,6 +41,6 @@ test.describe('username change', () => {
     await page.reload();
 
     // ProfileTab re-fetches GET /users/me on mount; input must show new value.
-    await expect(page.locator('.max-w-2xl input[type="text"]')).toHaveValue(newUsername);
+    await expect(page.locator('.max-w-2xl input[type="text"]')).toHaveValue(newUsername, { timeout: 15_000 });
   });
 });
