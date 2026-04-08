@@ -32,16 +32,31 @@ const FolderCard: React.FC<FolderCardProps> = ({ folder, onClick }) => {
             group-hover:bg-gray-50 transition-colors duration-200
           "
         >
-          <svg
-            className="w-20 h-20 text-gray-200"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-          </svg>
-          <span className="text-sm font-medium text-gray-400">
-            {folder.post_count} {folder.post_count === 1 ? 'post' : 'posts'}
-          </span>
+          {folder.avatar_path ? (
+            <>
+              <img
+                src={folder.avatar_path}
+                alt={folder.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <span className="absolute bottom-2 right-2 text-xs font-medium text-white bg-black/50 rounded-full px-2 py-0.5">
+                {folder.post_count} {folder.post_count === 1 ? 'post' : 'posts'}
+              </span>
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-20 h-20 text-gray-200"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+              </svg>
+              <span className="text-sm font-medium text-gray-400">
+                {folder.post_count} {folder.post_count === 1 ? 'post' : 'posts'}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
