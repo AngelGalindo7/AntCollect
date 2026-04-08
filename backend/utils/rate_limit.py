@@ -24,4 +24,5 @@ def get_user_or_ip_key(request: Request) -> str:
 limiter = Limiter(
     key_func=get_real_ip,
     storage_uri=os.getenv("RATE_LIMIT_STORAGE_URL", "memory://"),
+    enabled=os.getenv("TESTING", "false").lower() != "true" and "pytest" not in os.environ.get("PYTEST_CURRENT_TEST", ""),
 )

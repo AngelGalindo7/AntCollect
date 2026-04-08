@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 load_dotenv()
 
+os.environ["TESTING"] = "true"
+
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
 _FAKE_S3_URL = "https://test-bucket.s3.us-east-1.amazonaws.com/posts/1/original/test.jpg"
