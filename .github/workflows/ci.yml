@@ -52,6 +52,11 @@ jobs:
           DB_NAME: antcollect_test
           TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_S3_BUCKET: test-bucket
+          AWS_REGION: us-east-1
+          S3_MOCK: "true"
 
   messaging:
     runs-on: ubuntu-latest
@@ -179,10 +184,6 @@ jobs:
         # Mirrors the production grant documented in DB_SETUP.md step 7.
 
       # ── Start services ────────────────────────────────────────────────────
-      - name: Create Uploads directory
-        run: mkdir -p Uploads
-        # FastAPI mounts StaticFiles(directory="Uploads") — directory must exist.
-
       - name: Start FastAPI
         run: uvicorn backend.main:app --port 8000 &
         env:
@@ -192,6 +193,10 @@ jobs:
           DB_PORT: 5432
           DB_NAME: antcollect_test
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Start messaging service
         run: mvn spring-boot:run -Dspring-boot.run.profiles=test > /tmp/messaging.log 2>&1 &
@@ -248,6 +253,10 @@ jobs:
           TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
           TEST_USERNAME: ${{ secrets.TEST_USERNAME }}
           TEST_OTHER_USERNAME: ${{ secrets.TEST_OTHER_USERNAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Upload Playwright report
         if: failure()
