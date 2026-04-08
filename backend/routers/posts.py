@@ -6,7 +6,7 @@ from backend.database import get_db
 from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType, MediaAsset
 from backend.models.media_assets import AssetStatus
 from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
-from ..utils.files import save_upload_file, get_file_size, delete_file, process_and_save_image
+from ..utils.files import delete_file, process_and_save_image
 from ..utils.auth import authenthicate_access_token
 
 router = APIRouter(
@@ -50,6 +50,7 @@ def upload_post(
             asset = MediaAsset(
                 uploader_id=user_id,
                 file_url=image_data["paths"]["original"],
+                s3_key=f"posts/{user_id}/original/{image_data['filename']}",
                 json_metadata={
                     "paths": {
                         "thumbnail": image_data["paths"]["thumbnail"],
