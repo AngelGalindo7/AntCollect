@@ -24,7 +24,7 @@ const FolderCard: React.FC<FolderCardProps> = ({ folder, onClick }) => {
             forming the folder's "shelf". */}
         <div
           className="
-            relative -mt-0.75 w-full aspect-square
+            relative z-0 -mt-0.75 w-full aspect-square
             bg-white border-[3px] border-gray-900
             rounded-b-2xl rounded-tr-2xl overflow-hidden
             flex flex-col items-center justify-center gap-3
