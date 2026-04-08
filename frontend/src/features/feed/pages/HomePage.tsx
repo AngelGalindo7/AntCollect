@@ -43,7 +43,7 @@ const HomePage: React.FC = () => {
 					      ...post,
 					      image_paths: (post.images ?? [])
                 .filter(img => img && img.paths?.medium)
-                .map((img) => `${API_BASE}/${img.paths.original}`),
+                .map((img) => img.paths.original),
                   })),
                   };
                         
