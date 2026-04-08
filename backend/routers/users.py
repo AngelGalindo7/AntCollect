@@ -190,23 +190,28 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
 
     response = JSONResponse(content=content)
 
+    secure = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+    domain = os.getenv("COOKIE_DOMAIN") or None
+
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
+        secure=secure,
         samesite="lax",
         max_age=ACCESS_TOKEN_MAX_AGE,
-        path="/"
+        path="/",
+        domain=domain,
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token_data["token"],
         httponly=True,
-        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
+        secure=secure,
         samesite="lax",
         max_age=REFRESH_TOKEN_MAX_AGE,
-        path="/"
+        path="/",
+        domain=domain,
     )
 
     return response

@@ -23,8 +23,12 @@ REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60  # 30 days
 
 
 def _cookie_response(content: dict, access_token: str, refresh_token:str):
-    
     """Build and return JSONResponse with httpOnly cookies for access/refresh tokens."""
+    secure = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+    # COOKIE_DOMAIN=.petrcollect.com in production so cookies are shared between
+    # petrcollect.com (Vercel frontend) and api.petrcollect.com (this service).
+    # Leave unset in development — browser default scopes to the current origin.
+    domain = os.getenv("COOKIE_DOMAIN") or None
 
     response = JSONResponse(content=content)
 
@@ -32,19 +36,21 @@ def _cookie_response(content: dict, access_token: str, refresh_token:str):
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
+        secure=secure,
         samesite="lax",
         max_age=ACCESS_TOKEN_MAX_AGE,
-        path="/"
+        path="/",
+        domain=domain,
     )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=os.getenv("COOKIE_SECURE", "false").lower() == "true",
+        secure=secure,
         samesite="lax",
         max_age=REFRESH_TOKEN_MAX_AGE,
-        path="/"
+        path="/",
+        domain=domain,
     )
     return response
 
