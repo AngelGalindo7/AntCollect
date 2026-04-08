@@ -56,7 +56,7 @@ const FolderPage: React.FC = () => {
             ...post,
             image_paths: (post.images ?? [])
               .filter((img: any) => img && img.paths?.original)
-              .map((img: any) => `${API_BASE}/${img.paths.original}`),
+              .map((img: any) => img.paths.original),
           })),
         };
         setFolder(transformed);
