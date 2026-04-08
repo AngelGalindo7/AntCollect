@@ -125,7 +125,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
     }
   };
 
-  const avatarUrl = me?.avatar_path ? `${BACKEND_URL}/${me.avatar_path}` : null;
+  const avatarUrl = me?.avatar_path ?? null;
   const initials = me ? me.username.slice(0, 2).toUpperCase() : '?';
 
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -313,8 +313,8 @@ interface TradeRequestCardProps {
 
 function TradeRequestCard({ request, onAccept, onDecline }: TradeRequestCardProps) {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-  const thumbnailUrl = request.post_thumbnail ? `${BACKEND_URL}/${request.post_thumbnail}` : null;
-  const avatarUrl = request.requester_avatar ? `${BACKEND_URL}/${request.requester_avatar}` : null;
+  const thumbnailUrl = request.post_thumbnail ?? null;
+  const avatarUrl = request.requester_avatar ?? null;
 
   return (
     <div className="rounded-lg border border-gray-200 p-3 bg-gray-50 text-sm space-y-2">

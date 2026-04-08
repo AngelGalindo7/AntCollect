@@ -57,7 +57,7 @@ const UserProfile: React.FC = () => {
             ...post,
             image_paths: (post as any).images
               ?.filter((img: any) => img && img.paths?.medium)
-              .map((img: any) => `${API_BASE}/${img.paths.original}`) ?? [],
+              .map((img: any) => img.paths.original) ?? [],
           })),
         };
         setProfile(transformedData);
@@ -193,7 +193,7 @@ const UserProfile: React.FC = () => {
               >
                 {profile.avatar_path ? (
                   <img
-                    src={`${API_BASE}/${profile.avatar_path}`}
+                    src={profile.avatar_path}
                     alt={profile.username}
                     className="w-full h-full object-cover"
                   />
