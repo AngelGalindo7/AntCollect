@@ -15,38 +15,43 @@ interface FolderCardProps {
 const FolderCard: React.FC<FolderCardProps> = ({ folder, onClick }) => {
   return (
     <div
-      className="relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer"
+      className="cursor-pointer group"
       onClick={() => onClick?.(folder)}
     >
-      {/* Header — matches PostCard title area */}
-      <div className="px-3 py-2 bg-white border-b border-gray-200 flex items-start justify-between">
-        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 flex-1 pr-2">
-          {folder.name}
-        </h3>
-        <div className="shrink-0 w-7 h-7 rounded-full bg-purple-700 text-white flex items-center justify-center text-xs font-bold">
-          F
+      <div className="relative">
+        {/* Tab — sits above-left of the body */}
+        <div className="w-2/5 h-6 bg-gray-900 rounded-t-lg relative z-10" />
+
+        {/* Body — overlaps tab bottom by 1px so borders join flush.
+            No top-left radius so the left edge runs continuous with the tab's left border. */}
+        <div
+          className="
+            -mt-px w-full aspect-square
+            bg-purple-50 border-[3px] border-gray-900
+            rounded-b-2xl rounded-tr-2xl overflow-hidden
+            flex flex-col items-center justify-center gap-3
+            group-hover:bg-purple-100 transition-colors duration-200
+          "
+        >
+          <svg
+            className="w-16 h-16 text-purple-300"
+            fill="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+          </svg>
+          <span className="text-sm font-medium text-purple-400">
+            {folder.post_count} {folder.post_count === 1 ? 'post' : 'posts'}
+          </span>
         </div>
       </div>
 
-      {/* Avatar area — same aspect-square as PostCard image, blank for now */}
-      <div className="relative aspect-square overflow-hidden bg-purple-50 flex items-center justify-center">
-        <svg
-          className="w-16 h-16 text-purple-200"
-          fill="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-        </svg>
-      </div>
-
-      {/* Footer — type badge + post count */}
-      <div className="px-3 py-2 bg-white border-t border-gray-200 flex items-center justify-between">
-        <span className="text-xs font-medium text-purple-600 bg-purple-50 rounded-full px-2 py-0.5">
+      {/* Label below — equivalent of PostCard's header/footer text area */}
+      <div className="mt-2 px-1 text-center">
+        <p className="text-sm font-bold text-gray-900 truncate">{folder.name}</p>
+        <p className="text-xs text-purple-500 mt-0.5">
           {FOLDER_TYPE_LABELS[folder.folder_type]}
-        </span>
-        <span className="text-sm text-gray-500">
-          {folder.post_count} {folder.post_count === 1 ? 'post' : 'posts'}
-        </span>
+        </p>
       </div>
     </div>
   );
