@@ -14,6 +14,7 @@ import { API_BASE } from '@/shared/api/api';
 const CreateFolder: React.FC = () => {
   const navigate = useNavigate();
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [folderType, setFolderType] = useState<FolderType>('collection');
@@ -23,7 +24,9 @@ const CreateFolder: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch the current user's username from localStorage, then their posts
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
   useEffect(() => {
     const username = localStorage.getItem('username');
     if (!username) return;
@@ -58,6 +61,13 @@ const CreateFolder: React.FC = () => {
     nameInputRef.current?.focus();
   }, []);
 
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
   const togglePost = (postId: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -88,7 +98,18 @@ const CreateFolder: React.FC = () => {
       if (!createRes.ok) throw new Error('Failed to create folder');
       const folder = await createRes.json();
 
-      // Step 2: add selected posts sequentially (backend adds order_index per call)
+      // Step 2: upload avatar if one was selected
+      if (avatarFile) {
+        const formData = new FormData();
+        formData.append('file', avatarFile);
+        await fetchWithAuth(`${API_BASE}/folders/${folder.id}/avatar`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+      }
+
+      // Step 3: add selected posts sequentially (backend adds order_index per call)
       for (const postId of selectedIds) {
         await fetchWithAuth(`${API_BASE}/folders/${folder.id}/posts`, {
           method: 'POST',
@@ -126,12 +147,35 @@ const CreateFolder: React.FC = () => {
 
       {/* Folder identity row */}
       <div className="flex items-center gap-5 mb-8">
-        {/* Avatar placeholder — blank circle, wire upload later */}
-        <div className="w-20 h-20 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-          <svg className="w-9 h-9 text-purple-300" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-          </svg>
-        </div>
+        {/* Avatar — click to select image */}
+        <button
+          type="button"
+          onClick={() => avatarInputRef.current?.click()}
+          className="relative w-20 h-20 rounded-full overflow-hidden bg-purple-100 flex items-center justify-center shrink-0 group hover:ring-2 hover:ring-purple-400 transition-all"
+          aria-label="Choose folder avatar"
+        >
+          {avatarPreview ? (
+            <img src={avatarPreview} alt="Folder avatar" className="w-full h-full object-cover" />
+          ) : (
+            <svg className="w-9 h-9 text-purple-300" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+            </svg>
+          )}
+          {/* Camera overlay on hover */}
+          <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </span>
+        </button>
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={handleAvatarSelect}
+        />
 
         {/* Name input */}
         <div className="flex-1">
