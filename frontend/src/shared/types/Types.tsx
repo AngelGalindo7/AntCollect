@@ -90,6 +90,7 @@ export interface Folder {
   name: string;
   description: string | null;
   cover_post_id: number | null;
+  avatar_path: string | null;
   is_public: boolean;
   folder_type: FolderType;
   post_count: number;
