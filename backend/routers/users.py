@@ -7,7 +7,7 @@ from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset
 from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, ChangePasswordRequest
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token
-from ..utils.files import process_and_save_image, _cleanup_files
+from ..utils.files import process_and_save_image, delete_file
 from typing import List
 
 ACCESS_TOKEN_MAX_AGE = 30 * 60  # 30 minutes — matches JWT expiry in create_access_token
@@ -75,7 +75,7 @@ def update_avatar(
     db.commit()
 
     if old_avatar_path and old_avatar_path != new_avatar_path:
-        _cleanup_files([old_avatar_path])
+        delete_file(old_avatar_path)
 
     return AvatarUpdateResponse(avatar_path=new_avatar_path)
 
