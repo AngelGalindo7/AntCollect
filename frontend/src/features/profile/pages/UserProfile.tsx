@@ -2,10 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import Search from "@/features/search/components/Search";
-import { fetchWithAuth } from "@/shared/api/api";
+import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useParams, useNavigate } from "react-router-dom";
-
-const API_BASE = "http://localhost:8000";
 
 type TabValue = "collection" | "looking_for" | "trading";
 

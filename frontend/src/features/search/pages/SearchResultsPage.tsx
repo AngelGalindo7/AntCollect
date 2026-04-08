@@ -2,10 +2,8 @@ import React, { useEffect, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import type { Post, GridItem } from "@/shared/types/Types";
 import Search from '@/features/search/components/Search';
-import { fetchWithAuth } from "@/shared/api/api";
+import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useSearchParams, useNavigate } from "react-router-dom";
-
-const API_BASE = "http://localhost:8000";
 
 interface SearchUser {
   user_id: number;

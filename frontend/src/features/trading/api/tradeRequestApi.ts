@@ -1,7 +1,5 @@
-import { fetchWithAuth } from '@/shared/api/api';
+import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 import type { TradeRequest, TradeRequestType } from '../types';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 export async function createTradeRequest(data: {
   target_post_id: number;
@@ -9,7 +7,7 @@ export async function createTradeRequest(data: {
   request_type: TradeRequestType;
   offered_folder_id?: number;
 }): Promise<TradeRequest> {
-  const res = await fetchWithAuth(`${BACKEND_URL}/trade-requests`, {
+  const res = await fetchWithAuth(`${API_BASE}/trade-requests`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -19,26 +17,26 @@ export async function createTradeRequest(data: {
 }
 
 export async function getTradeInbox(): Promise<TradeRequest[]> {
-  const res = await fetchWithAuth(`${BACKEND_URL}/trade-requests/inbox`);
+  const res = await fetchWithAuth(`${API_BASE}/trade-requests/inbox`);
   if (!res.ok) throw new Error('Failed to fetch trade inbox');
   return res.json();
 }
 
 export async function getTradeInboxCount(): Promise<number> {
-  const res = await fetchWithAuth(`${BACKEND_URL}/trade-requests/inbox/count`);
+  const res = await fetchWithAuth(`${API_BASE}/trade-requests/inbox/count`);
   if (!res.ok) throw new Error('Failed to fetch trade inbox count');
   const data = await res.json();
   return data.count;
 }
 
 export async function getSentTradeRequests(): Promise<TradeRequest[]> {
-  const res = await fetchWithAuth(`${BACKEND_URL}/trade-requests/sent`);
+  const res = await fetchWithAuth(`${API_BASE}/trade-requests/sent`);
   if (!res.ok) throw new Error('Failed to fetch sent requests');
   return res.json();
 }
 
 export async function acceptTradeRequest(id: number): Promise<TradeRequest> {
-  const res = await fetchWithAuth(`${BACKEND_URL}/trade-requests/${id}/accept`, {
+  const res = await fetchWithAuth(`${API_BASE}/trade-requests/${id}/accept`, {
     method: 'POST',
   });
   if (!res.ok) throw await res.json();
@@ -46,7 +44,7 @@ export async function acceptTradeRequest(id: number): Promise<TradeRequest> {
 }
 
 export async function declineTradeRequest(id: number): Promise<void> {
-  const res = await fetchWithAuth(`${BACKEND_URL}/trade-requests/${id}/decline`, {
+  const res = await fetchWithAuth(`${API_BASE}/trade-requests/${id}/decline`, {
     method: 'POST',
   });
   if (!res.ok) throw await res.json();

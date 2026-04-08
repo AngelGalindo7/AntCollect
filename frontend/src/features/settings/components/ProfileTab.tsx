@@ -1,8 +1,6 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchWithAuth } from '@/shared/api/api';
-
-const API_BASE = 'http://localhost:8000';
+import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 
 interface UserMe {
   id: number;

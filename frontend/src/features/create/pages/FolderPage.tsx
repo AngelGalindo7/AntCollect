@@ -4,7 +4,7 @@ import { fetchWithAuth } from '@/shared/api/api';
 import PostGridLayout from '@/features/posts/components/PostGridLayout';
 import type { GridItem, Post, FolderType } from '@/shared/types/Types';
 
-const API_BASE = 'http://localhost:8000';
+import { API_BASE } from '@/shared/api/api';
 
 const FOLDER_TYPE_LABELS: Record<FolderType, string> = {
   collection: 'Collection',

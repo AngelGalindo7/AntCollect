@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { fetchWithAuth } from '@/shared/api/api';
-
-const API_BASE = 'http://localhost:8000';
+import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 
 function passwordStrength(pw: string): 'weak' | 'medium' | 'strong' {
   if (pw.length < 8) return 'weak';

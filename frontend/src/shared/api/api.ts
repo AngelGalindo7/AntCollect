@@ -1,6 +1,6 @@
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
-const API_BASE = "http://localhost:8000";
+export const API_BASE = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
 
 async function refreshAccessToken(): Promise<boolean> {
     try {

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { fetchWithAuth } from '@/shared/api/api';
-const API_BASE = "http://localhost:8000";
+import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 
 const PostType = {
   LOOKING_FOR: "looking_for",

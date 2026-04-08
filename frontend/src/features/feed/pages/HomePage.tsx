@@ -4,7 +4,7 @@ import Search from "@/features/search/components/Search";
 import type { Post, TopPostsResponse, PostWithEngagement, GridItem } from "@/shared/types/Types";
 import { fetchWithAuth } from "@/shared/api/api";
 
-const API_BASE = "http://localhost:8000";
+import { API_BASE } from '@/shared/api/api';
 
 const HomePage: React.FC = () => {
     const [loading, setLoading] = useState(false);
