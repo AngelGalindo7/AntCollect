@@ -111,15 +111,8 @@ const PostCard: React.FC<PostCardProps> = ({
   };
 
   return (
-    <div className="relative bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-      {/* Top: caption */}
-      <div className="px-3 py-2 bg-white border-b border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">
-          {post.caption || 'Untitled Post'}
-        </h3>
-      </div>
-
-      {/* Image */}
+    <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
+      {/* Image — leads the card */}
       <div
         className="relative aspect-square overflow-hidden bg-gray-100 cursor-pointer group"
         onClick={handleClick}
@@ -139,8 +132,15 @@ const PostCard: React.FC<PostCardProps> = ({
         )}
       </div>
 
+      {/* Caption below image */}
+      <div className="px-3 pt-2 pb-1">
+        <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">
+          {post.caption || 'Untitled Post'}
+        </h3>
+      </div>
+
       {/* Bottom bar: like + optional trade button */}
-      <div className="px-3 py-2 bg-white border-t border-gray-200 flex items-center justify-between">
+      <div className="px-3 py-2 flex items-center justify-between">
         <button
           onClick={handleLikeClick}
           className="flex items-center gap-2 text-sm font-medium transition-colors duration-200 hover:opacity-80"
