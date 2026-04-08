@@ -11,3 +11,5 @@ app:
     # Falls back to a fixed test-only secret when JWT_SECRET is not in the environment.
     # Production always requires the env var (no default in application.yml).
     secret: ${JWT_SECRET:test-secret-key-for-unit-tests-only-not-for-prod}
+  internal:
+    secret: ${INTERNAL_SERVICE_SECRET:test-internal-secret-for-unit-tests-only}
