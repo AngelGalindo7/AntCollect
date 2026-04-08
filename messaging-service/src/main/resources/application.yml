@@ -8,7 +8,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -27,11 +27,13 @@ app:
     expiration: 1200
   internal:
     secret: ${INTERNAL_SERVICE_SECRET}
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
 logging:
   level:
     com.petrcollect.messaging: DEBUG
     org.springframework.web: DEBUG
 server:
   error:
-    include-message: always
-    include-stacktrace: always
+    include-message: never
+    include-stacktrace: never
