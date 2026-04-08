@@ -81,7 +81,7 @@ export default function ProfileTab() {
   if (isLoading) return <p className="text-sm text-gray-500">Loading…</p>;
   if (!user) return null;
 
-  const avatarUrl = user.avatar_path ? `${API_BASE}/${user.avatar_path}` : null;
+  const avatarUrl = user.avatar_path ?? null;
   const initials = user.username.slice(0, 2).toUpperCase();
 
   return (
