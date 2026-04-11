@@ -1,0 +1,107 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write   # Required for OIDC role assumption
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Configure AWS credentials via OIDC ──────────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # ── Login to Amazon ECR ──────────────────────────────────────────────
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ── Build & Push Backend ─────────────────────────────────────────────
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/petrcollect-backend:latest
+
+      # ── Build & Push Messaging ──────────────────────────────────────────
+      - name: Build and push Messaging
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: messaging-service/Dockerfile
+          push: true
+          tags: ${{ steps.login-ecr.outputs.registry }}/petrcollect-messaging:latest
+
+      # ── RDS Initialization (Admin) ──────────────────────────────────────
+      # Note: We use a postgres client to connect to RDS. 
+      # RDS must be accessible from GitHub Actions runners (or use a VPN/Runner in VPC).
+      - name: Initialize RDS Roles and Schemas
+        run: |
+          # Replace placeholders in SQL with environment variables
+          sed -i "s/\${APP_DB_PASSWORD}/${{ secrets.APP_DB_PASSWORD }}/g" infra/db/init-roles.sql
+          sed -i "s/\${MESSAGING_DB_PASSWORD}/${{ secrets.MESSAGING_DB_PASSWORD }}/g" infra/db/init-roles.sql
+          
+          # Execute the script using psql (admin credentials)
+          PGPASSWORD="${{ secrets.RDS_ADMIN_PASSWORD }}" psql \
+            -h ${{ secrets.RDS_HOST }} \
+            -U ${{ secrets.RDS_ADMIN_USER }} \
+            -d ${{ secrets.DB_NAME }} \
+            -f infra/db/init-roles.sql
+
+      # ── Run Alembic Migrations (App User) ───────────────────────────────
+      - name: Run Backend Migrations
+        run: |
+          docker run --rm \
+            -e DB_USER=petrcollect_app \
+            -e DB_PASSWORD=${{ secrets.APP_DB_PASSWORD }} \
+            -e DB_HOST=${{ secrets.RDS_HOST }} \
+            -e DB_PORT=${{ secrets.RDS_PORT }} \
+            -e DB_NAME=${{ secrets.DB_NAME }} \
+            ${{ steps.login-ecr.outputs.registry }}/petrcollect-backend:latest \
+            alembic upgrade head
+
+      # ── Cross-Schema Permissions ────────────────────────────────────────
+      # Messaging needs to read from public.users.
+      # This MUST run after migrations have created the tables.
+      - name: Grant Cross-Schema Permissions
+        run: |
+          PGPASSWORD="${{ secrets.RDS_ADMIN_PASSWORD }}" psql \
+            -h ${{ secrets.RDS_HOST }} \
+            -U ${{ secrets.RDS_ADMIN_USER }} \
+            -d ${{ secrets.DB_NAME }} \
+            -c "GRANT SELECT ON public.users TO petrcollect_messaging;"
+
+      # ── Deploy to EC2 ────────────────────────────────────────────────────
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mkdir -p /opt/petrcollect
+            cd /opt/petrcollect
+            
+            # Login to ECR on EC2
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+            
+            # Pull latest images
+            docker pull ${{ steps.login-ecr.outputs.registry }}/petrcollect-backend:latest
+            docker pull ${{ steps.login-ecr.outputs.registry }}/petrcollect-messaging:latest
+            
+            # Restart services
+            # Assuming docker-compose.yml on EC2 points to these tags
+            docker-compose up -d
