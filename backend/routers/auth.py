@@ -67,15 +67,16 @@ def refresh_token(
 
         refresh_token_str = request.cookies.get("refresh_token")
         user_id = decode_refresh_token(refresh_token_str)
-        db_token, user = db.query(RefreshToken, User).join(
+        result = db.query(RefreshToken, User).join(
             User, RefreshToken.user_id == User.id
         ).filter(
-            RefreshToken.token == refresh_token_str, 
+            RefreshToken.token == refresh_token_str,
             RefreshToken.user_id == user_id,
             RefreshToken.revoked == False,
-            ).first()
-        if not db_token:
+        ).first()
+        if not result:
             raise HTTPException(status_code=401, detail="Invalid token")
+        db_token, user = result
         
         new_access_token = create_access_token({
             "sub": str(user.id),
@@ -108,14 +109,16 @@ def refresh_token(
             access_token=new_access_token,
             refresh_token=new_refresh_token_data["token"],
         )
-    except HTTPException:
-        db.rollback()
-        raise 
     except Exception as e:
         db.rollback()
+        # If it's already an HTTP exception (like our 401 invalid token above), re-raise it
+        if isinstance(e, HTTPException):
+            raise e
+        # Otherwise, log the error in the console but return a 500 so you don't mistakenly log users out on DB failures
+        print(f"Internal Server Error during token refresh: {e}")
         raise HTTPException(
-            status_code=401,
-            detail=f"An error occurred validating refresh token: {e}"
+            status_code=500,
+            detail="Internal Server Error during token validation",
         )
     
     
@@ -123,11 +126,24 @@ def refresh_token(
 
     
 
-"""
 @router.post("/logout")
-def logout():
+def logout(
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    refresh_token_str = request.cookies.get("refresh_token")
+    if refresh_token_str:
+        db_token = db.query(RefreshToken).filter(
+            RefreshToken.token == refresh_token_str,
+            RefreshToken.revoked == False,
+        ).first()
+        if db_token:
+            db_token.revoked = True
+            db.commit()
+
+    secure = os.getenv("COOKIE_SECURE", "false").lower() == "true"
+    domain = os.getenv("COOKIE_DOMAIN") or None
     response = JSONResponse(content={"ok": True})
-    for cookie_name in ["access_token", "refresh_token"]:
-        response.delete_cookie(cookie_name, path="/")
+    response.delete_cookie("access_token", path="/", domain=domain, secure=secure)
+    response.delete_cookie("refresh_token", path="/", domain=domain, secure=secure)
     return response
-    """
