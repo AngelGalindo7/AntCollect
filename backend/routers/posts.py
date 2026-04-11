@@ -83,13 +83,16 @@ def upload_post(
         "message": "Upload successful"
     }
     
+    except HTTPException:
+        db.rollback()
+        for path in all_created_files:
+            try:
+                delete_file(path)
+            except Exception:
+                pass
+        raise
     except Exception as e:
         db.rollback()
-        #add cleanup function
-
-        # 'locals()' is a dictionary of all current local variables.
-        # We use .get() to safely retrieve the list. If it doesn't exist, we get an empty list [].
-        
         for path in all_created_files:
             try:
                 delete_file(path)
@@ -159,6 +162,7 @@ def like_image(
 
 @router.get("/top")
 def get_top_posts(k: int = 10, db: Session = Depends(get_db), user: UserSearch = Depends(authenthicate_access_token)):
+    k = min(max(k, 1), 100)
 
 
     # top_posts = (
@@ -218,6 +222,10 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), user: UserSearch =
             Post.updated_at,
             top_posts_subquery.c.engagement_count.label("total_engagement"),
             #consider wrapping in array_remove to eliminate null values
+            func.array_agg(
+                MediaAsset.file_url,
+                order_by=PostImage.order_index
+                ).label("image_paths"),
             func.array_agg(
                 MediaAsset.json_metadata,
                 order_by=PostImage.order_index
