@@ -7,6 +7,8 @@ export interface TradeRequest {
   requester_username: string;
   requester_avatar: string | null;
   recipient_id: number;
+  recipient_username: string;
+  recipient_avatar: string | null;
   target_post_id: number;
   post_caption: string;
   post_thumbnail: string | null;

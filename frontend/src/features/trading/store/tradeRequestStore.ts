@@ -3,8 +3,10 @@ import type { TradeRequest } from '../types';
 
 interface TradeRequestStore {
   pendingRequests: TradeRequest[];
+  sentRequests: TradeRequest[];
   pendingCount: number;
   setPendingRequests: (requests: TradeRequest[]) => void;
+  setSentRequests: (requests: TradeRequest[]) => void;
   setPendingCount: (count: number) => void;
   appendRequest: (request: TradeRequest) => void;
   removeRequest: (id: number) => void;
@@ -12,8 +14,10 @@ interface TradeRequestStore {
 
 export const useTradeRequestStore = create<TradeRequestStore>((set) => ({
   pendingRequests: [],
+  sentRequests: [],
   pendingCount: 0,
   setPendingRequests: (requests) => set({ pendingRequests: requests }),
+  setSentRequests: (requests) => set({ sentRequests: requests }),
   setPendingCount: (count) => set({ pendingCount: count }),
   appendRequest: (request) =>
     set((state) => ({
