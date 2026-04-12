@@ -134,9 +134,13 @@ def create_user(
         email = user.email,
         password_hash = hashed_pw
     )
-    
+
     db.add(new_user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Username or email already registered")
     db.refresh(new_user)
 
     return new_user
@@ -393,16 +397,8 @@ def retrieve_user(
 @router.post("/retrieve_user_likes", response_model=UserPostLikesResponse)
 def retrieve_user_likes(
     db: Session = Depends(get_db),
-    user_id: User = Depends(authenthicate_access_token)
+    current_user: UserSearch = Depends(authenthicate_access_token)
 ):
-    
-    likes_subquery = (
-        select(func.count(PostLike.id))
-        .where(PostLike.post_id == Post.id)
-        .correlate(Post)
-        .scalar_subquery()
-    )
-
     query = (
         select(
             Post.id.label("post_id"),
@@ -412,14 +408,9 @@ def retrieve_user_likes(
             Post.type,
             Post.updated_at,
             func.array_agg(
-            MediaAsset.json_metadata,
-            order_by=PostImage.order_index
-        ).label("images"),
-            #func.array_agg(
-            #    PostImage.file_metadata,
-            #    order_by=PostImage.order_index
-            #).label("images"),
-            #likes_subquery.label("total_likes")
+                MediaAsset.json_metadata,
+                order_by=PostImage.order_index
+            ).label("images"),
         )
         .join(PostLike, Post.id == PostLike.post_id)
         .outerjoin(PostImage, Post.id == PostImage.post_id)
@@ -428,121 +419,17 @@ def retrieve_user_likes(
     )
 
     posts_query = query.where(
-        PostLike.user_id == user_id,
-        Post.public == True
-        )
-    
+        PostLike.user_id == current_user.user_id,
+        Post.public == True,
+    )
+
     results = db.execute(posts_query).all()
 
     return UserPostLikesResponse(
-        user_id=user_id,
+        user_id=current_user.user_id,
         posts=[PostBase.model_validate(row) for row in results]
     )
 
-@router.post("update-bio")
-def update_bio(
-        
-        new_bio: str=Form(...),
-        db: Session = Depends(get_db),
-        user: UserSearch = Depends(authenthicate_access_token)
-
-):
-
-
-
-    user_id = current_user.user_id
-    
-
-    try:
-        
-        update_user = db.query(User).filter(User.id == user_id).update({"bio": new_bio})
-
-        db.commit()
-
-        return {
-        "user_id": str(user_id),
-        "message": "Update successful"
-    }
-    
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred during upload: {e}"
-            )
-"""
-@router.post("update-bio")
-def update_bio(
-        
-        new_bio: str=Form(...)
-        db: Session = Depends(get_db)
-        user: UserSearch = Depends(authenthicate_access_token)
-
-    )
-
-
-
-    user_id = current_user.user_id
-    
-
-    try:
-        
-        update_user = db.query(User).filter(User.id == user_id).update({"bio": new_bio})
-
-        db.commit()
-
-        return {
-        "user_id": str(user_id),
-        "message": "Update successful"
-    }
-    
-    except Exception as e:
-        db.rollback(        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred during upload: {e}"
-        )
-"""
-
-#test existing 
-@router.post("/update-avatar")
-def update_avatar(
-        
-        new_avatar: UploadFile=File(...),
-        db: Session = Depends(get_db),
-        user: UserSearch = Depends(authenthicate_access_token)
-
-):
-
-
-
-    user_id = current_user.user_id
-    uploaded_avatar = None
-
-    try:
-        file_path = save_upload_file(new_avatar) 
-
-        update_user = db.query(User).filter(User.id == user_id).update({"avatar_path": file_path})
-        #TODO Delete old avatar_path in stored uploads
-        db.commit()
-
-        return {
-        "user_id": str(user_id),
-        "message": "Update successful"
-    }
-    
-    except Exception as e:
-        db.rollback()
-
-                
-        if file_path:
-            try:
-                delete_file(file_path)
-            except Exception:
-                pass
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"An error occurred during update: {e}"
-        )
 
 
 
