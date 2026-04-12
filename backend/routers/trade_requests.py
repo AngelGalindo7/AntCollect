@@ -24,6 +24,11 @@ logger = logging.getLogger(__name__)
 
 _MESSAGING_INTERNAL_URL = os.getenv("MESSAGING_INTERNAL_URL", "http://localhost:8080")
 _INTERNAL_SECRET = os.getenv("INTERNAL_SERVICE_SECRET", "")
+if not _INTERNAL_SECRET:
+    logger.warning(
+        "INTERNAL_SERVICE_SECRET is not set — the /internal/trade-notify endpoint "
+        "is unprotected. Set this env var before deploying."
+    )
 
 
 def _notify_trade_request(trade: TradeRequestResponse) -> None:
@@ -70,8 +75,9 @@ def _build_response(
     trade: TradeRequest,
     db: Session,
 ) -> TradeRequestResponse:
-    """Join requester, post, folder data onto the trade request row."""
+    """Join requester, recipient, post, folder data onto the trade request row."""
     requester = db.get(User, trade.requester_id)
+    recipient = db.get(User, trade.recipient_id)
     post = db.get(Post, trade.target_post_id)
 
     # Thumbnail: first PostImage → json_metadata.paths.thumbnail
@@ -103,6 +109,8 @@ def _build_response(
         requester_username=requester.username if requester else "",
         requester_avatar=requester.avatar_path if requester else None,
         recipient_id=trade.recipient_id,
+        recipient_username=recipient.username if recipient else "",
+        recipient_avatar=recipient.avatar_path if recipient else None,
         target_post_id=trade.target_post_id,
         post_caption=post.caption if post else "",
         post_thumbnail=post_thumbnail,
