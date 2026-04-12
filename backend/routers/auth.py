@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone, timedelta
 
 from fastapi import Depends, HTTPException, APIRouter, Request
 from sqlalchemy.orm import Session
@@ -67,16 +68,27 @@ def refresh_token(
 
         refresh_token_str = request.cookies.get("refresh_token")
         user_id = decode_refresh_token(refresh_token_str)
+        
+        # Retrieve the token regardless of its revocation status
         result = db.query(RefreshToken, User).join(
             User, RefreshToken.user_id == User.id
         ).filter(
             RefreshToken.token == refresh_token_str,
             RefreshToken.user_id == user_id,
-            RefreshToken.revoked == False,
         ).first()
+
         if not result:
             raise HTTPException(status_code=401, detail="Invalid token")
+
         db_token, user = result
+        
+        # Grace period logic: allow recently revoked tokens (within 10 seconds)
+        # to handle concurrent request bursts from SPAs.
+        if db_token.revoked:
+            grace_period = timedelta(seconds=10)
+            now = datetime.now(timezone.utc)
+            if not db_token.revoked_at or now > (db_token.revoked_at + grace_period):
+                raise HTTPException(status_code=401, detail="Token has been revoked")
         
         new_access_token = create_access_token({
             "sub": str(user.id),
@@ -84,7 +96,10 @@ def refresh_token(
             "email": user.email})
         new_refresh_token_data = create_refresh_token({"sub": user.id,})
 
+        # Mark as revoked and set the timestamp for the grace period
         db_token.revoked = True
+        db_token.revoked_at = datetime.now(timezone.utc)
+        
         new_refresh = RefreshToken(
             user_id=db_token.user_id,
             token=new_refresh_token_data["token"],
@@ -134,11 +149,11 @@ def logout(
     refresh_token_str = request.cookies.get("refresh_token")
     if refresh_token_str:
         db_token = db.query(RefreshToken).filter(
-            RefreshToken.token == refresh_token_str,
-            RefreshToken.revoked == False,
+            RefreshToken.token == refresh_token_str
         ).first()
-        if db_token:
+        if db_token and not db_token.revoked:
             db_token.revoked = True
+            db_token.revoked_at = datetime.now(timezone.utc)
             db.commit()
 
     secure = os.getenv("COOKIE_SECURE", "false").lower() == "true"

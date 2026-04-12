@@ -1,5 +1,7 @@
 from httpx import AsyncClient
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone, timedelta
+import asyncio
 
 from backend.models import RefreshToken
 
@@ -35,6 +37,33 @@ async def test_refresh_token_revoked_returns_401(
     # Router filter (revoked == False) finds no row → unpacking None → caught
     # by the broad except → re-raised as 401
     assert response.status_code == 401
+
+
+async def test_refresh_token_grace_period(
+    auth_client: AsyncClient, db: Session
+):
+    token_str = auth_client.cookies.get("refresh_token")
+    db_token = db.query(RefreshToken).filter(RefreshToken.token == token_str).first()
+    
+    # 1. Revoke with a very recent timestamp (grace period active)
+    db_token.revoked = True
+    db_token.revoked_at = datetime.now(timezone.utc) - timedelta(seconds=2)
+    db.commit()
+    
+    response = await auth_client.post("/auth/refresh-token")
+    assert response.status_code == 200, "Should succeed within 10s grace period"
+    
+    # 2. Revoke with an old timestamp (grace period expired)
+    # Note: we need to get the NEW token from the previous successful refresh
+    new_token_str = auth_client.cookies.get("refresh_token")
+    new_db_token = db.query(RefreshToken).filter(RefreshToken.token == new_token_str).first()
+    
+    new_db_token.revoked = True
+    new_db_token.revoked_at = datetime.now(timezone.utc) - timedelta(seconds=11)
+    db.commit()
+    
+    response = await auth_client.post("/auth/refresh-token")
+    assert response.status_code == 401, "Should fail after 10s grace period"
 
 
 async def test_refresh_token_missing_cookie_returns_401(client: AsyncClient):
