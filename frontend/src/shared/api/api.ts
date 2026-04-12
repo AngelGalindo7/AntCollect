@@ -26,9 +26,7 @@ export async function fetchWithAuth(
         credentials: "include",
     };
 
-    console.log("Making API request to:", url, "with options:", config);
     let response = await fetch(url, config);
-    console.log("Received response:", response);
     if (response.status === 401) {
 
         if(!isRefreshing) {
