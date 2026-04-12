@@ -27,7 +27,7 @@ def get_file_size(file_path: str) -> int:
 def delete_file(file_path_or_url: str) -> None:
     if not file_path_or_url:
         return
-    if file_path_or_url.startswith("https://"):
+    if file_path_or_url.startswith("https://") or file_path_or_url.startswith("http://"):
         key = s3_key_from_url(file_path_or_url)
         if key:
             delete_s3_object(key)
