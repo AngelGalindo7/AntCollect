@@ -10,6 +10,7 @@ import { useTradeRequestStore } from '@/features/trading/store/tradeRequestStore
 import {
   getTradeInboxCount,
   getTradeInbox,
+  getSentTradeRequests,
   acceptTradeRequest,
   declineTradeRequest,
 } from '@/features/trading/api/tradeRequestApi';
@@ -37,8 +38,15 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
 
   const { sendMessage } = useWebSocketContext();
 
-  const { pendingRequests, pendingCount, setPendingRequests, setPendingCount, removeRequest } =
-    useTradeRequestStore();
+  const {
+    pendingRequests,
+    sentRequests,
+    pendingCount,
+    setPendingRequests,
+    setSentRequests,
+    setPendingCount,
+    removeRequest
+  } = useTradeRequestStore();
 
   const { data: me } = useQuery<UserMe>({
     queryKey: ['me'],
@@ -67,8 +75,12 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
     setMessagesOpen(false);
     if (opening) {
       try {
-        const inbox = await getTradeInbox();
+        const [inbox, sent] = await Promise.all([
+          getTradeInbox(),
+          getSentTradeRequests(),
+        ]);
         setPendingRequests(inbox);
+        setSentRequests(sent);
       } catch {
         // panel shows empty list on failure
       }
@@ -89,6 +101,9 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
         }),
       });
 
+      if (!convRes.ok) {
+        throw new Error(`Failed to create conversation: ${convRes.status}`);
+      }
       const conversation = await convRes.json();
       const conversationId: string = String(conversation.conversationId ?? conversation.id);
 
@@ -254,44 +269,66 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 space-y-4">
-            {pendingRequests.length === 0 && (
-              <p className="text-sm text-gray-400 text-center mt-8">No pending trade requests</p>
+            {pendingRequests.length === 0 && sentRequests.length === 0 && (
+              <p className="text-sm text-gray-400 text-center mt-8">No trade activity</p>
             )}
 
-            {wantToTrade.length > 0 && (
-              <section>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  Wants Your Stickers
+            {/* Inbox Section */}
+            {(wantToTrade.length > 0 || hasWhatYouNeed.length > 0) && (
+              <div className="space-y-4">
+                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
+                  Incoming Requests
                 </h3>
-                <div className="space-y-2">
-                  {wantToTrade.map((req) => (
-                    <TradeRequestCard
-                      key={req.id}
-                      request={req}
-                      onAccept={handleAccept}
-                      onDecline={handleDecline}
-                    />
-                  ))}
-                </div>
-              </section>
+                {wantToTrade.length > 0 && (
+                  <section>
+                    <h4 className="text-xs font-semibold text-gray-500 mb-2">
+                      Wants Your Stickers
+                    </h4>
+                    <div className="space-y-2">
+                      {wantToTrade.map((req) => (
+                        <TradeRequestCard
+                          key={req.id}
+                          request={req}
+                          onAccept={handleAccept}
+                          onDecline={handleDecline}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {hasWhatYouNeed.length > 0 && (
+                  <section>
+                    <h4 className="text-xs font-semibold text-gray-500 mb-2">
+                      Has What You Need
+                    </h4>
+                    <div className="space-y-2">
+                      {hasWhatYouNeed.map((req) => (
+                        <TradeRequestCard
+                          key={req.id}
+                          request={req}
+                          onAccept={handleAccept}
+                          onDecline={handleDecline}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
             )}
 
-            {hasWhatYouNeed.length > 0 && (
-              <section>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                  Has What You Need
+            {/* Sent Section */}
+            {sentRequests.length > 0 && (
+              <div className="space-y-4 pt-4 border-t border-gray-100">
+                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
+                  Your Sent Requests
                 </h3>
                 <div className="space-y-2">
-                  {hasWhatYouNeed.map((req) => (
-                    <TradeRequestCard
-                      key={req.id}
-                      request={req}
-                      onAccept={handleAccept}
-                      onDecline={handleDecline}
-                    />
+                  {sentRequests.map((req) => (
+                    <SentTradeRequestCard key={req.id} request={req} />
                   ))}
                 </div>
-              </section>
+              </div>
             )}
           </div>
         </div>
@@ -362,6 +399,84 @@ function TradeRequestCard({ request, onAccept, onDecline }: TradeRequestCardProp
         >
           Decline
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── SentTradeRequestCard ──────────────────────────────────────────────────────
+
+interface SentTradeRequestCardProps {
+  request: TradeRequest;
+}
+
+function SentTradeRequestCard({ request }: SentTradeRequestCardProps) {
+  const thumbnailUrl = request.post_thumbnail ?? null;
+  const avatarUrl = request.recipient_avatar ?? null;
+
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return {
+          label: 'Pending',
+          classes: 'bg-amber-100 text-amber-700 border-amber-200'
+        };
+      case 'ACCEPTED':
+        return {
+          label: 'Accepted',
+          classes: 'bg-green-100 text-green-700 border-green-200'
+        };
+      case 'DECLINED':
+        return {
+          label: 'Rejected',
+          classes: 'bg-red-100 text-red-700 border-red-200'
+        };
+      case 'EXPIRED':
+        return {
+          label: 'Expired',
+          classes: 'bg-gray-100 text-gray-500 border-gray-200'
+        };
+      default:
+        return {
+          label: status,
+          classes: 'bg-gray-100 text-gray-700 border-gray-200'
+        };
+    }
+  };
+
+  const status = getStatusDisplay(request.status);
+
+  return (
+    <div className="rounded-lg border border-gray-200 p-3 bg-white text-sm space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${status.classes}`}>
+          {status.label}
+        </span>
+        <span className="text-[10px] text-gray-400">
+          {new Date(request.created_at).toLocaleDateString()}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center text-[10px] font-semibold shrink-0">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={request.recipient_username} className="w-full h-full object-cover" />
+          ) : (
+            request.recipient_username.charAt(0).toUpperCase()
+          )}
+        </div>
+        <p className="text-xs text-gray-500 truncate">
+          Requested from <span className="font-medium text-gray-700">@{request.recipient_username}</span>
+        </p>
+      </div>
+
+      <div className="flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-100">
+        {thumbnailUrl && (
+          <img src={thumbnailUrl} alt={request.post_caption} className="w-8 h-8 rounded object-cover shrink-0" />
+        ) || (
+            <div className="w-8 h-8 rounded bg-gray-200 shrink-0" />
+          )}
+        <span className="text-xs text-gray-600 line-clamp-1 italic">"{request.post_caption}"</span>
       </div>
     </div>
   );
