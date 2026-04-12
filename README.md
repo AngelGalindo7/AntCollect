@@ -44,7 +44,14 @@ Auth uses httpOnly cookies — access tokens (short-lived) and refresh tokens (3
 
 ---
 
-## Running it locally
+## Deployment & CI/CD
+
+The project is containerized using **Docker** and deployed on **AWS EC2**. CI/CD is managed via **GitHub Actions** with **Amazon ECR** and **AWS OIDC**.
+
+---
+
+
+
 
 You'll need: **Python 3.11+**, **Node 20+**, **Java 17**, **Maven**, **PostgreSQL**
 
