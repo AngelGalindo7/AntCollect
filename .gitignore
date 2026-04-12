@@ -32,4 +32,4 @@ docs/
 .DS_Store
 
 # LocalStack data
-localstack_data/
+localstack_data/node_modules/
