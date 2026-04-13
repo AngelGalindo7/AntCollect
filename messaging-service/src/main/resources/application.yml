@@ -2,7 +2,7 @@ spring:
   config:
     import: optional:file:../.env[.properties]
   datasource:
-    url: jdbc:postgresql://localhost:5432/antcollect
+    url: jdbc:postgresql://localhost:5432/antcollect_local
     username: ${MESSAGING_DB_USER}
     password: ${MESSAGING_DB_PASSWORD}
   jpa:
