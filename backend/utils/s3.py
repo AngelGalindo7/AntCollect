@@ -26,7 +26,7 @@ def _get_client():
 def upload_image_bytes(key: str, image_bytes: bytes, content_type: str) -> str:
     bucket = os.getenv("AWS_S3_BUCKET")
     region = os.getenv("AWS_REGION", "us-east-1")
-    endpoint_url = os.getenv("AWS_ENDPOINT_URL")
+    internal_endpoint = os.getenv("AWS_ENDPOINT_URL")
 
     try:
         _get_client().put_object(
@@ -38,9 +38,13 @@ def upload_image_bytes(key: str, image_bytes: bytes, content_type: str) -> str:
     except ClientError as e:
         raise HTTPException(status_code=500, detail=f"S3 upload failed: {e}")
 
+    # Use a separate public-facing URL for the response if available (for local dev),
+    # otherwise fall back to the internal one.
+    public_endpoint = os.getenv("AWS_S3_PUBLIC_ENDPOINT_URL", internal_endpoint)
+
     # LocalStack / custom endpoint — path-style URL
-    if endpoint_url:
-        return f"{endpoint_url.rstrip('/')}/{bucket}/{key}"
+    if public_endpoint:
+        return f"{public_endpoint.rstrip('/')}/{bucket}/{key}"
 
     return f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
 
@@ -57,8 +61,13 @@ def delete_s3_object(key: str) -> None:
 
 
 def s3_key_from_url(url: str) -> str | None:
-    if not url.startswith("https://") and not url.startswith("http://"):
+    if not url:
         return None
+
+    # If it doesn't look like a URL, assume it's already a key.
+    # This makes deletion more robust.
+    if not url.startswith("https://") and not url.startswith("http://"):
+        return url
 
     parsed = urlparse(url)
     endpoint_url = os.getenv("AWS_ENDPOINT_URL")
