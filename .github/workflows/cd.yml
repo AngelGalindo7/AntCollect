@@ -65,7 +65,7 @@ jobs:
       - name: Run Backend Migrations
         run: |
           docker run --rm \
-            -e DB_USER=petrcollect_app \
+            -e DB_USER=${{ secrets.APP_DB_USER }} \
             -e DB_PASSWORD=${{ secrets.APP_DB_PASSWORD }} \
             -e DB_HOST=${{ secrets.RDS_HOST }} \
             -e DB_PORT=${{ secrets.RDS_PORT }} \
@@ -82,7 +82,7 @@ jobs:
             -h ${{ secrets.RDS_HOST }} \
             -U ${{ secrets.RDS_ADMIN_USER }} \
             -d ${{ secrets.DB_NAME }} \
-            -c "GRANT SELECT ON public.users TO petrcollect_messaging;"
+            -c "GRANT SELECT ON public.users TO ${{ secrets.MESSAGING_DB_USER }};"
 
       # ── Prepare EC2 Directory ────────────────────────────────────────────
       - name: Prepare EC2 Directory
