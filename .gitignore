@@ -31,5 +31,5 @@ docs/
 # OS
 .DS_Store
 
-# LocalStack data
-localstack_data/node_modules/
+# LocalStack data (ephemeral runtime state — recreated by test-db-setup.sh)
+localstack_data/
