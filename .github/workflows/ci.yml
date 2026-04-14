@@ -41,6 +41,7 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_HOST: localhost
           DB_PORT: 5432
+          CLOUDFRONT_DOMAIN: ${{ secrets.CLOUDFRONT_DOMAIN }}
 
       - name: Run pytest
         run: pytest
@@ -184,6 +185,7 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_HOST: localhost
           DB_PORT: 5432
+          CLOUDFRONT_DOMAIN: ${{ secrets.CLOUDFRONT_DOMAIN }}
 
       - name: Grant cross-schema read to messaging user
         run: |
@@ -208,6 +210,7 @@ jobs:
           # bucket name and region need to be set explicitly here.
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+          CLOUDFRONT_DOMAIN: ${{ secrets.CLOUDFRONT_DOMAIN }}
 
       - name: Start messaging service
         run: mvn spring-boot:run -Dspring-boot.run.profiles=test > /tmp/messaging.log 2>&1 &
