@@ -37,9 +37,9 @@ def _to_cf(url: str, cf_domain: str) -> str:
 def upgrade() -> None:
     cf_domain = os.environ.get("CLOUDFRONT_DOMAIN")
     if not cf_domain:
-        raise RuntimeError(
-            "CLOUDFRONT_DOMAIN env var must be set before running this migration."
-        )
+        # No-op in local dev / CI — those DBs only have LocalStack URLs, not
+        # amazonaws.com URLs, so there is nothing to rewrite.
+        return
 
     bind = op.get_bind()
     session = Session(bind=bind)
