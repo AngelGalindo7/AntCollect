@@ -16,7 +16,7 @@ import {
 } from '@/features/trading/api/tradeRequestApi';
 import type { TradeRequest } from '@/features/trading/types';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
 const MESSAGING_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
 interface UserMe {
