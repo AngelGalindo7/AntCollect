@@ -9,7 +9,6 @@ pyjwt
 python-multipart
 alembic
 Pillow
-python-magic
 boto3
 pytest
 pytest-asyncio
