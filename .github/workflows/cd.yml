@@ -27,6 +27,16 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # ── Capture ECR token for EC2 SSH steps ─────────────────────────────
+      # The runner has AWS credentials from OIDC; capturing the token here
+      # means EC2 SSH steps can docker-login without needing aws CLI on EC2.
+      - name: Get ECR login token
+        id: ecr-token
+        run: |
+          PASSWORD=$(aws ecr get-login-password --region ${{ secrets.AWS_REGION }})
+          echo "::add-mask::$PASSWORD"
+          echo "password=$PASSWORD" >> $GITHUB_OUTPUT
+
       # ── Build & Push Backend ─────────────────────────────────────────────
       - name: Build and push Backend
         uses: docker/build-push-action@v6
@@ -84,12 +94,12 @@ jobs:
 
       # ── Run Alembic Migrations (App User via EC2) ───────────────────────
       # docker run executes on EC2 so the container reaches RDS inside the VPC.
-      # EC2 authenticates to ECR using its instance role — no long-lived keys needed.
+      # ECR token is forwarded from the runner — no aws CLI needed on EC2.
       - name: Run Backend Migrations
         uses: appleboy/ssh-action@v1.0.3
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_PASSWORD: ${{ steps.ecr-token.outputs.password }}
           APP_DB_USER: ${{ secrets.APP_DB_USER }}
           APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
           RDS_HOST: ${{ secrets.RDS_HOST }}
@@ -99,10 +109,9 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: ECR_REGISTRY,AWS_REGION,APP_DB_USER,APP_DB_PASSWORD,RDS_HOST,RDS_PORT,DB_NAME
+          envs: ECR_REGISTRY,ECR_PASSWORD,APP_DB_USER,APP_DB_PASSWORD,RDS_HOST,RDS_PORT,DB_NAME
           script: |
-            export PATH=$PATH:/usr/local/bin
-            aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+            echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
             docker run --rm \
               -e DB_USER="$APP_DB_USER" \
               -e DB_PASSWORD="$APP_DB_PASSWORD" \
@@ -180,20 +189,23 @@ jobs:
       # ── Deploy to EC2 ────────────────────────────────────────────────────
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_PASSWORD: ${{ steps.ecr-token.outputs.password }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: ECR_REGISTRY,ECR_PASSWORD
           script: |
-            export PATH=$PATH:/usr/local/bin
             cd /opt/petrcollect
 
             # Login to ECR on EC2
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+            echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
             # Pull latest images
-            docker pull ${{ steps.login-ecr.outputs.registry }}/petrcollect-backend:latest
-            docker pull ${{ steps.login-ecr.outputs.registry }}/petrcollect-messaging:latest
+            docker pull "$ECR_REGISTRY/petrcollect-backend:latest"
+            docker pull "$ECR_REGISTRY/petrcollect-messaging:latest"
 
             # Restart services
             docker-compose -f docker-compose.prod.yml up -d
