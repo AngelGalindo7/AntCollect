@@ -45,50 +45,95 @@ jobs:
           push: true
           tags: ${{ steps.login-ecr.outputs.registry }}/petrcollect-messaging:latest
 
-      # ── RDS Initialization (Admin) ──────────────────────────────────────
-      # Note: We use a postgres client to connect to RDS.
-      # RDS must be accessible from GitHub Actions runners (or use a VPN/Runner in VPC).
+      # ── RDS Initialization (Admin via EC2) ──────────────────────────────
+      # psql runs on EC2, which is inside the VPC and can reach the private RDS
+      # endpoint. All role names are injected from secrets — nothing is hardcoded.
+      # Prereq: postgresql-client must be installed on the EC2 instance.
       - name: Initialize RDS roles and schemas
+        uses: appleboy/ssh-action@v1.0.3
         env:
           PGPASSWORD: ${{ secrets.RDS_ADMIN_PASSWORD }}
+          RDS_HOST: ${{ secrets.RDS_HOST }}
+          RDS_PORT: ${{ secrets.RDS_PORT }}
+          RDS_ADMIN_USER: ${{ secrets.RDS_ADMIN_USER }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          APP_DB_USER: ${{ secrets.APP_DB_USER }}
           APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
+          MESSAGING_DB_USER: ${{ secrets.MESSAGING_DB_USER }}
           MESSAGING_DB_PASSWORD: ${{ secrets.MESSAGING_DB_PASSWORD }}
-        run: |
-          psql \
-            -h ${{ secrets.RDS_HOST }} \
-            -U ${{ secrets.RDS_ADMIN_USER }} \
-            -d ${{ secrets.DB_NAME }} \
-            -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'petrcollect_app') THEN CREATE ROLE petrcollect_app WITH LOGIN PASSWORD '${APP_DB_PASSWORD}'; END IF; END \$\$;" \
-            -c "ALTER ROLE petrcollect_app SET search_path TO public;" \
-            -c "GRANT ALL PRIVILEGES ON SCHEMA public TO petrcollect_app;" \
-            -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'petrcollect_messaging') THEN CREATE ROLE petrcollect_messaging WITH LOGIN PASSWORD '${MESSAGING_DB_PASSWORD}'; END IF; END \$\$;" \
-            -c "CREATE SCHEMA IF NOT EXISTS petrcollect_messaging AUTHORIZATION petrcollect_messaging;" \
-            -c "ALTER ROLE petrcollect_messaging SET search_path TO petrcollect_messaging, public;" \
-            -c "GRANT ALL PRIVILEGES ON SCHEMA petrcollect_messaging TO petrcollect_messaging;" \
-            -c "GRANT USAGE ON SCHEMA public TO petrcollect_messaging;"
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: PGPASSWORD,RDS_HOST,RDS_PORT,RDS_ADMIN_USER,DB_NAME,APP_DB_USER,APP_DB_PASSWORD,MESSAGING_DB_USER,MESSAGING_DB_PASSWORD
+          script: |
+            psql \
+              -h "$RDS_HOST" \
+              -p "$RDS_PORT" \
+              -U "$RDS_ADMIN_USER" \
+              -d "$DB_NAME" \
+              -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${APP_DB_USER}') THEN CREATE ROLE ${APP_DB_USER} WITH LOGIN PASSWORD '${APP_DB_PASSWORD}'; END IF; END \$\$;" \
+              -c "ALTER ROLE ${APP_DB_USER} SET search_path TO public;" \
+              -c "GRANT ALL PRIVILEGES ON SCHEMA public TO ${APP_DB_USER};" \
+              -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${MESSAGING_DB_USER}') THEN CREATE ROLE ${MESSAGING_DB_USER} WITH LOGIN PASSWORD '${MESSAGING_DB_PASSWORD}'; END IF; END \$\$;" \
+              -c "CREATE SCHEMA IF NOT EXISTS ${MESSAGING_DB_USER} AUTHORIZATION ${MESSAGING_DB_USER};" \
+              -c "ALTER ROLE ${MESSAGING_DB_USER} SET search_path TO ${MESSAGING_DB_USER}, public;" \
+              -c "GRANT ALL PRIVILEGES ON SCHEMA ${MESSAGING_DB_USER} TO ${MESSAGING_DB_USER};" \
+              -c "GRANT USAGE ON SCHEMA public TO ${MESSAGING_DB_USER};"
 
-      # ── Run Alembic Migrations (App User) ───────────────────────────────
+      # ── Run Alembic Migrations (App User via EC2) ───────────────────────
+      # docker run executes on EC2 so the container reaches RDS inside the VPC.
+      # EC2 authenticates to ECR using its instance role — no long-lived keys needed.
       - name: Run Backend Migrations
-        run: |
-          docker run --rm \
-            -e DB_USER=${{ secrets.APP_DB_USER }} \
-            -e DB_PASSWORD=${{ secrets.APP_DB_PASSWORD }} \
-            -e DB_HOST=${{ secrets.RDS_HOST }} \
-            -e DB_PORT=${{ secrets.RDS_PORT }} \
-            -e DB_NAME=${{ secrets.DB_NAME }} \
-            ${{ steps.login-ecr.outputs.registry }}/petrcollect-backend:latest \
-            alembic upgrade head
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          APP_DB_USER: ${{ secrets.APP_DB_USER }}
+          APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
+          RDS_HOST: ${{ secrets.RDS_HOST }}
+          RDS_PORT: ${{ secrets.RDS_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: ECR_REGISTRY,AWS_REGION,APP_DB_USER,APP_DB_PASSWORD,RDS_HOST,RDS_PORT,DB_NAME
+          script: |
+            aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+            docker run --rm \
+              -e DB_USER="$APP_DB_USER" \
+              -e DB_PASSWORD="$APP_DB_PASSWORD" \
+              -e DB_HOST="$RDS_HOST" \
+              -e DB_PORT="$RDS_PORT" \
+              -e DB_NAME="$DB_NAME" \
+              "$ECR_REGISTRY/petrcollect-backend:latest" \
+              alembic upgrade head
 
-      # ── Cross-Schema Permissions ────────────────────────────────────────
-      # Messaging needs to read from public.users.
-      # This MUST run after migrations have created the tables.
+      # ── Cross-Schema Permissions (Admin via EC2) ────────────────────────
+      # Grants messaging user read access to public.users.
+      # Must run after Alembic has created the table.
       - name: Grant Cross-Schema Permissions
-        run: |
-          PGPASSWORD="${{ secrets.RDS_ADMIN_PASSWORD }}" psql \
-            -h ${{ secrets.RDS_HOST }} \
-            -U ${{ secrets.RDS_ADMIN_USER }} \
-            -d ${{ secrets.DB_NAME }} \
-            -c "GRANT SELECT ON public.users TO ${{ secrets.MESSAGING_DB_USER }};"
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PGPASSWORD: ${{ secrets.RDS_ADMIN_PASSWORD }}
+          RDS_HOST: ${{ secrets.RDS_HOST }}
+          RDS_PORT: ${{ secrets.RDS_PORT }}
+          RDS_ADMIN_USER: ${{ secrets.RDS_ADMIN_USER }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          MESSAGING_DB_USER: ${{ secrets.MESSAGING_DB_USER }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: PGPASSWORD,RDS_HOST,RDS_PORT,RDS_ADMIN_USER,DB_NAME,MESSAGING_DB_USER
+          script: |
+            psql \
+              -h "$RDS_HOST" \
+              -p "$RDS_PORT" \
+              -U "$RDS_ADMIN_USER" \
+              -d "$DB_NAME" \
+              -c "GRANT SELECT ON public.users TO ${MESSAGING_DB_USER};"
 
       # ── Prepare EC2 Directory ────────────────────────────────────────────
       - name: Prepare EC2 Directory
@@ -100,8 +145,8 @@ jobs:
           script: mkdir -p /opt/petrcollect
 
       # ── Create .env for EC2 ──────────────────────────────────────────────
-      # We create an environment file that contains ONLY application DB credentials.
-      # Notice that the RDS_ADMIN_PASSWORD is intentionally omitted for security.
+      # RDS_ADMIN_PASSWORD is intentionally omitted — admin creds are only
+      # needed for the one-time schema init steps above, not at runtime.
       - name: Create .env file for EC2
         run: |
           echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" > .env
@@ -118,7 +163,7 @@ jobs:
           echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
           echo "CLOUDFRONT_DOMAIN=${{ secrets.CLOUDFRONT_DOMAIN }}" >> .env
           echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" >> .env
-          
+
       # ── Copy configuration to EC2 ────────────────────────────────────────
       - name: Copy docker-compose and .env to EC2
         uses: appleboy/scp-action@v0.1.7
@@ -138,14 +183,13 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /opt/petrcollect
-            
+
             # Login to ECR on EC2
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-            
+
             # Pull latest images
             docker pull ${{ steps.login-ecr.outputs.registry }}/petrcollect-backend:latest
             docker pull ${{ steps.login-ecr.outputs.registry }}/petrcollect-messaging:latest
-            
+
             # Restart services
-            # Assuming docker-compose.yml on EC2 points to these tags
             docker-compose -f docker-compose.prod.yml up -d
