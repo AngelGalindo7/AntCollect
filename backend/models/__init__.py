@@ -33,7 +33,7 @@ __all__ = [
     "PostImage",
     "PostLike",
     "PostComment",
-    "CommentLike",
+
     "EngagementLog",
     "EngagementType",
     "RefreshToken",
