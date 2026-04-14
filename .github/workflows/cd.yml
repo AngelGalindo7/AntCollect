@@ -209,4 +209,4 @@ jobs:
             docker pull "$ECR_REGISTRY/petrcollect-messaging:latest"
 
             # Restart services
-            docker-compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.prod.yml up -d
