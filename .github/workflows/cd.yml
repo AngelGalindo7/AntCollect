@@ -102,8 +102,16 @@ jobs:
           echo "DB_HOST=${{ secrets.RDS_HOST }}" >> .env
           echo "DB_PORT=${{ secrets.RDS_PORT }}" >> .env
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "APP_DB_USER=${{ secrets.APP_DB_USER }}" >> .env
           echo "APP_DB_PASSWORD=${{ secrets.APP_DB_PASSWORD }}" >> .env
+          echo "MESSAGING_DB_USER=${{ secrets.MESSAGING_DB_USER }}" >> .env
           echo "MESSAGING_DB_PASSWORD=${{ secrets.MESSAGING_DB_PASSWORD }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "INTERNAL_SERVICE_SECRET=${{ secrets.INTERNAL_SERVICE_SECRET }}" >> .env
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+          echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
+          echo "CLOUDFRONT_DOMAIN=${{ secrets.CLOUDFRONT_DOMAIN }}" >> .env
+          echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" >> .env
           
       # ── Copy configuration to EC2 ────────────────────────────────────────
       - name: Copy docker-compose and .env to EC2
