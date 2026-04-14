@@ -17,7 +17,6 @@ router = APIRouter(
 
 
 
-#TODO Add a ban table in postgresql and check if user_id is not banned
 @router.post("/upload-post")
 @limiter.limit("10/hour", key_func=get_user_or_ip_key)
 def upload_post(
@@ -118,10 +117,8 @@ def like_image(
         )
         .first()
     )
-    #print(f"Existing like: {existing_like}")
 
     if existing_like:
-        #print(f"OKay delete?")
         db.delete(existing_like)
         db.commit()
         return {
@@ -164,28 +161,6 @@ def like_image(
 def get_top_posts(k: int = 10, db: Session = Depends(get_db), user: UserSearch = Depends(authenthicate_access_token)):
     k = min(max(k, 1), 100)
 
-
-    # top_posts = (
-    #     db.query(
-    #         Post,
-    #         func.count(EngagementLog.id).label("total_engagement")
-    #     )
-    #     .join(EngagementLog, Post.id == EngagementLog.post_id)
-    #     .group_by(Post.id)
-    #     .order_by(func.count(EngagementLog.id).desc())
-    #     .limit(k)
-    #     .all()
-    # )
-
-    """
-    existing_like = (
-        db.query(PostLike)
-        .filter(
-            PostLike.user_id==user.user_id,
-            PostLike.post_id==Post.post_id
-        )
-        .first()
-    )"""
     existing_like_subquery = (
     select(func.count(PostLike.id))
     .where(
@@ -246,48 +221,11 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), user: UserSearch =
 
     results = db.execute(final_query).all()
     
-    # return [
-    #     {
-    #         "post_id": post.id,
-    #         "caption": post.caption,
-    #         "engagement_score": total_engagement
-
-    #     }
-    #     for post, total_engagement in top_posts
-    #]
-
     return TopPostsResponse(
         total_returned=len(results),
         k_value=k,
         posts=[PostWithEngagement.model_validate(row) for row in results]
     )
-
-    #TODO Add messaging section for users to message each other
-
-    #TODO Look into adding pydantic schemas in the resposnes for the endpoints
-
-    #TODO Look into the correct input for comment/like
-
-    #TODO For comment/like/post if token is expired then look into how to deal with it
-    #1 within endpoint catch the error and call get autheriation jwt token
-    #2 return response to frontend and let frontend call the get atuehrization token
-    #prioritize low latency, "efficient" 
-
-    #TODO Finish figma db tables for post users, refresh, comments, likes, comments
-    #Add entity relationships as well
-
-    #TODO Update README With current progress, description
-
-    #TODO Create frontend with react, typescript, add login
-
-    #TODO Add java microservice to track  requests to db success/failure, average speed for each request
-    #Point is to track db usage and how code is affected after refactors etc 
-    
-    #TODO Add get likes for post @app.get("/post/{post_id}/likes_count")
-
-    #TODO Add get to check if user liked a post @app.get("/post/{post_id}/liked_by_me")
-
-
 
 
 @router.post("/comment_post")
@@ -319,11 +257,3 @@ def comment(
         "comment_id": new_comment.id,
         "message": "Successfully commented"}
     
-
-
-
-"""TODO Verify logic on banning
-Should each api request check if user is banned?
-Or should a user not be able to make any request at all
-
-"""
