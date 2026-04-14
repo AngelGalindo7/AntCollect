@@ -4,7 +4,7 @@ import { fetchWithAuth } from '@/shared/api/api';
 import { useMessageStore } from '../store/messageStore';
 import type { Message } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
 // ── Response shape from GET /conversations/:id/messages ───────────────────────
 // Matches MessageHistoryResponse.java exactly.

@@ -5,7 +5,7 @@ import { ConversationCell } from './ConversationCell';
 import { fetchWithAuth } from '@/shared/api/api';
 import type { Conversation } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
 interface ConversationListProps {
   onSelectConversation: (conversationId: string) => void;

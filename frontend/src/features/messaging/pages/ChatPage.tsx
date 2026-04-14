@@ -11,7 +11,7 @@ import ChatHeader from '../components/Chat/ChatHeader';
 import MessageList from '../components/Chat/MessageList';
 import ChatInput from '../components/Chat/ChatInput/ChatInput';
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
 export default function ChatPage() {
   const { conversationId } = useParams<{ conversationId: string }>();

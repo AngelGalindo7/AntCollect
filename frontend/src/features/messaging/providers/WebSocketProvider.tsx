@@ -9,7 +9,7 @@ import type { ReactNode } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useSocketFrameHandler } from '../hooks/useSocketFrameHandler';
 
-const WS_URL = import.meta.env.VITE_WS_URL;
+const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080/ws";
 
 interface WebSocketContextValue {
   sendMessage: (conversationId: string, content: string, clientMessageId: string, contentType?: string) => void;
