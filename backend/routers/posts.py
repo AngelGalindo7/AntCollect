@@ -43,9 +43,6 @@ def upload_post(
         db.add(post)
         db.flush()
         for i, image in enumerate(post_images):
-            #file_path = save_upload_file(image)
-            #uploaded_files.append(file_path)
-            #size_bytes = get_file_size(file_path)
             image_data = process_and_save_image(image, user_id)
             all_created_files.extend(image_data["paths"].values())
             
@@ -205,9 +202,6 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), user: UserSearch =
                 MediaAsset.json_metadata,
                 order_by=PostImage.order_index
                 ).label("images"),
-            #func.array_agg(PostImage.json_metadata,
-            #               order_by=PostImage.order_index
-            #               ).label("images"),
             likes_subquery.label("total_likes"),
             existing_like_subquery.label("is_liked")
 
@@ -232,20 +226,19 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), user: UserSearch =
 def comment(
     post_id: int,
     content: str,
-    user_id: User = Depends(authenthicate_access_token),
+    user: User = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
 ):
-    
+
     new_comment = PostComment(
         post_id=post_id,
-        user_id=user_id,
+        user_id=user.user_id,
         content=content,
-
     )
 
     new_engagement = EngagementLog(
         post_id=post_id,
-        user_id=user_id,
+        user_id=user.user_id,
         event_type=EngagementType.comment
     )
     db.add(new_comment)
