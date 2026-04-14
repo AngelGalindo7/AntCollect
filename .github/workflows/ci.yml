@@ -257,10 +257,10 @@ jobs:
           TEST_OTHER_EMAIL: ${{ secrets.TEST_OTHER_EMAIL }}
           TEST_OTHER_PASSWORD: ${{ secrets.TEST_OTHER_PASSWORD }}
         run: |
-          curl -sf -X POST http://localhost:8000/users/create-user \
+          curl -s --fail-with-body -X POST http://localhost:8000/users/create-user \
             -H "Content-Type: application/json" \
             -d "{\"username\":\"$TEST_USERNAME\",\"email\":\"$TEST_USER_EMAIL\",\"password\":\"$TEST_USER_PASSWORD\"}"
-          curl -sf -X POST http://localhost:8000/users/create-user \
+          curl -s --fail-with-body -X POST http://localhost:8000/users/create-user \
             -H "Content-Type: application/json" \
             -d "{\"username\":\"$TEST_OTHER_USERNAME\",\"email\":\"$TEST_OTHER_EMAIL\",\"password\":\"$TEST_OTHER_PASSWORD\"}"
 
