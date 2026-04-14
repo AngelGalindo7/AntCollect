@@ -1,0 +1,35 @@
+services:
+  backend:
+    image: ${ECR_REGISTRY}/petrcollect-backend:latest
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${APP_DB_USER}
+      - DB_PASSWORD=${APP_DB_PASSWORD}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - AWS_REGION=${AWS_REGION}
+      - CLOUDFRONT_DOMAIN=${CLOUDFRONT_DOMAIN}
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SERVICE_SECRET=${INTERNAL_SERVICE_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - MESSAGING_INTERNAL_URL=http://messaging:8080
+      - HTTPS_ENABLED=true
+      - BEHIND_PROXY=true
+      - COOKIE_SECURE=true
+    restart: unless-stopped
+
+  messaging:
+    image: ${ECR_REGISTRY}/petrcollect-messaging:latest
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - MESSAGING_DB_USER=${MESSAGING_DB_USER}
+      - MESSAGING_DB_PASSWORD=${MESSAGING_DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SERVICE_SECRET=${INTERNAL_SERVICE_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+    restart: unless-stopped

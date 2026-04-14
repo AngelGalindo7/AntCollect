@@ -35,8 +35,6 @@ docs/
 # Deployment / infra — operational config, not project source
 infra/
 docker-compose.yml
-docker-compose.prod.yml
-docker-compose.ci.yml
 
 # OS
 .DS_Store
