@@ -1,0 +1,80 @@
+# Local development compose template.
+# Copy to docker-compose.yml and fill in your .env before running.
+# docker-compose.yml is git-ignored — this file is the committed reference.
+
+services:
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack_main
+    ports:
+      - "127.0.0.1:4566:4566"
+      - "127.0.0.1:4510-4559:4510-4559"
+    environment:
+      - SERVICES=s3
+      - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+      - DEBUG=1
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:4566/_localstack/health', timeout=3)\" 2>/dev/null || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 24
+      start_period: 20s
+
+  postgres:
+    image: postgres:16
+    container_name: petrcollect_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_ADMIN_PASSWORD}
+      - POSTGRES_DB=${DB_NAME:-antcollect}
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${DB_NAME:-antcollect}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: ${ECR_REGISTRY:-local}/petrcollect-backend:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-antcollect}
+      - DB_USER=${DB_USER:-petrcollect_app}
+      - DB_PASSWORD=${APP_DB_PASSWORD}
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:4566
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - AWS_REGION=${AWS_REGION}
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SERVICE_SECRET=${INTERNAL_SERVICE_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  messaging:
+    build:
+      context: .
+      dockerfile: messaging-service/Dockerfile
+    image: ${ECR_REGISTRY:-local}/petrcollect-messaging:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME:-antcollect}
+      - SPRING_DATASOURCE_USERNAME=${MESSAGING_DB_USER:-petrcollect_messaging}
+      - SPRING_DATASOURCE_PASSWORD=${MESSAGING_DB_PASSWORD}
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_S3_PUBLIC_ENDPOINT_URL=http://localhost:4566
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - AWS_REGION=${AWS_REGION}
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SERVICE_SECRET=${INTERNAL_SERVICE_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
