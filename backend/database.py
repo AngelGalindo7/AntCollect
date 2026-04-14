@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from urllib.parse import quote_plus
 load_dotenv()
+load_dotenv('.env.local', override=True)
 
 DB_USER = os.getenv("DB_USER")
 DB_HOST = os.getenv("DB_HOST")
