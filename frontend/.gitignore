@@ -1,3 +1,7 @@
+# Environment — use .env.example as the template; actual .env is local-only
+.env
+.env.local
+
 # Logs
 logs
 *.log
