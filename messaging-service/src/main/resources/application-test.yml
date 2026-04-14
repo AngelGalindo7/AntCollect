@@ -23,6 +23,8 @@ app:
     secret: ${JWT_SECRET}
     algorithm: HS256
     expiration: 1200
+  internal:
+    secret: test-internal-secret
 logging:
   level:
     com.petrcollect.messaging: DEBUG
