@@ -46,20 +46,26 @@ jobs:
           tags: ${{ steps.login-ecr.outputs.registry }}/petrcollect-messaging:latest
 
       # ── RDS Initialization (Admin) ──────────────────────────────────────
-      # Note: We use a postgres client to connect to RDS. 
+      # Note: We use a postgres client to connect to RDS.
       # RDS must be accessible from GitHub Actions runners (or use a VPN/Runner in VPC).
-      - name: Initialize RDS Roles and Schemas
+      - name: Initialize RDS roles and schemas
+        env:
+          PGPASSWORD: ${{ secrets.RDS_ADMIN_PASSWORD }}
+          APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
+          MESSAGING_DB_PASSWORD: ${{ secrets.MESSAGING_DB_PASSWORD }}
         run: |
-          # Replace placeholders in SQL with environment variables
-          sed -i "s/\${APP_DB_PASSWORD}/${{ secrets.APP_DB_PASSWORD }}/g" infra/db/init-roles.sql
-          sed -i "s/\${MESSAGING_DB_PASSWORD}/${{ secrets.MESSAGING_DB_PASSWORD }}/g" infra/db/init-roles.sql
-          
-          # Execute the script using psql (admin credentials)
-          PGPASSWORD="${{ secrets.RDS_ADMIN_PASSWORD }}" psql \
+          psql \
             -h ${{ secrets.RDS_HOST }} \
             -U ${{ secrets.RDS_ADMIN_USER }} \
             -d ${{ secrets.DB_NAME }} \
-            -f infra/db/init-roles.sql
+            -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'petrcollect_app') THEN CREATE ROLE petrcollect_app WITH LOGIN PASSWORD '${APP_DB_PASSWORD}'; END IF; END \$\$;" \
+            -c "ALTER ROLE petrcollect_app SET search_path TO public;" \
+            -c "GRANT ALL PRIVILEGES ON SCHEMA public TO petrcollect_app;" \
+            -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'petrcollect_messaging') THEN CREATE ROLE petrcollect_messaging WITH LOGIN PASSWORD '${MESSAGING_DB_PASSWORD}'; END IF; END \$\$;" \
+            -c "CREATE SCHEMA IF NOT EXISTS petrcollect_messaging AUTHORIZATION petrcollect_messaging;" \
+            -c "ALTER ROLE petrcollect_messaging SET search_path TO petrcollect_messaging, public;" \
+            -c "GRANT ALL PRIVILEGES ON SCHEMA petrcollect_messaging TO petrcollect_messaging;" \
+            -c "GRANT USAGE ON SCHEMA public TO petrcollect_messaging;"
 
       # ── Run Alembic Migrations (App User) ───────────────────────────────
       - name: Run Backend Migrations
