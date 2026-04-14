@@ -29,7 +29,7 @@ jobs:
 
       # ── Build & Push Backend ─────────────────────────────────────────────
       - name: Build and push Backend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: backend/Dockerfile
@@ -38,7 +38,7 @@ jobs:
 
       # ── Build & Push Messaging ──────────────────────────────────────────
       - name: Build and push Messaging
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: messaging-service/Dockerfile
