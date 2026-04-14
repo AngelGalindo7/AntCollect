@@ -13,11 +13,11 @@ jobs:
       id-token: write   # Required for OIDC role assumption
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       # ── Configure AWS credentials via OIDC ──────────────────────────────
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@ff717079ee2060e4bcee96c4779b553acc87447c # v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
@@ -25,7 +25,7 @@ jobs:
       # ── Login to Amazon ECR ──────────────────────────────────────────────
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@f2e9fc6c2b355c1890b65e6f6f0e2ac3e6e22f78 # v2
 
       # ── Capture ECR token for EC2 SSH steps ─────────────────────────────
       # The runner has AWS credentials from OIDC; capturing the token here
@@ -39,7 +39,7 @@ jobs:
 
       # ── Build & Push Backend ─────────────────────────────────────────────
       - name: Build and push Backend
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           file: backend/Dockerfile
@@ -48,7 +48,7 @@ jobs:
 
       # ── Build & Push Messaging ──────────────────────────────────────────
       - name: Build and push Messaging
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           file: messaging-service/Dockerfile
@@ -60,7 +60,7 @@ jobs:
       # endpoint. All role names are injected from secrets — nothing is hardcoded.
       # Prereq: postgresql-client must be installed on the EC2 instance.
       - name: Initialize RDS roles and schemas
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         env:
           PGPASSWORD: ${{ secrets.RDS_ADMIN_PASSWORD }}
           PGSSLMODE: require
@@ -96,7 +96,7 @@ jobs:
       # docker run executes on EC2 so the container reaches RDS inside the VPC.
       # ECR token is forwarded from the runner — no aws CLI needed on EC2.
       - name: Run Backend Migrations
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_PASSWORD: ${{ steps.ecr-token.outputs.password }}
@@ -125,7 +125,7 @@ jobs:
       # Grants messaging user read access to public.users.
       # Must run after Alembic has created the table.
       - name: Grant Cross-Schema Permissions
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         env:
           PGPASSWORD: ${{ secrets.RDS_ADMIN_PASSWORD }}
           PGSSLMODE: require
@@ -149,12 +149,12 @@ jobs:
 
       # ── Prepare EC2 Directory ────────────────────────────────────────────
       - name: Prepare EC2 Directory
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          script: mkdir -p /opt/petrcollect
+          script: mkdir -p ~/petrcollect
 
       # ── Create .env for EC2 ──────────────────────────────────────────────
       # RDS_ADMIN_PASSWORD is intentionally omitted — admin creds are only
@@ -178,17 +178,17 @@ jobs:
 
       # ── Copy configuration to EC2 ────────────────────────────────────────
       - name: Copy docker-compose and .env to EC2
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "docker-compose.prod.yml,.env"
-          target: "/opt/petrcollect/"
+          target: "~/petrcollect/"
 
       # ── Deploy to EC2 ────────────────────────────────────────────────────
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_PASSWORD: ${{ steps.ecr-token.outputs.password }}
@@ -198,7 +198,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: ECR_REGISTRY,ECR_PASSWORD
           script: |
-            cd /opt/petrcollect
+            chmod 600 ~/petrcollect/.env
+            cd ~/petrcollect
 
             # Login to ECR on EC2
             echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
