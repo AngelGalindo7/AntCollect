@@ -8,8 +8,8 @@ spring:
 
 app:
   jwt:
-    # Falls back to a fixed test-only secret when JWT_SECRET is not in the environment.
-    # Production always requires the env var (no default in application.yml).
-    secret: ${JWT_SECRET:test-secret-key-for-unit-tests-only-not-for-prod}
+    # Fixed test-only secret — never read from JWT_SECRET env var.
+    # Must be >= 32 bytes (256 bits) for JJWT 0.12.x / RFC 7518 HS256 — changing this value must meet that minimum or JJWT throws WeakKeyException.
+    secret: "test-secret-key-for-unit-tests-only-not-for-prod"
   internal:
     secret: ${INTERNAL_SERVICE_SECRET:test-internal-secret-for-unit-tests-only}
