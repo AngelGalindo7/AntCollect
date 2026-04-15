@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE } from '@/shared/api/api';
 
 const SignUp: React.FC = () => {
     const [username, setUsername] = useState("");
@@ -30,7 +31,7 @@ const SignUp: React.FC = () => {
     
 
     try {
-        const res = await fetch("http://127.0.0.1:8000/users/create-user",{
+        const res = await fetch(`${API_BASE}/users/create-user`, {
           method: "POST",
           headers: { "Content-Type": "application/json"},
           body: JSON.stringify({
