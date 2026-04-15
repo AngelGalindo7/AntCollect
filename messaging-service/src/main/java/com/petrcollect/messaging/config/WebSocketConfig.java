@@ -1,6 +1,7 @@
 package com.petrcollect.messaging.config;
 
 import com.petrcollect.messaging.websocket.JwtHandshakeInterceptor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -15,6 +16,7 @@ import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.web.socket.WebSocketHandler;
 import java.security.Principal;
+import java.util.Arrays;
 import java.util.Map;
 
 @Configuration
@@ -22,6 +24,9 @@ import java.util.Map;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
+
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    private String allowedOrigins;
 
     public WebSocketConfig(JwtHandshakeInterceptor jwtHandshakeInterceptor) {
         this.jwtHandshakeInterceptor = jwtHandshakeInterceptor;
@@ -42,6 +47,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .addInterceptors(jwtHandshakeInterceptor)
                 .withSockJS();
         */
+        String[] origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toArray(String[]::new);
+
         registry.addEndpoint("/ws")
         .setHandshakeHandler(new DefaultHandshakeHandler() {
             @Override
@@ -50,11 +60,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                               Map<String, Object> attributes) {
                 Long userId = (Long) attributes.get("userId");
                 if (userId == null) return null;
-                return userId::toString; // method reference as Principal lambda
+                return userId::toString;
             }
         })
         .addInterceptors(jwtHandshakeInterceptor)
-        .setAllowedOrigins("http://localhost:5173");//frontend origin 
+        .setAllowedOrigins(origins);
     }
 
     @Override
