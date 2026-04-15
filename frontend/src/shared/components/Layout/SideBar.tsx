@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useUIStore } from '@/shared/store/useUIStore';
-import { fetchWithAuth } from '@/shared/api/api';
+import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 import { ConversationList } from '@/features/messaging/components/ConversationList';
 import { ConversationSearch } from '@/features/messaging/components/ConversationSearch';
 import { useWebSocketContext } from '@/features/messaging/providers/WebSocketProvider';
@@ -16,8 +16,6 @@ import {
 } from '@/features/trading/api/tradeRequestApi';
 import type { TradeRequest } from '@/features/trading/types';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
-const MESSAGING_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
 interface UserMe {
   username: string;
@@ -51,7 +49,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
   const { data: me } = useQuery<UserMe>({
     queryKey: ['me'],
     queryFn: () =>
-      fetchWithAuth(`${BACKEND_URL}/users/me`).then((r) => {
+      fetchWithAuth(`${API_BASE}/users/me`).then((r) => {
         if (!r.ok) throw new Error('Failed to load user');
         return r.json();
       }),
@@ -91,7 +89,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
     try {
       const accepted = await acceptTradeRequest(tradeRequest.id);
 
-      const convRes = await fetchWithAuth(`${MESSAGING_URL}/conversations`, {
+      const convRes = await fetchWithAuth(`${API_BASE}/conversations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
