@@ -59,6 +59,10 @@ jobs:
       # psql runs on EC2, which is inside the VPC and can reach the private RDS
       # endpoint. All role names are injected from secrets — nothing is hardcoded.
       # Prereq: postgresql-client must be installed on the EC2 instance.
+      #
+      # set -euo pipefail: catches empty/unset secrets before they produce malformed SQL.
+      # --set=ON_ERROR_STOP=1: any SQL failure immediately stops psql with non-zero exit,
+      #   so this CI step fails loudly instead of silently swallowing errors.
       - name: Initialize RDS roles and schemas
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         env:
@@ -72,24 +76,27 @@ jobs:
           APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
           MESSAGING_DB_USER: ${{ secrets.MESSAGING_DB_USER }}
           MESSAGING_DB_PASSWORD: ${{ secrets.MESSAGING_DB_PASSWORD }}
+          MESSAGING_DB_SCHEMA: ${{ secrets.MESSAGING_DB_SCHEMA }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: PGPASSWORD,PGSSLMODE,RDS_HOST,RDS_PORT,RDS_ADMIN_USER,DB_NAME,APP_DB_USER,APP_DB_PASSWORD,MESSAGING_DB_USER,MESSAGING_DB_PASSWORD
+          envs: PGPASSWORD,PGSSLMODE,RDS_HOST,RDS_PORT,RDS_ADMIN_USER,DB_NAME,APP_DB_USER,APP_DB_PASSWORD,MESSAGING_DB_USER,MESSAGING_DB_PASSWORD,MESSAGING_DB_SCHEMA
           script: |
+            set -euo pipefail
             psql \
               -h "$RDS_HOST" \
               -p "$RDS_PORT" \
               -U "$RDS_ADMIN_USER" \
               -d "$DB_NAME" \
+              --set=ON_ERROR_STOP=1 \
               -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${APP_DB_USER}') THEN CREATE ROLE ${APP_DB_USER} WITH LOGIN PASSWORD '${APP_DB_PASSWORD}'; END IF; END \$\$;" \
               -c "ALTER ROLE ${APP_DB_USER} SET search_path TO public;" \
               -c "GRANT ALL PRIVILEGES ON SCHEMA public TO ${APP_DB_USER};" \
               -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${MESSAGING_DB_USER}') THEN CREATE ROLE ${MESSAGING_DB_USER} WITH LOGIN PASSWORD '${MESSAGING_DB_PASSWORD}'; END IF; END \$\$;" \
-              -c "CREATE SCHEMA IF NOT EXISTS ${MESSAGING_DB_USER} AUTHORIZATION ${MESSAGING_DB_USER};" \
-              -c "ALTER ROLE ${MESSAGING_DB_USER} SET search_path TO ${MESSAGING_DB_USER}, public;" \
-              -c "GRANT ALL PRIVILEGES ON SCHEMA ${MESSAGING_DB_USER} TO ${MESSAGING_DB_USER};" \
+              -c "CREATE SCHEMA IF NOT EXISTS ${MESSAGING_DB_SCHEMA} AUTHORIZATION ${MESSAGING_DB_USER};" \
+              -c "ALTER ROLE ${MESSAGING_DB_USER} SET search_path TO ${MESSAGING_DB_SCHEMA}, public;" \
+              -c "GRANT ALL PRIVILEGES ON SCHEMA ${MESSAGING_DB_SCHEMA} TO ${MESSAGING_DB_USER};" \
               -c "GRANT USAGE ON SCHEMA public TO ${MESSAGING_DB_USER};"
 
       # ── Run Alembic Migrations (App User via EC2) ───────────────────────
@@ -169,6 +176,7 @@ jobs:
           echo "APP_DB_PASSWORD=${{ secrets.APP_DB_PASSWORD }}" >> .env
           echo "MESSAGING_DB_USER=${{ secrets.MESSAGING_DB_USER }}" >> .env
           echo "MESSAGING_DB_PASSWORD=${{ secrets.MESSAGING_DB_PASSWORD }}" >> .env
+          echo "MESSAGING_DB_SCHEMA=${{ secrets.MESSAGING_DB_SCHEMA }}" >> .env
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "INTERNAL_SERVICE_SECRET=${{ secrets.INTERNAL_SERVICE_SECRET }}" >> .env
           echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env

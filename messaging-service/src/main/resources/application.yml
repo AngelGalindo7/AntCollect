@@ -12,13 +12,12 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        default_schema: petrcollect_messaging
+        default_schema: ${MESSAGING_DB_SCHEMA}
   flyway:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
-    schemas: petrcollect_messaging
-    default-schema: petrcollect_messaging
+    default-schema: ${MESSAGING_DB_SCHEMA}
 
 app:
   jwt:
