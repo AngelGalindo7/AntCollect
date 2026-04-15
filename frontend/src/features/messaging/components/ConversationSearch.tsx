@@ -3,8 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useConversationStore } from '../store/conversationStore';
 import { fetchWithAuth } from '@/shared/api/api';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";  // FastAPI :8000
-const API_BASE    = import.meta.env.VITE_API_URL ?? "http://localhost:8080"; // messaging service :8080
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
+const API_BASE    = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 interface UserResult {
   id: number;
   username: string;
