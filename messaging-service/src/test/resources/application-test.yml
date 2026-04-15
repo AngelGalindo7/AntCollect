@@ -1,10 +1,17 @@
+MESSAGING_DB_SCHEMA: petrcollect_messaging
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/antcollect_test
     username: ${MESSAGING_DB_USER:testuser}
     password: ${MESSAGING_DB_PASSWORD:testpassword}
+  jpa:
+    properties:
+      hibernate:
+        default_schema: petrcollect_messaging
   flyway:
     locations: classpath:db/migration,classpath:db/testdata
+    default-schema: petrcollect_messaging
 
 app:
   jwt:
