@@ -53,8 +53,7 @@ export default function ProfileTab() {
       if (updated.username !== localStorage.getItem('username')) {
         localStorage.setItem('username', updated.username);
       }
-      queryClient.invalidateQueries({ queryKey: ['me'] });
-      setInitialised(false);
+      queryClient.setQueryData(['me'], updated);
       setUsernameError('');
     },
     onError: (err: Error) => {
