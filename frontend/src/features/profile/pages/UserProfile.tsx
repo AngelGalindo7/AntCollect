@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
+import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import Search from "@/features/search/components/Search";
 import { fetchWithAuth, API_BASE } from "@/shared/api/api";
@@ -21,6 +22,7 @@ const UserProfile: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState<TabValue>("collection");
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   // Avatar upload state
   const [uploading, setUploading] = useState(false);
@@ -122,8 +124,8 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const handlePostClick = (post: Post, imageIndex: number) => {
-    console.log(`Clicked post ${post.post_id}, image index: ${imageIndex}`);
+  const handlePostClick = (post: Post) => {
+    setSelectedPost(post);
   };
 
   const handleFolderClick = (folder: Folder) => {
@@ -311,6 +313,15 @@ const UserProfile: React.FC = () => {
         folderType={tabFolderType}
         postOwnerId={profile.user_id}
       />
+
+      {selectedPost && (
+        <PostDetailModal
+          post={selectedPost}
+          onClose={() => setSelectedPost(null)}
+          postOwnerId={profile.user_id}
+          folderType={tabFolderType}
+        />
+      )}
     </div>
   );
 };
