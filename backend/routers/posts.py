@@ -203,22 +203,35 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), user: UserSearch =
                 order_by=PostImage.order_index
                 ).label("images"),
             likes_subquery.label("total_likes"),
-            existing_like_subquery.label("is_liked")
-
+            existing_like_subquery.label("is_liked"),
+            User.id.label("user_user_id"),
+            User.username.label("user_username"),
+            User.avatar_path.label("user_avatar_path"),
     )
-    .join(top_posts_subquery, Post.id == top_posts_subquery.c.id )
+    .join(top_posts_subquery, Post.id == top_posts_subquery.c.id)
+    .join(User, Post.user_id == User.id)
     .outerjoin(PostImage, Post.id == PostImage.post_id)
     .outerjoin(MediaAsset, PostImage.asset_id == MediaAsset.id)
-    .group_by(Post.id,top_posts_subquery.c.engagement_count)
+    .group_by(Post.id, top_posts_subquery.c.engagement_count, User.id)
     .order_by(top_posts_subquery.c.engagement_count.desc())
     )
 
     results = db.execute(final_query).all()
-    
+
+    posts = []
+    for row in results:
+        row_dict = row._asdict()
+        row_dict["user"] = {
+            "user_id": row_dict.pop("user_user_id"),
+            "username": row_dict.pop("user_username"),
+            "avatar_path": row_dict.pop("user_avatar_path"),
+        }
+        posts.append(PostWithEngagement.model_validate(row_dict))
+
     return TopPostsResponse(
-        total_returned=len(results),
+        total_returned=len(posts),
         k_value=k,
-        posts=[PostWithEngagement.model_validate(row) for row in results]
+        posts=posts,
     )
 
 

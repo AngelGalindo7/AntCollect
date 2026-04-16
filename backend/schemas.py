@@ -70,6 +70,14 @@ class ImageMetadata(BaseModel):
     original_width: int
     original_height: int
 
+class PostUserInfo(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    username: str
+    avatar_path: Optional[str] = None
+
+
 class PostBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -82,6 +90,7 @@ class PostBase(BaseModel):
     images: List[Optional[ImageMetadata]] # List of strings from array_agg
     total_likes: int
     is_liked: Optional[bool] = None  # Only included if user is authenticated
+    user: Optional[PostUserInfo] = None
 
 class PostWithEngagement(PostBase):
     total_engagement: int
