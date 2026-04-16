@@ -1,5 +1,7 @@
 package com.petrcollect.messaging.trade;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -11,6 +13,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/internal")
 public class TradeNotificationController {
+
+    private static final Logger log = LoggerFactory.getLogger(TradeNotificationController.class);
 
     private final SimpMessagingTemplate messagingTemplate;
     private final String internalSecret;
@@ -28,10 +32,10 @@ public class TradeNotificationController {
             @RequestBody TradeNotificationRequest req) {
 
         if (!internalSecret.equals(secret)) {
+            log.warn("Trade notification rejected — invalid X-Internal-Secret");
             return ResponseEntity.status(403).build();
         }
 
-        // Build the STOMP payload with snake_case keys to match the frontend TradeRequest interface.
         Map<String, Object> payload = new HashMap<>();
         payload.put("id",                   req.id());
         payload.put("requester_id",         req.requesterId());
@@ -53,6 +57,8 @@ public class TradeNotificationController {
             payload
         );
 
+        log.info("Trade notification pushed: tradeRequestId={} recipientId={}",
+                req.id(), req.recipientId());
         return ResponseEntity.noContent().build();
     }
 }
