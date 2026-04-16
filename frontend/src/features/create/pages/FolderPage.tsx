@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchWithAuth } from '@/shared/api/api';
 import PostGridLayout from '@/features/posts/components/PostGridLayout';
+import PostDetailModal from '@/features/posts/components/PostDetailModal';
 import type { GridItem, Post, FolderType } from '@/shared/types/Types';
 
 import { API_BASE } from '@/shared/api/api';
@@ -33,6 +34,7 @@ const FolderPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   const currentUserId = parseInt(localStorage.getItem('userId') ?? '0', 10);
   const isOwner = !!folder && folder.user_id === currentUserId;
@@ -198,7 +200,21 @@ const FolderPage: React.FC = () => {
       </div>
 
       {/* ── Posts grid ── */}
-      <PostGridLayout items={gridItems} />
+      <PostGridLayout
+        items={gridItems}
+        onPostClick={(post) => setSelectedPost(post)}
+        folderType={folder.folder_type}
+        postOwnerId={folder.user_id}
+      />
+
+      {selectedPost && (
+        <PostDetailModal
+          post={selectedPost}
+          onClose={() => setSelectedPost(null)}
+          postOwnerId={folder.user_id}
+          folderType={folder.folder_type}
+        />
+      )}
     </div>
   );
 };
