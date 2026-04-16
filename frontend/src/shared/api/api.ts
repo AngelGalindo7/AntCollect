@@ -2,7 +2,7 @@ let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 export const API_BASE = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
 
-async function refreshAccessToken(): Promise<boolean> {
+export async function refreshAccessToken(): Promise<boolean> {
     try {
         const res = await fetch(`${API_BASE}/auth/refresh-token`, {
             method: "POST",
