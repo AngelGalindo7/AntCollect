@@ -384,6 +384,17 @@ def retrieve_user(
     )
 
     results = db.execute(posts_query).all()
+    post_user = {
+        "user_id": target_user.id,
+        "username": target_user.username,
+        "avatar_path": target_user.avatar_path,
+    }
+    posts = []
+    for row in results:
+        row_dict = row._asdict()
+        row_dict["user"] = post_user
+        posts.append(PostBase.model_validate(row_dict))
+
     return UserProfileResponse(
         user_id=target_user.id,
         username=target_user.username,
@@ -391,7 +402,7 @@ def retrieve_user(
         avatar_path=target_user.avatar_path,
         sticker_count=target_user.sticker_count,
         is_owner=is_owner,
-        posts=[PostBase.model_validate(row) for row in results]
+        posts=posts,
     )
 
 @router.post("/retrieve_user_likes", response_model=UserPostLikesResponse)
