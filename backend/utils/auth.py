@@ -1,4 +1,5 @@
 import bcrypt
+import logging
 import secrets
 from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
@@ -10,6 +11,8 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 SECRET_KEY = os.getenv("JWT_SECRET")
 security = HTTPBearer(auto_error=False) #Reads the "Authorization: Bearer <token> header"
@@ -49,16 +52,16 @@ def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
     return token_info
 
 def decode_refresh_token(db_token):
-    
-
     try:
         payload = jwt.decode(db_token, SECRET_KEY, algorithms=["HS256"])
         user_id = payload.get("sub")
         payload_type = payload.get("type")
-        
+
     except jwt.ExpiredSignatureError:
+        logger.info("refresh token expired", extra={"event": "auth.refresh_token_expired"})
         raise HTTPException(status_code=401, detail="Refresh token expired")
     except jwt.InvalidTokenError:
+        logger.warning("invalid refresh token", extra={"event": "auth.refresh_token_invalid"})
         raise HTTPException(status_code=401, detail="Invalid token")
     if not user_id:
         raise  HTTPException(status_code=401, detail="Invalid refresh token payload")
@@ -91,8 +94,10 @@ def _decode_access_token(access_token_str: str):
         payload_type = payload.get("type")
 
     except jwt.ExpiredSignatureError:
+        logger.info("access token expired", extra={"event": "auth.access_token_expired"})
         raise HTTPException(status_code=401, detail="Access token expired")
     except jwt.InvalidTokenError:
+        logger.warning("invalid access token", extra={"event": "auth.access_token_invalid"})
         raise HTTPException(status_code=401, detail="Invalid token")
     if not user_id:
         raise  HTTPException(status_code=401, detail="Invalid refresh token payload")
