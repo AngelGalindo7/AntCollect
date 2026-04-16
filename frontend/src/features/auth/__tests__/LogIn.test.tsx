@@ -24,11 +24,11 @@ describe('LogIn', () => {
     localStorage.clear()
   })
 
-  it('renders email input, password input, and submit button', () => {
+  it('renders username input, password input, and submit button', () => {
     const { container } = renderLogIn()
     expect(container.querySelector('input[type="text"]')).toBeTruthy()
     expect(container.querySelector('input[type="password"]')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /log in/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /^login$/i })).toBeTruthy()
   })
 
   it('sets localStorage.username after successful POST /users/login', async () => {
@@ -40,7 +40,7 @@ describe('LogIn', () => {
     fireEvent.change(container.querySelector('input[type="password"]')!, {
       target: { value: 'secret123' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /log in/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^login$/i }))
 
     await waitFor(() => expect(localStorage.getItem('username')).toBe('testuser'))
   })
@@ -60,7 +60,7 @@ describe('LogIn', () => {
     fireEvent.change(container.querySelector('input[type="password"]')!, {
       target: { value: 'wrongpass' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /log in/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^login$/i }))
 
     await waitFor(() =>
       expect(screen.getByText('Invalid credentials')).toBeTruthy()
