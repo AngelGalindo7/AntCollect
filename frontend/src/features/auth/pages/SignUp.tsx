@@ -45,7 +45,12 @@ const SignUp: React.FC = () => {
         const data = await res.json();
 
         if (!res.ok) {
-          setError(data.detail || "Something went wrong.");
+          const detail = data.detail;
+          if (Array.isArray(detail)) {
+            setError(detail.map((e: { msg: string }) => e.msg).join(" · "));
+          } else {
+            setError(detail || "Something went wrong.");
+          }
           return;
         }
         //replace with real backend fetch call
