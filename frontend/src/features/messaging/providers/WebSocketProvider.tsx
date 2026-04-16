@@ -37,12 +37,18 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
   
 
   
+  // Guard every publish with clientRef.current?.connected — optional chaining alone
+  // only prevents calling publish on null. If the client is activated but the
+  // WebSocket handshake hasn't completed yet (e.g. cold refresh), publish throws
+  // "There is no underlying STOMP connection" which propagates through React's
+  // effect scheduler and gets caught by the error boundary.
   const sendReadAck = useCallback((conversationId: string, messageId: string) => {
-    clientRef.current?.publish({
+    if (!clientRef.current?.connected) return;
+    clientRef.current.publish({
       destination: '/app/read',
       body: JSON.stringify({ conversationId, messageId }),
     });
-  }, []); 
+  }, []);
 
   
   const handlers = useSocketFrameHandler(sendReadAck);
@@ -123,14 +129,16 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
     clientMessageId: string,
     contentType: string = 'text',
   ) => {
-    clientRef.current?.publish({
+    if (!clientRef.current?.connected) return;
+    clientRef.current.publish({
       destination: '/app/send',
       body: JSON.stringify({ clientMessageId, conversationId, content, contentType }),
     });
   }, []);
 
   const sendTyping = useCallback((conversationId: string) => {
-    clientRef.current?.publish({
+    if (!clientRef.current?.connected) return;
+    clientRef.current.publish({
       destination: '/app/typing',
       body: JSON.stringify({ conversationId }),
     });
