@@ -118,6 +118,25 @@ async def _rate_limit_handler(request: Request, exc) -> JSONResponse:
 
 app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 
+
+async def _generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """
+    Catch-all for any exception not handled by a more specific handler.
+    Returning a JSONResponse here keeps the response inside FastAPI's ExceptionMiddleware,
+    which sits below CORSMiddleware — so CORS headers are always present even on 500s.
+    Without this, Starlette's outermost ServerErrorMiddleware generates a bare 500
+    that bypasses CORSMiddleware entirely, causing the browser to report a CORS error.
+    """
+    logger.error(
+        "unhandled exception",
+        exc_info=exc,
+        extra={"path": str(request.url), "method": request.method},
+    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+
+app.add_exception_handler(Exception, _generic_exception_handler)
+
 _allowed = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
 origins = [o.strip() for o in _allowed.split(",")]
 
