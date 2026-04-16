@@ -26,6 +26,7 @@ import com.petrcollect.messaging.websocket.SessionRegistry;
 import com.petrcollect.messaging.websocket.WebSocketConnectionLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * Handles inbound STOMP frames from WebSocket clients.
@@ -151,7 +152,7 @@ public class MessageWebSocketHandler {
         SessionState state = new SessionState(userId, executor, registeredAt, userSummary);
         sessionStates.put(sessionId, state);
         stateByUserId.put(userId, state);
-        log.debug("WebSocket connected: userId={} sessionId={}", userId, sessionId);
+        log.info("WebSocket connected: userId={} sessionId={}", userId, sessionId);
     }
 
     /**
@@ -180,7 +181,9 @@ public class MessageWebSocketHandler {
 
         // Drain the queue — do NOT call shutdownNow()
         state.executor().shutdown();
-        log.debug("WebSocket disconnected: userId={} sessionId={}", state.userId(), sessionId);
+        long sessionDurationMs = System.currentTimeMillis() - state.registeredAt();
+        log.info("WebSocket disconnected: userId={} sessionId={} sessionDurationMs={}",
+                state.userId(), sessionId, sessionDurationMs);
     }
 
     // ── STOMP message handlers ────────────────────────────────────────────────
@@ -197,14 +200,17 @@ public class MessageWebSocketHandler {
      */
     @MessageMapping("/send")
     public void handleSend(@Payload SendMessageRequest req, Principal principal) {
-        log.info("handleSend called - principal={} req={}", principal, req);
-
         Long senderId = extractUserId(principal);
-        log.info("senderId resolved to: {}", senderId);
         SessionState state = getState(senderId);
         if (state == null) return;
 
         state.executor().submit(() -> {
+            // MDC fields are picked up by LogstashEncoder and included in every
+            // JSON log line emitted within this task. cleared in finally so the
+            // thread is clean for the next task (executor reuses threads).
+            MDC.put("userId", senderId.toString());
+            MDC.put("conversationId", req.conversationId().toString());
+            long start = System.currentTimeMillis();
             try {
                 Message saved = messageService.sendMessage(req, senderId);
                 MessageResponse dto = toWebSocketMessage(saved, req.conversationId(), state.userSummary());
@@ -217,6 +223,10 @@ public class MessageWebSocketHandler {
                 fanOutToParticipants(req.conversationId(), senderId,
                         DEST_MESSAGES, new InboundMessagePayload(dto));
 
+                long durationMs = System.currentTimeMillis() - start;
+                log.info("STOMP message processed: conversationId={} durationMs={}",
+                        req.conversationId(), durationMs);
+
             } catch (MessageService.DuplicateMessageException dup) {
                 // Idempotent retry — return existing message, same shape as success
                 messaging.convertAndSendToUser(
@@ -224,12 +234,15 @@ public class MessageWebSocketHandler {
                         AckPayload.success(req.clientMessageId(),
                                 toWebSocketMessage(dup.getExisting(), req.conversationId(), state.userSummary()))
                 );
+                log.debug("STOMP duplicate message (idempotent): conversationId={}", req.conversationId());
             } catch (Exception e) {
-                log.error("sendMessage failed for userId={}", senderId, e);
+                log.error("STOMP send failed: userId={} conversationId={}", senderId, req.conversationId(), e);
                 messaging.convertAndSendToUser(
                         senderId.toString(), DEST_ACK,
                         AckPayload.error(req.clientMessageId(), e.getMessage())
                 );
+            } finally {
+                MDC.clear();
             }
         });
     }
