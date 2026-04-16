@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useMessageStore } from '../store/messageStore';
@@ -25,7 +25,14 @@ export default function ChatPage() {
   // ── Store actions only — never store state here ────────────────────────────
   // Pulling state (e.g. messagesByConversation) in ChatPage would mean this
   // component re-renders on every message. State lives in the child components.
+  //
+  // Exception: storeSeeded — a boolean that only transitions false→true once per
+  // conversation load. It does NOT subscribe to per-message updates because the
+  // selector returns the same `true` value on every subsequent message append.
   const setActiveConversation = useMessageStore((s) => s.setActiveConversation);
+  const storeSeeded = useMessageStore(
+    useCallback((s) => safeId in s.messagesByConversation, [safeId])
+  );
   const markConversationRead  = useConversationStore((s) => s.markConversationRead);
   const upsertConversation    = useConversationStore((s) => s.upsertConversation);
   const { sendReadAck }       = useWebSocketContext();
@@ -149,7 +156,11 @@ export default function ChatPage() {
   }
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const isLoading    = messagesLoading || convLoading;
+  // Keep skeleton visible through the one render-cycle gap between TanStack
+  // resolving (isLoading → false) and the useEffect in useMessages seeding
+  // the Zustand store. Without !storeSeeded here, MessageList would render
+  // against an empty store and flash "No messages yet" before the effect fires.
+  const isLoading    = messagesLoading || convLoading || (!messagesError && !storeSeeded);
   const currentUserId = localStorage.getItem('userId') ?? '';
 
   const displayName = conversationData?.isGroup
