@@ -170,7 +170,7 @@ const PostCard: React.FC<PostCardProps> = ({
     <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
       {/* Card header: avatar + username on left, options menu on right */}
       <div className="flex items-center justify-between px-3 py-2">
-        <PostHeader user={post.user} />
+        {post.user && <PostHeader user={post.user} />}
 
         <div ref={dropdownRef} className="relative shrink-0">
           <button
