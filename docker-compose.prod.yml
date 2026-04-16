@@ -19,6 +19,9 @@ services:
       - HTTPS_ENABLED=true
       - BEHIND_PROXY=true
       - COOKIE_SECURE=true
+      - LOG_LEVEL=INFO
+      - SLOW_REQUEST_MS=500
+      - SLOW_QUERY_MS=100
     restart: unless-stopped
 
   messaging:
@@ -33,4 +36,5 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_SERVICE_SECRET=${INTERNAL_SERVICE_SECRET}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - LOG_LEVEL=INFO
     restart: unless-stopped

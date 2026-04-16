@@ -54,6 +54,7 @@ services:
       - AWS_REGION=${AWS_REGION}
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_SERVICE_SECRET=${INTERNAL_SERVICE_SECRET}
+      - LOG_LEVEL=DEBUG
     depends_on:
       postgres:
         condition: service_healthy
@@ -75,6 +76,7 @@ services:
       - AWS_REGION=${AWS_REGION}
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_SERVICE_SECRET=${INTERNAL_SERVICE_SECRET}
+      - LOG_LEVEL=DEBUG
     depends_on:
       postgres:
         condition: service_healthy
