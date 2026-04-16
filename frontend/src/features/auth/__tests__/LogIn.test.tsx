@@ -28,7 +28,7 @@ describe('LogIn', () => {
     const { container } = renderLogIn()
     expect(container.querySelector('input[type="text"]')).toBeTruthy()
     expect(container.querySelector('input[type="password"]')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /create account/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /log in/i })).toBeTruthy()
   })
 
   it('sets localStorage.username after successful POST /users/login', async () => {
@@ -40,7 +40,7 @@ describe('LogIn', () => {
     fireEvent.change(container.querySelector('input[type="password"]')!, {
       target: { value: 'secret123' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /create account/i }))
+    fireEvent.click(screen.getByRole('button', { name: /log in/i }))
 
     await waitFor(() => expect(localStorage.getItem('username')).toBe('testuser'))
   })
@@ -60,7 +60,7 @@ describe('LogIn', () => {
     fireEvent.change(container.querySelector('input[type="password"]')!, {
       target: { value: 'wrongpass' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /create account/i }))
+    fireEvent.click(screen.getByRole('button', { name: /log in/i }))
 
     await waitFor(() =>
       expect(screen.getByText('Invalid credentials')).toBeTruthy()
