@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import './index.css';
 import SignUp from '@/features/auth/pages/SignUp';
 import LogIn from '@/features/auth/pages/LogIn';
@@ -12,6 +12,10 @@ import SettingsPage from '@/features/settings/pages/SettingsPage';
 import CreateFolder from '@/features/create/pages/CreateFolder';
 import FolderPage from '@/features/create/pages/FolderPage';
 
+function RequireAuth() {
+  return localStorage.getItem('userId') ? <Outlet /> : <Navigate to="/Login" replace />;
+}
+
 function App(){
   return (
     <BrowserRouter>
@@ -19,16 +23,18 @@ function App(){
         <Route path="/Login" element={<LogIn />} />
         <Route path="/CreateAccount" element={<SignUp />}/>
 
-      <Route element={<Layout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/create-post" element={<CreatePost />} />
-        <Route path="/create-folder" element={<CreateFolder />} />
-        <Route path="/folders/:folderId" element={<FolderPage />} />
-        <Route path="/search" element={<SearchResultsPage />} />
-        <Route path="/messages/:conversationId" element={<ChatPage />} />
-        <Route path="/:username" element={<UserProfile />} caseSensitive/>
+      <Route element={<RequireAuth />}>
+        <Route element={<Layout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/create-post" element={<CreatePost />} />
+          <Route path="/create-folder" element={<CreateFolder />} />
+          <Route path="/folders/:folderId" element={<FolderPage />} />
+          <Route path="/search" element={<SearchResultsPage />} />
+          <Route path="/messages/:conversationId" element={<ChatPage />} />
+          <Route path="/:username" element={<UserProfile />} caseSensitive/>
         </Route>
+      </Route>
     </Routes>
     </BrowserRouter>
   )
