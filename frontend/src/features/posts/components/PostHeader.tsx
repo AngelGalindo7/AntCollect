@@ -13,7 +13,7 @@ interface PostHeaderProps {
 const PostHeader: React.FC<PostHeaderProps> = ({ user }) => (
   <Link
     to={`/${user.username}`}
-    className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition-colors"
+    className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity"
     onClick={(e) => e.stopPropagation()}
   >
     {user.avatar_path ? (

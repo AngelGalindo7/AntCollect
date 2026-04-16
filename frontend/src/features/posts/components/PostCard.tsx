@@ -168,9 +168,41 @@ const PostCard: React.FC<PostCardProps> = ({
 
   return (
     <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
-      <PostHeader user={post.user} />
+      {/* Card header: avatar + username on left, options menu on right */}
+      <div className="flex items-center justify-between px-3 py-2">
+        <PostHeader user={post.user} />
 
-      {/* Image — leads the card */}
+        <div ref={dropdownRef} className="relative shrink-0">
+          <button
+            onClick={(e) => { e.stopPropagation(); setDropdownOpen((o) => !o); }}
+            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-500"
+            aria-label="Post options"
+          >
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="5" cy="12" r="1.5" />
+              <circle cx="12" cy="12" r="1.5" />
+              <circle cx="19" cy="12" r="1.5" />
+            </svg>
+          </button>
+
+          {dropdownOpen && (
+            <div className="absolute top-full right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-30 overflow-hidden">
+              {DROPDOWN_OPTIONS.map((opt) => (
+                <button
+                  key={opt.label}
+                  onClick={() => setDropdownOpen(false)}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <span className="text-gray-500">{opt.icon}</span>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Image */}
       <div
         className="relative aspect-square overflow-hidden bg-gray-100 cursor-pointer group"
         onClick={handleClick}
@@ -188,40 +220,6 @@ const PostCard: React.FC<PostCardProps> = ({
             </svg>
           </div>
         )}
-
-        {/* Three-dot options button */}
-        <div
-          ref={dropdownRef}
-          className="absolute top-2 right-2 z-20"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => setDropdownOpen((o) => !o)}
-            className="w-7 h-7 flex items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition-colors backdrop-blur-sm"
-            aria-label="Post options"
-          >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <circle cx="5" cy="12" r="1.5" />
-              <circle cx="12" cy="12" r="1.5" />
-              <circle cx="19" cy="12" r="1.5" />
-            </svg>
-          </button>
-
-          {dropdownOpen && (
-            <div className="absolute top-full right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-1 overflow-hidden">
-              {DROPDOWN_OPTIONS.map((opt) => (
-                <button
-                  key={opt.label}
-                  onClick={() => setDropdownOpen(false)}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  <span className="text-gray-500">{opt.icon}</span>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Caption below image */}
