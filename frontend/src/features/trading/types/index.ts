@@ -15,6 +15,7 @@ export interface TradeRequest {
   request_type: TradeRequestType;
   offered_folder_id: number | null;
   offered_folder_name: string | null;
+  offered_post_ids: number[] | null;
   status: TradeRequestStatus;
   created_at: string;
 }

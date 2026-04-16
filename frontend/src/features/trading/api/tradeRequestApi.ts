@@ -6,6 +6,7 @@ export async function createTradeRequest(data: {
   recipient_id: number;
   request_type: TradeRequestType;
   offered_folder_id?: number;
+  offered_post_ids?: number[];
 }): Promise<TradeRequest> {
   const res = await fetchWithAuth(`${API_BASE}/trade-requests`, {
     method: 'POST',
