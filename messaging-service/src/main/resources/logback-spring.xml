@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!--
+        Structured JSON to stdout — same design principle as the FastAPI backend.
+        Docker Compose captures stdout; the awslogs log driver ships it to CloudWatch.
+        MDC fields (userId, conversationId, sessionId) are automatically included at
+        the top level of each JSON object by LogstashEncoder.
+
+        Field renames:
+          @timestamp  → timestamp
+          logger_name → logger
+          thread_name → thread
+          @version    → omitted (always "1", no analytical value)
+          level_value → omitted (numeric duplicate of level string)
+    -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <fieldNames>
+                <timestamp>timestamp</timestamp>
+                <version>[ignore]</version>
+                <levelValue>[ignore]</levelValue>
+                <logger>logger</logger>
+                <thread>thread</thread>
+            </fieldNames>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="JSON_CONSOLE"/>
+    </root>
+
+</configuration>
