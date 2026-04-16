@@ -1,6 +1,8 @@
 import datetime
 from sqlalchemy import BigInteger, String, DateTime, ForeignKey, text, Index, CheckConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
+from typing import Optional
 from backend.database import Base
 
 
@@ -50,6 +52,9 @@ class TradeRequest(Base):
     request_type: Mapped[str] = mapped_column(String(20), nullable=False)
     offered_folder_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("folders.id", ondelete="SET NULL"), nullable=True
+    )
+    offered_post_ids: Mapped[Optional[list]] = mapped_column(
+        JSONB, nullable=True
     )
     status: Mapped[str] = mapped_column(
         String(10), nullable=False, server_default=text("'PENDING'")

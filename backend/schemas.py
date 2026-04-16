@@ -210,6 +210,7 @@ class CreateTradeRequest(BaseModel):
     recipient_id: int
     request_type: TradeRequestType
     offered_folder_id: Optional[int] = None
+    offered_post_ids: Optional[List[int]] = None
 
 
 class TradeRequestResponse(BaseModel):
@@ -228,5 +229,6 @@ class TradeRequestResponse(BaseModel):
     request_type: TradeRequestType
     offered_folder_id: Optional[int] = None
     offered_folder_name: Optional[str] = None
+    offered_post_ids: Optional[List[int]] = None
     status: TradeRequestStatus
     created_at: datetime

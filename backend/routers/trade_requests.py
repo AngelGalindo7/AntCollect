@@ -117,6 +117,7 @@ def _build_response(
         request_type=trade.request_type,  # type: ignore[arg-type]
         offered_folder_id=trade.offered_folder_id,
         offered_folder_name=offered_folder_name,
+        offered_post_ids=trade.offered_post_ids,
         status=trade.status,  # type: ignore[arg-type]
         created_at=trade.created_at,
     )
@@ -172,13 +173,31 @@ def create_trade_request(
                 detail="Offered folder not found or does not belong to you",
             )
 
-    # 6. Create and commit (partial unique index will raise IntegrityError on duplicate)
+    # 6. Validate offered post IDs — each must exist and belong to the requester
+    validated_post_ids: list[int] | None = None
+    if payload.offered_post_ids:
+        for pid in payload.offered_post_ids:
+            offered_post = db.get(Post, pid)
+            if not offered_post:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Offered post {pid} not found",
+                )
+            if offered_post.user_id != requester_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Offered post {pid} does not belong to you",
+                )
+        validated_post_ids = list(payload.offered_post_ids)
+
+    # 7. Create and commit (partial unique index will raise IntegrityError on duplicate)
     trade = TradeRequest(
         requester_id=requester_id,
         recipient_id=payload.recipient_id,
         target_post_id=payload.target_post_id,
         request_type=payload.request_type.value,
         offered_folder_id=payload.offered_folder_id,
+        offered_post_ids=validated_post_ids,
         status="PENDING",
         created_at=datetime.now(timezone.utc),
     )
