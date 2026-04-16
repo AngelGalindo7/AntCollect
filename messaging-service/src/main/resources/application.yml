@@ -30,8 +30,9 @@ app:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
 logging:
   level:
-    com.petrcollect.messaging: DEBUG
-    org.springframework.web: DEBUG
+    root: INFO
+    # Set LOG_LEVEL=DEBUG in .env for verbose local output. INFO in production.
+    com.petrcollect.messaging: ${LOG_LEVEL:INFO}
 server:
   error:
     include-message: never
