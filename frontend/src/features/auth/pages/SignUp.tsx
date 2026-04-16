@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { API_BASE } from '@/shared/api/api';
 
 const SignUp: React.FC = () => {
+    const navigate = useNavigate();
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -57,6 +59,7 @@ const SignUp: React.FC = () => {
         //await fetch("/api/signup", {...})
 
         setSuccess(data.msg || "Account created successfully!");
+        setTimeout(() => navigate('/Login'), 1500);
     } catch (err) { 
         console.error("Network Error:", err);
         setError("Network error.");
