@@ -209,7 +209,7 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), user: UserSearch =
             User.avatar_path.label("user_avatar_path"),
     )
     .join(top_posts_subquery, Post.id == top_posts_subquery.c.id)
-    .join(User, Post.user_id == User.id)
+    .outerjoin(User, Post.user_id == User.id)
     .outerjoin(PostImage, Post.id == PostImage.post_id)
     .outerjoin(MediaAsset, PostImage.asset_id == MediaAsset.id)
     .group_by(Post.id, top_posts_subquery.c.engagement_count, User.id)
