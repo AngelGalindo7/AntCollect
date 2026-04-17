@@ -39,16 +39,13 @@ const HomePage: React.FC = () => {
                 //}));
                 const transformedData = {
 				        ...data,
-				        posts: data.posts.map((post) => {
-                  // console.log('[HomePage] Processing post author:', post.user);
-                  return {
-					          ...post,
-					          image_paths: (post.images ?? [])
-                      .filter(img => img && img.paths?.medium)
-                      .map((img) => img.paths.original),
+				        posts: data.posts.map((post) => ({
+					      ...post,
+					      image_paths: (post.images ?? [])
+                .filter(img => img && img.paths?.medium)
+                .map((img) => img.paths.original),
+                  })),
                   };
-                }),
-                };
                         
                 setPosts(transformedData.posts);
 

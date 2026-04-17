@@ -155,14 +155,14 @@ def like_image(
             }
 
 @router.get("/top")
-def get_top_posts(k: int = 10, db: Session = Depends(get_db), user: UserSearch = Depends(authenthicate_access_token)):
+def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: UserSearch = Depends(authenthicate_access_token)):
     k = min(max(k, 1), 100)
 
     existing_like_subquery = (
     select(func.count(PostLike.id))
     .where(
         PostLike.post_id == Post.id,
-        PostLike.user_id == user.user_id  # current user from auth token
+        PostLike.user_id == current_user.user_id  # current user from auth token
     )
     .scalar_subquery()
     )
