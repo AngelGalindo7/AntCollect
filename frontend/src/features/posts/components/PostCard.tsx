@@ -172,7 +172,10 @@ const PostCard: React.FC<PostCardProps> = ({
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex-1 min-w-0">
           {post.user ? (
-            <PostHeader user={post.user} />
+            <>
+              {/* console.log('[PostCard Debug] Rendering Header for user:', post.user.username, post.user.avatar_path) */}
+              <PostHeader user={post.user} />
+            </>
           ) : (
             <div className="h-7" /> // Placeholder to keep height and layout
           )}

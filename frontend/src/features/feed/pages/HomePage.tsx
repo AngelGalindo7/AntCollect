@@ -39,13 +39,20 @@ const HomePage: React.FC = () => {
                 //}));
                 const transformedData = {
 				        ...data,
-				        posts: data.posts.map((post) => ({
-					      ...post,
-					      image_paths: (post.images ?? [])
-                .filter(img => img && img.paths?.medium)
-                .map((img) => img.paths.original),
-                  })),
+				        posts: data.posts.map((post) => {
+                  console.log('[Explore Debug] Post author data from API:', {
+                    id: post.post_id,
+                    user: post.user,
+                    avatar: post.user?.avatar_path
+                  });
+                  return {
+					          ...post,
+					          image_paths: (post.images ?? [])
+                      .filter(img => img && img.paths?.medium)
+                      .map((img) => img.paths.original),
                   };
+                }),
+                };
                         
                 setPosts(transformedData.posts);
 
