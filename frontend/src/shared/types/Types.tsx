@@ -43,8 +43,7 @@ export type Post = {
   updated_at: string;
   is_liked: boolean;
   images?: { paths: { medium: string; original: string } }[];
-  // Added user to associate a post with its author
-  user: {
+  user?: {
     user_id: number;
     username: string;
     avatar_path: string | null;
@@ -61,8 +60,6 @@ export type ProfileResponse = {
   avatar_path: string | null;
   sticker_count: number;
   is_owner: boolean;
-  // Posts here will now contain the `user` object, though it will be
-  // redundant information (the same user for all posts).
   posts: Post[];
 };
 

@@ -1,6 +1,10 @@
-# Environment — use .env.example as the template; actual .env is local-only
+# Environment — use .env.example as the template; actual .env files are local-only
+# Production Vercel env vars: set in Vercel dashboard, not committed
 .env
 .env.local
+.env.production
+.env.production.local
+e2e/.env.test
 
 # Logs
 logs

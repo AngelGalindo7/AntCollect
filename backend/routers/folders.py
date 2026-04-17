@@ -144,12 +144,16 @@ def get_folder(
             ).label("images"),
             likes_subquery.label("total_likes"),
             existing_like_subquery.label("is_liked"),
+            User.id.label("user_user_id"),
+            User.username.label("user_username"),
+            User.avatar_path.label("user_avatar_path"),
         )
+        .join(User, Post.user_id == User.id)
         .join(FolderPost, Post.id == FolderPost.post_id)
         .outerjoin(PostImage, Post.id == PostImage.post_id)
         .outerjoin(MediaAsset, PostImage.asset_id == MediaAsset.id)
         .where(FolderPost.folder_id == folder_id)
-        .group_by(Post.id, FolderPost.order_index)
+        .group_by(Post.id, FolderPost.order_index, User.id)
         .order_by(FolderPost.order_index)
     )
 
@@ -157,6 +161,16 @@ def get_folder(
         posts_query = posts_query.where(Post.public == True, Post.is_published == True)
 
     post_rows = db.execute(posts_query).all()
+
+    posts = []
+    for row in post_rows:
+        row_dict = row._asdict()
+        row_dict["user"] = {
+            "user_id": row_dict.pop("user_user_id"),
+            "username": row_dict.pop("user_username"),
+            "avatar_path": row_dict.pop("user_avatar_path"),
+        }
+        posts.append(PostBase.model_validate(row_dict))
 
     return FolderWithPostsResponse(
         id=folder.id,
@@ -167,7 +181,7 @@ def get_folder(
         avatar_path=folder.avatar_path,
         is_public=folder.is_public,
         folder_type=folder.folder_type,
-        posts=[PostBase.model_validate(row) for row in post_rows],
+        posts=posts,
     )
 
 

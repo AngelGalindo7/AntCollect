@@ -304,16 +304,30 @@ def _search_posts(query: str, limit: int, db: Session) -> List[PostWithEngagemen
             Post.updated_at,
             top_search_posts_subquery.c.engagement_count.label("total_engagement"),
             func.array_agg(MediaAsset.json_metadata, order_by=PostImage.order_index).label("images"),
-            likes_subquery.label("total_likes")
+            likes_subquery.label("total_likes"),
+            User.id.label("user_user_id"),
+            User.username.label("user_username"),
+            User.avatar_path.label("user_avatar_path"),
         )
         .join(top_search_posts_subquery, Post.id == top_search_posts_subquery.c.id)
+        .join(User, Post.user_id == User.id)
         .outerjoin(PostImage, Post.id == PostImage.post_id)
         .outerjoin(MediaAsset, PostImage.asset_id == MediaAsset.id)
-        .group_by(Post.id, top_search_posts_subquery.c.engagement_count)
+        .group_by(Post.id, top_search_posts_subquery.c.engagement_count, User.id)
         .order_by(top_search_posts_subquery.c.engagement_count.desc())
     ).all()
 
-    return [PostWithEngagement.model_validate(row) for row in posts]
+    results = []
+    for row in posts:
+        row_dict = row._asdict()
+        row_dict["user"] = {
+            "user_id": row_dict.pop("user_user_id"),
+            "username": row_dict.pop("user_username"),
+            "avatar_path": row_dict.pop("user_avatar_path"),
+        }
+        results.append(PostWithEngagement.model_validate(row_dict))
+    
+    return results
 #TODO Filter out private,non published posts in the query to avoid fetching invalid data
 @router.post("/get_user_", response_model = UserProfileResponse)
 def retrieve_user(
@@ -422,11 +436,15 @@ def retrieve_user_likes(
                 MediaAsset.json_metadata,
                 order_by=PostImage.order_index
             ).label("images"),
+            User.id.label("user_user_id"),
+            User.username.label("user_username"),
+            User.avatar_path.label("user_avatar_path"),
         )
         .join(PostLike, Post.id == PostLike.post_id)
+        .join(User, Post.user_id == User.id)
         .outerjoin(PostImage, Post.id == PostImage.post_id)
         .outerjoin(MediaAsset, MediaAsset.id == PostImage.asset_id)
-        .group_by(Post.id)
+        .group_by(Post.id, User.id)
     )
 
     posts_query = query.where(
@@ -436,9 +454,19 @@ def retrieve_user_likes(
 
     results = db.execute(posts_query).all()
 
+    posts = []
+    for row in results:
+        row_dict = row._asdict()
+        row_dict["user"] = {
+            "user_id": row_dict.pop("user_user_id"),
+            "username": row_dict.pop("user_username"),
+            "avatar_path": row_dict.pop("user_avatar_path"),
+        }
+        posts.append(PostBase.model_validate(row_dict))
+
     return UserPostLikesResponse(
         user_id=current_user.user_id,
-        posts=[PostBase.model_validate(row) for row in results]
+        posts=posts
     )
 
 

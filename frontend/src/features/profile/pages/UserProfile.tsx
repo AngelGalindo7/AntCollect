@@ -51,6 +51,11 @@ const UserProfile: React.FC = () => {
         if (!profileRes.ok) throw new Error(`Failed to load profile: ${profileRes.status}`);
 
         const data: ProfileResponse = await profileRes.json();
+        const postUser = {
+          user_id: data.user_id,
+          username: data.username,
+          avatar_path: data.avatar_path,
+        };
         const transformedData: ProfileResponse = {
           ...data,
           posts: data.posts.map((post) => ({
@@ -58,6 +63,7 @@ const UserProfile: React.FC = () => {
             image_paths: (post as any).images
               ?.filter((img: any) => img && img.paths?.medium)
               .map((img: any) => img.paths.original) ?? [],
+            user: postUser,
           })),
         };
         setProfile(transformedData);

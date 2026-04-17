@@ -170,9 +170,15 @@ const PostCard: React.FC<PostCardProps> = ({
     <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm hover:-translate-y-1 hover:shadow-xl transition-all duration-300">
       {/* Card header: avatar + username on left, options menu on right */}
       <div className="flex items-center justify-between px-3 py-2">
-        {post.user && <PostHeader user={post.user} />}
+        <div className="flex-1 min-w-0">
+          {post.user ? (
+            <PostHeader user={post.user} />
+          ) : (
+            <div className="h-7" /> // Placeholder to keep height and layout
+          )}
+        </div>
 
-        <div ref={dropdownRef} className="relative shrink-0">
+        <div ref={dropdownRef} className="relative shrink-0 ml-2">
           <button
             onClick={(e) => { e.stopPropagation(); setDropdownOpen((o) => !o); }}
             className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-500"
