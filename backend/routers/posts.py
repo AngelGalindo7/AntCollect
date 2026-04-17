@@ -1,11 +1,11 @@
 from fastapi import UploadFile, File, Depends, Form, HTTPException, APIRouter, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select, desc
 from backend.database import get_db
 from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType, MediaAsset
 from backend.models.media_assets import AssetStatus
-from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
+from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch, PostUserInfo
 from ..utils.files import delete_file, process_and_save_image
 from ..utils.auth import authenthicate_access_token
 from ..utils.rate_limit import limiter, get_user_or_ip_key
@@ -154,9 +154,11 @@ def like_image(
             "liked":True
             }
 
-@router.get("/top")
+@router.get("/top", response_model=TopPostsResponse)
 def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: UserSearch = Depends(authenthicate_access_token)):
     k = min(max(k, 1), 100)
+
+    author = aliased(User)
 
     existing_like_subquery = (
     select(func.count(PostLike.id))
@@ -193,7 +195,6 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: User
             Post.type,
             Post.updated_at,
             top_posts_subquery.c.engagement_count.label("total_engagement"),
-            #consider wrapping in array_remove to eliminate null values
             func.array_agg(
                 MediaAsset.file_url,
                 order_by=PostImage.order_index
@@ -204,29 +205,46 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: User
                 ).label("images"),
             likes_subquery.label("total_likes"),
             existing_like_subquery.label("is_liked"),
-            User.id.label("user_user_id"),
-            User.username.label("user_username"),
-            User.avatar_path.label("user_avatar_path"),
+            author.id.label("user_user_id"),
+            author.username.label("user_username"),
+            author.avatar_path.label("user_avatar_path"),
     )
     .join(top_posts_subquery, Post.id == top_posts_subquery.c.id)
-    .outerjoin(User, Post.user_id == User.id)
+    .outerjoin(author, Post.user_id == author.id)
     .outerjoin(PostImage, Post.id == PostImage.post_id)
     .outerjoin(MediaAsset, PostImage.asset_id == MediaAsset.id)
-    .group_by(Post.id, top_posts_subquery.c.engagement_count, User.id)
+    .group_by(Post.id, top_posts_subquery.c.engagement_count, author.id, author.username, author.avatar_path)
     .order_by(top_posts_subquery.c.engagement_count.desc())
     )
 
-    results = db.execute(final_query).all()
+    results = db.execute(final_query).mappings().all()
 
     posts = []
     for row in results:
-        row_dict = row._asdict()
-        row_dict["user"] = {
-            "user_id": row_dict.pop("user_user_id"),
-            "username": row_dict.pop("user_username"),
-            "avatar_path": row_dict.pop("user_avatar_path"),
+        # Construct the user object explicitly as a dict for the response model
+        post_author = {
+            "user_id": row["user_user_id"],
+            "username": row["user_username"],
+            "avatar_path": row["user_avatar_path"]
+        } if row["user_user_id"] else None
+
+        # Build the post dict to match PostWithEngagement
+        post_data = {
+            "post_id": row["post_id"],
+            "caption": row["caption"],
+            "public": row["public"],
+            "is_published": row["is_published"],
+            "type": row["type"],
+            "updated_at": row["updated_at"],
+            "total_engagement": row["total_engagement"],
+            "images": row["images"],
+            "total_likes": row["total_likes"],
+            "is_liked": row["is_liked"] > 0 if row["is_liked"] is not None else False,
+            "user": post_author
         }
-        posts.append(PostWithEngagement.model_validate(row_dict))
+        
+        # print(f"DEBUG: Mapping post {row['post_id']}, author: {post_author['username'] if post_author else 'None'}")
+        posts.append(PostWithEngagement.model_validate(post_data))
 
     return TopPostsResponse(
         total_returned=len(posts),
