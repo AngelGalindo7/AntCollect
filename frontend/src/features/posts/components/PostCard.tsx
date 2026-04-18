@@ -171,11 +171,7 @@ const PostCard: React.FC<PostCardProps> = ({
       {/* Card header: avatar + username on left, options menu on right */}
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex-1 min-w-0">
-          {post.user ? (
-            <PostHeader user={post.user} />
-          ) : (
-            <div className="h-7" /> // Placeholder to keep height and layout
-          )}
+          <PostHeader user={post.user} />
         </div>
 
         <div ref={dropdownRef} className="relative shrink-0 ml-2">
