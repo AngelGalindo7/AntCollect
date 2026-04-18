@@ -221,6 +221,8 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: User
 
     posts = []
     for row in results:
+        print(f"DEBUG row keys: {list(row.keys())}", flush=True)
+        print(f"DEBUG post {row['post_id']} — user_user_id={row.get('user_user_id', 'KEY_MISSING')}, username={row.get('user_username', 'KEY_MISSING')}", flush=True)
         # Construct the user object explicitly as a dict for the response model
         post_author = {
             "user_id": row["user_user_id"],
@@ -242,7 +244,7 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: User
             "is_liked": row["is_liked"] > 0 if row["is_liked"] is not None else False,
             "user": post_author
         }
-        
+
         # print(f"DEBUG: Mapping post {row['post_id']}, author: {post_author['username'] if post_author else 'None'}")
         posts.append(PostWithEngagement.model_validate(post_data))
 
