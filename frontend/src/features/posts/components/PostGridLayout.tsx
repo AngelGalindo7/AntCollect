@@ -63,11 +63,11 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
   };
 
   return (
-    <div className="columns-2 min-[768px]:columns-3 min-[1100px]:columns-4 gap-3.5">
+    <div className="columns-2 min-[768px]:columns-3 min-[1100px]:columns-4 gap-6">
       {items.map((item) => {
         const key = item.kind === 'folder' ? `folder-${item.data.id}` : `post-${item.data.post_id}`;
         return (
-          <div key={key} className="break-inside-avoid mb-3.5">
+          <div key={key} className="break-inside-avoid mb-6">
             {renderItem(item)}
           </div>
         );
