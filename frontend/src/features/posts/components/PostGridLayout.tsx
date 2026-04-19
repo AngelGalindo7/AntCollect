@@ -3,17 +3,6 @@ import PostCard from './PostCard';
 import FolderCard from '@/features/create/components/FolderCard';
 import type { GridItem, Post, Folder, FolderType } from '@/shared/types/Types';
 
-/**
- * PostGridLayout
- *
- * Renders a mixed grid of folders and posts from a GridItem[] array.
- * Callers control ordering — pass folders first to pin them at the top.
- *
- * To add a new grid entity type later:
- *   1. Add a new `kind` to the GridItem union in Types.tsx
- *   2. Add a matching case in the renderItem switch below
- */
-
 interface PostGridLayoutProps {
   items: GridItem[];
   onPostClick?: (post: Post, imageIndex: number) => void;
@@ -57,7 +46,6 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
       case 'folder':
         return (
           <FolderCard
-            key={`folder-${item.data.id}`}
             folder={item.data}
             onClick={onFolderClick}
           />
@@ -65,24 +53,26 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
       case 'post':
         return (
           <PostCard
-            key={`post-${item.data.post_id}`}
             post={item.data}
             imagePath={item.data.image_paths[0]}
             imageIndex={0}
             onClick={onPostClick}
             onLikeToggle={onLikeToggle}
-            folderType={folderType}
-            postOwnerId={postOwnerId}
           />
         );
     }
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map(renderItem)}
-      </div>
+    <div className="columns-2 min-[768px]:columns-3 min-[1100px]:columns-4 gap-3.5">
+      {items.map((item) => {
+        const key = item.kind === 'folder' ? `folder-${item.data.id}` : `post-${item.data.post_id}`;
+        return (
+          <div key={key} className="break-inside-avoid mb-3.5">
+            {renderItem(item)}
+          </div>
+        );
+      })}
     </div>
   );
 };
