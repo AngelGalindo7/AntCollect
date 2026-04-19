@@ -1,0 +1,71 @@
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import PostCardOverlay from '../PostCardOverlay'
+
+function makeProps(overrides: Partial<Parameters<typeof PostCardOverlay>[0]> = {}) {
+  return {
+    user: { username: 'alice', avatar_path: 'https://cdn.example.com/alice.jpg' },
+    isLiked: false,
+    likeCount: 7,
+    onLikeClick: vi.fn(),
+    ...overrides,
+  }
+}
+
+describe('PostCardOverlay', () => {
+  it('renders user avatar when avatar_path is provided', () => {
+    render(<PostCardOverlay {...makeProps()} />)
+    const img = screen.getByRole('img', { name: 'alice' })
+    expect(img).toBeTruthy()
+    expect((img as HTMLImageElement).src).toContain('alice.jpg')
+  })
+
+  it('renders fallback div when avatar_path is null', () => {
+    const { container } = render(
+      <PostCardOverlay {...makeProps({ user: { username: 'bob', avatar_path: null } })} />
+    )
+    expect(screen.queryByRole('img', { name: 'bob' })).toBeNull()
+    expect(container.querySelector('div.rounded-full.bg-gray-400')).toBeTruthy()
+  })
+
+  it('renders fallback div when user is null', () => {
+    const { container } = render(<PostCardOverlay {...makeProps({ user: null })} />)
+    expect(container.querySelector('div.rounded-full.bg-gray-400')).toBeTruthy()
+  })
+
+  it('renders the correct like count', () => {
+    render(<PostCardOverlay {...makeProps({ likeCount: 42 })} />)
+    expect(screen.getByText('42')).toBeTruthy()
+  })
+
+  it('heart button has filled red class when isLiked is true', () => {
+    const { container } = render(<PostCardOverlay {...makeProps({ isLiked: true })} />)
+    const heart = container.querySelector('svg.fill-red-500')
+    expect(heart).toBeTruthy()
+  })
+
+  it('heart button has no fill class when isLiked is false', () => {
+    const { container } = render(<PostCardOverlay {...makeProps({ isLiked: false })} />)
+    expect(container.querySelector('svg.fill-red-500')).toBeNull()
+    expect(container.querySelector('svg.fill-none')).toBeTruthy()
+  })
+
+  it('calls onLikeClick when like button is clicked', () => {
+    const onLikeClick = vi.fn()
+    render(<PostCardOverlay {...makeProps({ onLikeClick })} />)
+    fireEvent.click(screen.getByRole('button', { name: /like post/i }))
+    expect(onLikeClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('bookmark button does not propagate clicks', () => {
+    const cardClick = vi.fn()
+    const { container } = render(
+      <div onClick={cardClick}>
+        <PostCardOverlay {...makeProps()} />
+      </div>
+    )
+    const bookmark = container.querySelector('[aria-label="Bookmark"]') as HTMLElement
+    fireEvent.click(bookmark)
+    expect(cardClick).not.toHaveBeenCalled()
+  })
+})
