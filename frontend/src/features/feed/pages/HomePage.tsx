@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
+import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import Search from "@/features/search/components/Search";
-import type { Post, TopPostsResponse, PostWithEngagement, GridItem } from "@/shared/types/Types";
+import type { Post, TopPostsResponse, PostWithEngagement, GridItem, FolderType } from "@/shared/types/Types";
 import { fetchWithAuth } from "@/shared/api/api";
 
 import { API_BASE } from '@/shared/api/api';
@@ -10,6 +11,7 @@ const HomePage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [posts, setPosts] = useState<PostWithEngagement[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
     useEffect(() => {
         const fetchPosts = async () => {
@@ -60,10 +62,8 @@ const HomePage: React.FC = () => {
         fetchPosts();
     }, []);
 
-    // Placeholder for post interaction
-    const handlePostClick = (post: Post, imageIndex: number) => {
-        console.log(`Clicked post ${post.post_id}, image index: ${imageIndex}`);
-        // Add navigation logic here, e.g., navigate(`/post/${post.post_id}`)
+    const handlePostClick = (post: Post) => {
+        setSelectedPost(post);
     };
     
 
@@ -131,6 +131,15 @@ const HomePage: React.FC = () => {
                 <div className="flex justify-center py-10 text-gray-500">
                     No posts found.
                 </div>
+            )}
+
+            {selectedPost && (
+                <PostDetailModal
+                    post={selectedPost}
+                    onClose={() => setSelectedPost(null)}
+                    postOwnerId={selectedPost.user?.user_id}
+                    folderType={selectedPost.type as FolderType}
+                />
             )}
         </div>
     );

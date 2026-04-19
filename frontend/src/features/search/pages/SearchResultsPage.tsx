@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
-import type { Post, GridItem } from "@/shared/types/Types";
+import PostDetailModal from "@/features/posts/components/PostDetailModal";
+import type { Post, GridItem, FolderType } from "@/shared/types/Types";
 import Search from '@/features/search/components/Search';
 import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useSearchParams, useNavigate } from "react-router-dom";
@@ -25,6 +26,7 @@ const SearchResultsPage: React.FC = () => {
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const query = searchParams.get("q") || "";
@@ -75,9 +77,8 @@ const SearchResultsPage: React.FC = () => {
     fetchSearchResults();
   }, [query]);
 
-  const handlePostClick = (post: Post, imageIndex: number) => {
-    console.log(`Clicked post ${post.post_id}, image index: ${imageIndex}`);
-    // Add navigation logic here, e.g., navigate(`/post/${post.post_id}`)
+  const handlePostClick = (post: Post) => {
+    setSelectedPost(post);
   };
 
   const handleUserClick = (username: string) => {
@@ -175,6 +176,15 @@ const SearchResultsPage: React.FC = () => {
             No results found for "{query}".
           </div>
         )
+      )}
+
+      {selectedPost && (
+        <PostDetailModal
+          post={selectedPost}
+          onClose={() => setSelectedPost(null)}
+          postOwnerId={selectedPost.user?.user_id}
+          folderType={selectedPost.type as FolderType}
+        />
       )}
     </div>
   );
