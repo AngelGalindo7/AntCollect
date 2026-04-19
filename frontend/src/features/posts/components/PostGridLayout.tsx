@@ -17,8 +17,7 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
   onPostClick,
   onLikeToggle,
   onFolderClick,
-  folderType,
-  postOwnerId,
+  // folderType and postOwnerId reserved for trade button re-enable
 }) => {
   if (!items || items.length === 0) {
     return (
