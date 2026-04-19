@@ -4,14 +4,14 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select, desc
 from backend.database import get_db
-
-logger = logging.getLogger(__name__)
 from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType, MediaAsset
 from backend.models.media_assets import AssetStatus
-from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch, PostUserInfo
+from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
 from ..utils.files import delete_file, process_and_save_image
 from ..utils.auth import authenthicate_access_token
 from ..utils.rate_limit import limiter, get_user_or_ip_key
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/posts",
@@ -199,10 +199,6 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: User
             Post.updated_at,
             top_posts_subquery.c.engagement_count.label("total_engagement"),
             func.array_agg(
-                MediaAsset.file_url,
-                order_by=PostImage.order_index
-                ).label("image_paths"),
-            func.array_agg(
                 MediaAsset.json_metadata,
                 order_by=PostImage.order_index
                 ).label("images"),
@@ -224,7 +220,6 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: User
 
     posts = []
     for row in results:
-        logger.info("top_posts_row", extra={"post_id": row["post_id"], "user_user_id": row.get("user_user_id", "KEY_MISSING"), "user_username": row.get("user_username", "KEY_MISSING")})
         # Construct the user object explicitly as a dict for the response model
         post_author = {
             "user_id": row["user_user_id"],
@@ -247,7 +242,6 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: User
             "user": post_author
         }
 
-        # print(f"DEBUG: Mapping post {row['post_id']}, author: {post_author['username'] if post_author else 'None'}")
         posts.append(PostWithEngagement.model_validate(post_data))
 
     return TopPostsResponse(
