@@ -278,4 +278,42 @@ def comment(
     return {
         "comment_id": new_comment.id,
         "message": "Successfully commented"}
+
+
+@router.delete("/{post_id}")
+def delete_post(
+    post_id: int,
+    current_user: User = Depends(authenthicate_access_token),
+    db: Session = Depends(get_db)
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    if post.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this post")
+
+    # 1. Collect all media assets associated with this post
+    # We do this before deleting the post because deleting the post will cascade-delete the PostImage records
+    post_images = db.query(PostImage).filter(PostImage.post_id == post_id).all()
+    media_assets = [pi.asset for pi in post_images if pi.asset]
+
+    # 2. Delete the post (this will cascade to PostImage, PostLike, PostComment, EngagementLog, etc.)
+    db.delete(post)
+
+    # 3. Cleanup files and MediaAsset records
+    # Since each post upload currently creates unique MediaAsset records, it's safe to delete them here.
+    for asset in media_assets:
+        if asset.json_metadata and "paths" in asset.json_metadata:
+            paths = asset.json_metadata["paths"]
+            for path in paths.values():
+                try:
+                    delete_file(path)
+                except Exception as e:
+                    logger.error(f"Failed to delete file {path}: {e}")
+        
+        db.delete(asset)
+
+    db.commit()
+    return {"message": "Post deleted successfully"}
     

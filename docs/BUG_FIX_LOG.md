@@ -341,16 +341,18 @@ Scopes: `frontend` · `backend` · `messaging` · `infra` · `docs`
 - **Important:** The nginx config in `infra/nginx/` is a reference copy — it is NOT deployed by CI/CD. Changes must be manually SCPed to EC2 or edited in-place over SSH and reloaded. See CICD_LEARNINGS.md.
 - **Risk:** None. The proxy_pass path change is symmetric — requests to `/ws` and `/ws/*` now both route correctly to Spring Boot :8080.
 
-08/04/2026 — fix(frontend tests): Vitest config missing from vite.config.ts
-- `vite.config.ts` had no `test` section — Vitest ran without jsdom, no setup file, no `@` alias, and scanned Playwright e2e specs
-- All 7 test suites failed with "Cannot find package '@/test/handlers'" and Playwright API errors
-- Fixed by importing `defineConfig` from `vitest/config` and adding `test` block: `environment: jsdom`, `setupFiles`, `exclude: ['e2e/**']`, and explicit alias resolution
-- No downstream risk — Vite build is unaffected; `vitest/config` re-exports the full Vite config type with the `test` extension
+---
 
-## 08/04/2026 � fix(backend tests): disable rate limiting in test environment
+## 08/04/2026 — fix(frontend tests): Vitest config missing from vite.config.ts
 
-- **Cause:** slowapi rate limits were being triggered during parallel or rapid test execution, causing 429 Too Many Requests or 400 Bad Request (from create-user) which led to test failures in 	est_users.py.
-- **Fix:** Modified ackend/utils/rate_limit.py to check TESTING environment variable and PYTEST_CURRENT_TEST. Added os.environ["TESTING"] = "true" to ackend/tests/conftest.py.
+- **Cause:** `vite.config.ts` had no `test` section — Vitest ran without jsdom, no setup file, no `@` alias, and scanned Playwright e2e specs.
+- **Fix:** Imported `defineConfig` from `vitest/config` and added a `test` block: `environment: jsdom`, `setupFiles`, `exclude: ['e2e/**']`, and explicit alias resolution.
+- **Risk:** None — Vite build is unaffected; `vitest/config` re-exports the full Vite config type with the `test` extension.
+
+## 08/04/2026 — fix(backend tests): disable rate limiting in test environment
+
+- **Cause:** slowapi rate limits were triggered during parallel or rapid test execution, causing 429 Too Many Requests or 400 Bad Request (from create-user) and test failures in `test_users.py`.
+- **Fix:** Modified `backend/utils/rate_limit.py` to check `TESTING` environment variable and `PYTEST_CURRENT_TEST`. Added `os.environ["TESTING"] = "true"` to `backend/tests/conftest.py`.
 - **Risk:** No production risk; the limiter remains active by default unless explicitly disabled via environment variables.
 
 
@@ -440,15 +442,11 @@ Scopes: `frontend` · `backend` · `messaging` · `infra` · `docs`
 - **Fix:** `upload_image_bytes` now reads `AWS_S3_PUBLIC_ENDPOINT_URL` (falls back to `AWS_ENDPOINT_URL` if unset) and uses it for the returned URL. `test-db-setup.sh` now passes `--build` to `docker-compose up` so the image is always rebuilt from current source. Also hardened `s3_key_from_url`: guard for empty/None input; non-URL strings are returned as-is (already a key) rather than silently returning `None`.
 - **Risk:** If `AWS_S3_PUBLIC_ENDPOINT_URL` is not set in production, the function falls back to `AWS_ENDPOINT_URL` which is correct (`https://` S3 URL in prod). No change to production behaviour.
 
-## 11/04/2026 - fix(backend auth): refresh token rotation race condition
+## ## 11/04/2026 — fix(backend auth): refresh token rotation race condition
 
-- **Cause:** Concurrent API calls in the SPA triggered multiple refresh requests at once. The first request marked the toke
-n as revoked, causing all subsequent simultaneous requests to fail with a 401 and log the user out.
-- **Fix:** Added 
-evoked_at timestamp to RefreshToken model. Implemented a 10-second grace period in /auth/refresh-toke
-n logic; tokens revoked within this window are still considered valid for issuance.
-- **Risk:** Marginal security trade-off as a revoked token is reusable for 10 seconds, but this is a standard industry cont
-rol for SPA token rotation.
+- **Cause:** Concurrent API calls in the SPA triggered multiple refresh requests at once. The first request marked the token as revoked, causing all subsequent simultaneous requests to fail with a 401 and log the user out.
+- **Fix:** Added `revoked_at` timestamp to `RefreshToken` model. Implemented a 10-second grace period in `/auth/refresh-token` logic; tokens revoked within this window are still considered valid for issuance.
+- **Risk:** Marginal security trade-off — a revoked token is reusable for 10 seconds, but this is a standard industry control for SPA token rotation.
 
 ## 13/04/2026 — fix(ci): CD pipeline deploying dev compose to EC2, wiring LocalStack into prod
 
@@ -651,10 +649,37 @@ rol for SPA token rotation.
 
 ---
 
-## 16/04/2026 — fix(backend+frontend): missing user info in post cards and layout misalignment
+## 17/04/2026 — fix(backend routers): post author missing from search, likes, and folder feed responses
 
-- **Cause:** Multiple backend endpoints (`_search_posts`, `retrieve_user_likes`, `get_folder`) were not joining the `User` table or providing the `user` field in their `PostBase` responses. The frontend `Post` type was also missing the `user` definition, and `PostCard.tsx` had a fragile flex layout that caused the "three dots" menu to shift left when the user section was empty.
-- **Fix (Backend):** Updated `_search_posts`, `retrieve_user_likes`, and `get_folder` in `backend/routers/users.py` and `backend/routers/folders.py` to join the `User` table and populate the `user` field in the response.
-- **Fix (Frontend):** Added the `user` field to the `Post` type in `Types.tsx`. Refactored the `PostCard.tsx` header to use a stable flex layout with a placeholder `div` to ensure the options menu always stays on the right.
-- **Risk:** None. The backend changes follow the established `PostUserInfo` pattern. The frontend layout fix is defensive and maintains visual consistency across all feed types.
+- **Cause:** `_search_posts`, `retrieve_user_likes`, and `get_folder` never joined the `User` table. These endpoints returned `PostBase` rows with `user: null`, so `PostCard` had no author data for search results, liked-posts, or folder views — even though `/posts/top` was already fixed in `715b327`.
+- **Fix:** Updated all three query sites in `backend/routers/users.py` and `backend/routers/folders.py` to join `User` and populate `user` in the response, following the `PostUserInfo` pattern from the `/posts/top` fix.
+- **Also fixed:** `Post` type in `Types.tsx` was missing the `user` field definition. `PostCard.tsx` header layout hardened so the three-dot menu stays right-aligned even when `user` is null.
+- **Risk:** Any other endpoint returning `PostBase` that has not been updated will still produce `user: null` — `PostCard` guards against this with the null check added in `4bb3f5a`.
 
+---
+
+## 17/04/2026 — fix(ci): EC2 disk exhaustion silently preventing Docker image rebuilds on deploy
+
+- **Cause:** EC2 disk was full. `docker pull` and `docker build` failed silently with no disk space; `docker-compose up -d` reused the already-running containers unchanged because no new image could be pulled. Every code fix committed and deployed through CI appeared successful, but EC2 was still running the original image — this is why multiple avatar fix commits had no visible effect in production.
+- **Compound effect:** The actual backend fix (`715b327`, User join in `/posts/top`) was correct from the start on April 16. It was invisible for ~24 hours because the EC2 was never updated.
+- **Fix 1 (`40990be`):** Added `--force-recreate` to `docker-compose up` in CD so containers are always replaced on deploy, making silent no-ops structurally impossible.
+- **Fix 2 (`6e551ed`):** Added `docker image prune -af` step after each deploy to reclaim disk space and prevent recurrence.
+- **Risk:** `--force-recreate` causes a brief container-restart gap on every deploy. `docker image prune -af` removes all locally cached images — rolling back to a previous image requires re-pulling from ECR.
+
+---
+
+## 17/04/2026 — fix(backend routers): SQLAlchemy column ambiguity in get_top_posts user join
+
+- **Cause:** The initial `/posts/top` User join (`715b327`) used `User` directly (no alias) and called `row._asdict()` on a non-`.mappings()` result set. When `author.*` columns share naming space with `Post.*` in the query, SQLAlchemy can produce label collisions that cause `_asdict()` to drop or misname the user columns.
+- **Fix:** Used `aliased(User)` (`author`) to give the join a distinct ORM identity; switched to `db.execute(...).mappings().all()` which returns proper dict-keyed rows by label name; built `post_data` as an explicit dict before `model_validate` to eliminate any remaining label ambiguity.
+- **Risk:** `outerjoin(author, ...)` means posts with no matching `User` row return `user: null` instead of being filtered out. This is the correct behaviour given FK integrity, but any orphaned posts will silently lose user info.
+
+---
+
+## 17/04/2026 — fix(frontend posts): PostHeader crashes when post.user is null
+
+- **Cause:** `PostHeader` declared `user: PostUser` as a required non-nullable prop. While backend endpoints were being updated to include the user join, any feed response with `user: null` caused `TypeError: Cannot read properties of null (reading 'username')`, unmounting the card.
+- **Fix:** Changed prop type to `PostUser | null | undefined`; added an early-return null branch that renders an `<AvatarIcon />` placeholder with no link. Extracted `AvatarIcon` as a named sub-component to avoid duplicating the SVG in both branches.
+- **Risk:** Posts with `user: null` silently show an avatar placeholder with no username link. This should not occur in production once all feed endpoints join the User table.
+
+$entry

@@ -324,6 +324,16 @@ const UserProfile: React.FC = () => {
         <PostDetailModal
           post={selectedPost}
           onClose={() => setSelectedPost(null)}
+          onDeleteSuccess={() => {
+            setProfile((prev) => {
+              if (!prev) return prev;
+              return {
+                ...prev,
+                posts: prev.posts.filter((p) => p.post_id !== selectedPost.post_id),
+              };
+            });
+            setSelectedPost(null);
+          }}
           postOwnerId={profile.user_id}
           folderType={tabFolderType}
         />
