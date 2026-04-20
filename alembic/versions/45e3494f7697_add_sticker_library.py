@@ -47,7 +47,12 @@ def upgrade() -> None:
     )
 
     # Add GIN index for search (requires pg_trgm extension)
-    op.execute('CREATE EXTENSION IF NOT EXISTS pg_trgm')
+    # Note: On RDS, this extension must be installed by a superuser (handled in CD)
+    try:
+        op.execute('CREATE EXTENSION IF NOT EXISTS pg_trgm')
+    except Exception:
+        # Ignore if user lacks privilege; index creation will fail if extension is truly missing
+        pass
     op.execute('CREATE INDEX idx_sticker_title ON sticker_library USING gin (title gin_trgm_ops)')
 
 

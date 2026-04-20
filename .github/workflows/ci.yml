@@ -35,7 +35,9 @@ jobs:
         run: pip install -r backend/requirements.txt
 
       - name: Run Alembic migrations
-        run: DB_NAME=antcollect_test alembic upgrade head
+        run: |
+          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h localhost -U ${{ secrets.DB_USER }} -d antcollect_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+          DB_NAME=antcollect_test alembic upgrade head
         env:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -198,7 +200,9 @@ jobs:
         # It lets Flyway create the petrcollect_messaging schema without extra grants.
 
       - name: Run Alembic migrations
-        run: DB_NAME=antcollect_test alembic upgrade head
+        run: |
+          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h localhost -U ${{ secrets.DB_USER }} -d antcollect_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+          DB_NAME=antcollect_test alembic upgrade head
         env:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}

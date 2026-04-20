@@ -683,3 +683,29 @@ Scopes: `frontend` · `backend` · `messaging` · `infra` · `docs`
 - **Risk:** Posts with `user: null` silently show an avatar placeholder with no username link. This should not occur in production once all feed endpoints join the User table.
 
 $entry
+
+---
+## 19/04/2026 — fix(backend main): NameError: name 'library' is not defined in main.py
+
+- **Cause:** `app.include_router(library.router)` was called in `backend/main.py`, but `library` was not included in the `from .routers import ...` statement. Any attempt to start the backend or import `app` (including in tests) raised a `NameError`.
+- **Fix:** Added `library` to the routers import line in `backend/main.py`.
+- **Risk:** None. The router was already implemented in `backend/routers/library.py` and correctly defined its `router` object; it just needed to be imported.
+
+## 19/04/2026 — fix(frontend library): unused beforeEach import in LibraryPage.test.tsx
+
+- **Cause:** `LibraryPage.test.tsx` imported `beforeEach` from `vitest` but never used it. With `noUnusedLocals: true` enabled in `tsconfig.app.json`, `tsc` failed with a `TS6133` error, blocking CI/CD.
+- **Fix:** Removed the `beforeEach` entry from the `vitest` import statement.
+- **Risk:** None. The test suite passes and correctly verifies the library page functionality without requiring a `beforeEach` block.
+
+## 19/04/2026 — fix(backend build): missing LibraryPage import in App.tsx
+
+- **Cause:** `App.tsx` was using `<LibraryPage />` in a route but the import statement was either missing or not committed. This caused a `TS2304: Cannot find name 'LibraryPage'` error during `npm run build`.
+- **Fix:** Added the `import LibraryPage from '@/features/library/pages/LibraryPage';` statement to `App.tsx` and committed it.
+- **Risk:** None. Fixes the build failure.
+
+## 20/04/2026 — fix(backend deploy): insufficient privilege to create pg_trgm extension on RDS
+
+- **Cause:** The Sticker Library migration attempted to `CREATE EXTENSION IF NOT EXISTS pg_trgm`. On AWS RDS, the application user lacks the necessary superuser privileges to install extensions, causing the Alembic migration to fail during deployment.
+- **Fix:** Added the `CREATE EXTENSION` command to the administrative initialization steps in `cd.yml` (for production) and `ci.yml` (for testing/E2E), where elevated privileges are available. Wrapped the command in a `try-except` block in the Alembic migration to allow it to fail gracefully in restricted environments while still supporting local development.
+- **Risk:** None. The extension is now managed as part of the infrastructure setup, and the application simply consumes it.
+
