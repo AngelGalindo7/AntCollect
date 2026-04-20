@@ -65,6 +65,7 @@ function App(){
           <Route path="/create-post" element={<CreatePost />} />
           <Route path="/create-folder" element={<CreateFolder />} />
           <Route path="/folders/:folderId" element={<FolderPage />} />
+          <Route path="/library" element={<LibraryPage />} />
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/messages/:conversationId" element={<ChatErrorBoundary><ChatPage /></ChatErrorBoundary>} />
           <Route path="/:username" element={<UserProfile />} caseSensitive/>
@@ -76,3 +77,4 @@ function App(){
 }
 
 export default App
+
