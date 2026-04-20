@@ -70,7 +70,7 @@ def handle_transparent_images(image):
     return image
 
 
-def process_and_save_image(file: UploadFile, user_id: int) -> Dict:
+def process_and_save_image(file: UploadFile, user_id: int, folder_prefix: str = "posts") -> Dict:
     check_file_size(file)
     validate_image(file)
 
@@ -88,7 +88,7 @@ def process_and_save_image(file: UploadFile, user_id: int) -> Dict:
         buf = io.BytesIO()
         image.save(buf, "JPEG", quality=90, optimize=True)
         original_bytes = buf.getvalue()
-        original_key = f"posts/{user_id}/original/{filename}"
+        original_key = f"{folder_prefix}/{user_id}/original/{filename}"
         original_url = upload_image_bytes(original_key, original_bytes, "image/jpeg")
         uploaded_keys.append(original_key)
 
@@ -99,7 +99,7 @@ def process_and_save_image(file: UploadFile, user_id: int) -> Dict:
         thumbnail.save(buf, "JPEG", quality=80, optimize=True)
         thumb_bytes = buf.getvalue()
         thumb_width, thumb_height = thumbnail.size
-        thumb_key = f"posts/{user_id}/thumbnail/{filename}"
+        thumb_key = f"{folder_prefix}/{user_id}/thumbnail/{filename}"
         thumb_url = upload_image_bytes(thumb_key, thumb_bytes, "image/jpeg")
         uploaded_keys.append(thumb_key)
 
@@ -110,7 +110,7 @@ def process_and_save_image(file: UploadFile, user_id: int) -> Dict:
         medium.save(buf, "JPEG", quality=85, optimize=True)
         medium_bytes = buf.getvalue()
         medium_width, medium_height = medium.size
-        medium_key = f"posts/{user_id}/medium/{filename}"
+        medium_key = f"{folder_prefix}/{user_id}/medium/{filename}"
         medium_url = upload_image_bytes(medium_key, medium_bytes, "image/jpeg")
         uploaded_keys.append(medium_key)
 
