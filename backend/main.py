@@ -11,7 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from .routers import auth, users, posts, folders, trade_requests
+from .routers import auth, users, posts, folders, trade_requests, library
 from .utils.logging_config import configure_logging, request_id_var
 from .utils.rate_limit import get_real_ip, limiter
 
