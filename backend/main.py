@@ -157,6 +157,7 @@ app.include_router(auth.router)
 app.include_router(posts.router)
 app.include_router(folders.router)
 app.include_router(trade_requests.router)
+app.include_router(library.router)
 
 
 @app.get("/health")
