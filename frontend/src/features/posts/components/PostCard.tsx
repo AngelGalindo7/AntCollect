@@ -9,14 +9,38 @@ interface PostCardProps {
   imageIndex: number;
   onClick?: (post: Post, imageIndex: number) => void;
   onLikeToggle?: (postId: number, isLiked: boolean) => void;
+  onDelete?: (postId: number) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClick, onLikeToggle }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClick, onLikeToggle, onDelete }) => {
   const [isLiked, setIsLiked] = useState(post.is_liked);
   const [likeCount, setLikeCount] = useState(post.total_likes || 0);
 
+  const currentUserId = localStorage.getItem('userId');
+  const isOwner = post.user?.user_id !== undefined && String(post.user.user_id) === currentUserId;
+
   const handleClick = () => {
     onClick?.(post, imageIndex);
+  };
+
+  const handlePostDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+
+    try {
+      const response = await fetchWithAuth(`${API_BASE}/posts/${post.post_id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        onDelete?.(post.post_id);
+      } else {
+        const data = await response.json();
+        alert(data.detail || 'Failed to delete post');
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      alert('An error occurred while deleting the post');
+    }
   };
 
   const handleLikeClick = async (e: React.MouseEvent) => {
@@ -72,6 +96,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
         isLiked={isLiked}
         likeCount={likeCount}
         onLikeClick={handleLikeClick}
+        isOwner={isOwner}
+        onDeleteClick={handlePostDelete}
       />
 
       {/* Trade button — uncomment block + re-enable state + restore folderType/postOwnerId props to restore

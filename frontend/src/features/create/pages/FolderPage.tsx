@@ -98,6 +98,16 @@ const FolderPage: React.FC = () => {
     }
   };
 
+  const handlePostDelete = (postId: number) => {
+    setFolder((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        posts: prev.posts.filter((p) => p.post_id !== postId),
+      };
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -203,6 +213,7 @@ const FolderPage: React.FC = () => {
       <PostGridLayout
         items={gridItems}
         onPostClick={(post) => setSelectedPost(post)}
+        onPostDelete={handlePostDelete}
         folderType={folder.folder_type}
         postOwnerId={folder.user_id}
       />
@@ -211,6 +222,10 @@ const FolderPage: React.FC = () => {
         <PostDetailModal
           post={selectedPost}
           onClose={() => setSelectedPost(null)}
+          onDeleteSuccess={() => {
+            handlePostDelete(selectedPost.post_id);
+            setSelectedPost(null);
+          }}
           postOwnerId={folder.user_id}
           folderType={folder.folder_type}
         />

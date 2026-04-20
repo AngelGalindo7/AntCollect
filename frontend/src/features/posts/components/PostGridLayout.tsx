@@ -7,6 +7,7 @@ interface PostGridLayoutProps {
   items: GridItem[];
   onPostClick?: (post: Post, imageIndex: number) => void;
   onLikeToggle?: (postId: number, isLiked: boolean) => void;
+  onPostDelete?: (postId: number) => void;
   onFolderClick?: (folder: Folder) => void;
   folderType?: FolderType;
   postOwnerId?: number;
@@ -16,6 +17,7 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
   items,
   onPostClick,
   onLikeToggle,
+  onPostDelete,
   onFolderClick,
   // folderType and postOwnerId reserved for trade button re-enable
 }) => {
@@ -57,6 +59,7 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
             imageIndex={0}
             onClick={onPostClick}
             onLikeToggle={onLikeToggle}
+            onDelete={onPostDelete}
           />
         );
     }

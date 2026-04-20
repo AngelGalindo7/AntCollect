@@ -157,6 +157,16 @@ const UserProfile: React.FC = () => {
     });
   };
 
+  const handlePostDelete = (postId: number) => {
+    setProfile((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        posts: prev.posts.filter((p) => p.post_id !== postId),
+      };
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -315,6 +325,7 @@ const UserProfile: React.FC = () => {
         items={gridItems}
         onPostClick={handlePostClick}
         onLikeToggle={handleLikeToggle}
+        onPostDelete={handlePostDelete}
         onFolderClick={handleFolderClick}
         folderType={tabFolderType}
         postOwnerId={profile.user_id}
@@ -325,13 +336,7 @@ const UserProfile: React.FC = () => {
           post={selectedPost}
           onClose={() => setSelectedPost(null)}
           onDeleteSuccess={() => {
-            setProfile((prev) => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                posts: prev.posts.filter((p) => p.post_id !== selectedPost.post_id),
-              };
-            });
+            handlePostDelete(selectedPost.post_id);
             setSelectedPost(null);
           }}
           postOwnerId={profile.user_id}

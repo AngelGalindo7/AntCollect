@@ -8,6 +8,8 @@ function makeProps(overrides: Partial<Parameters<typeof PostCardOverlay>[0]> = {
     isLiked: false,
     likeCount: 7,
     onLikeClick: vi.fn(),
+    isOwner: false,
+    onDeleteClick: vi.fn(),
     ...overrides,
   }
 }
@@ -57,15 +59,34 @@ describe('PostCardOverlay', () => {
     expect(onLikeClick).toHaveBeenCalledTimes(1)
   })
 
-  it('bookmark button does not propagate clicks', () => {
+  it('options button does not propagate clicks', () => {
     const cardClick = vi.fn()
-    const { container } = render(
+    render(
       <div onClick={cardClick}>
         <PostCardOverlay {...makeProps()} />
       </div>
     )
-    const bookmark = container.querySelector('[aria-label="Bookmark"]') as HTMLElement
-    fireEvent.click(bookmark)
+    const options = screen.getByLabelText('Options')
+    fireEvent.click(options)
     expect(cardClick).not.toHaveBeenCalled()
+  })
+
+  it('shows delete option only when isOwner is true', () => {
+    const { rerender } = render(<PostCardOverlay {...makeProps({ isOwner: false })} />)
+    fireEvent.click(screen.getByLabelText('Options'))
+    expect(screen.queryByText('Delete')).toBeNull()
+
+    rerender(<PostCardOverlay {...makeProps({ isOwner: true })} />)
+    // Options menu is still open or needs to be re-opened if component re-mounted
+    // Actually rerender keeps state if same component.
+    expect(screen.getByText('Delete')).toBeTruthy()
+  })
+
+  it('calls onDeleteClick when delete button is clicked', () => {
+    const onDeleteClick = vi.fn()
+    render(<PostCardOverlay {...makeProps({ isOwner: true, onDeleteClick })} />)
+    fireEvent.click(screen.getByLabelText('Options'))
+    fireEvent.click(screen.getByText('Delete'))
+    expect(onDeleteClick).toHaveBeenCalledTimes(1)
   })
 })

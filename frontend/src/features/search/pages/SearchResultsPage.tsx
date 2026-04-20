@@ -85,6 +85,14 @@ const SearchResultsPage: React.FC = () => {
     navigate(`/${username}`);
   };
 
+  const handlePostDelete = (postId: number) => {
+    if (!results) return;
+    setResults({
+      ...results,
+      posts: results.posts.filter((p) => p.post_id !== postId),
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -168,7 +176,11 @@ const SearchResultsPage: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-900">Posts</h2>
             </div>
           </div>
-          <PostGridLayout items={results.posts.map((p): GridItem => ({ kind: 'post', data: p }))} onPostClick={handlePostClick} />
+          <PostGridLayout 
+            items={results.posts.map((p): GridItem => ({ kind: 'post', data: p }))} 
+            onPostClick={handlePostClick}
+            onPostDelete={handlePostDelete}
+          />
         </>
       ) : (
         results && results.users.length === 0 && (
@@ -182,6 +194,10 @@ const SearchResultsPage: React.FC = () => {
         <PostDetailModal
           post={selectedPost}
           onClose={() => setSelectedPost(null)}
+          onDeleteSuccess={() => {
+            handlePostDelete(selectedPost.post_id);
+            setSelectedPost(null);
+          }}
           postOwnerId={selectedPost.user?.user_id}
           folderType={selectedPost.type as FolderType}
         />

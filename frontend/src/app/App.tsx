@@ -13,6 +13,7 @@ import ChatPage from '@/features/messaging/pages/ChatPage';
 import SettingsPage from '@/features/settings/pages/SettingsPage';
 import CreateFolder from '@/features/create/pages/CreateFolder';
 import FolderPage from '@/features/create/pages/FolderPage';
+import LibraryPage from '@/features/library/pages/LibraryPage';
 
 function RequireAuth() {
   return localStorage.getItem('userId') ? <Outlet /> : <Navigate to="/Login" replace />;

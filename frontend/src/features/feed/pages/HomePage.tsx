@@ -29,16 +29,6 @@ const HomePage: React.FC = () => {
                 const data: TopPostsResponse = await res.json();
                 //console.log(data)
 
-                //const transformedPosts = postsArray.map((post: any) => ({
-                //    ...post,
-                //    // Safety check: ensure image_paths exists before mapping
-                //    image_paths: (post.image_paths || []).map((path: string) => {
-                //        if (!path) return null;
-                //        const parts = path.split(/\\|\//);
-                //        const filename = parts[parts.length - 1];
-                //        return `${API_BASE}/uploads/${encodeURIComponent(filename)}`;
-                //    }),
-                //}));
                 const transformedData = {
 				        ...data,
 				        posts: data.posts.map((post) => ({
@@ -83,7 +73,11 @@ const HomePage: React.FC = () => {
                 return post;
             })
         );
-  }
+    }
+
+    const handlePostDelete = (postId: number) => {
+        setPosts((prevPosts) => prevPosts.filter((post) => post.post_id !== postId));
+    };
     
     if (loading) {
         return (
@@ -123,9 +117,10 @@ const HomePage: React.FC = () => {
             {/* Posts Grid Layout */}
             {posts.length > 0 ? (
                 <PostGridLayout
-                items={posts.map((p): GridItem => ({ kind: 'post', data: p }))}
-                onPostClick={handlePostClick}
-                onLikeToggle={handleLikeToggle}
+                    items={posts.map((p): GridItem => ({ kind: 'post', data: p }))}
+                    onPostClick={handlePostClick}
+                    onLikeToggle={handleLikeToggle}
+                    onPostDelete={handlePostDelete}
                 />
             ) : (
                 <div className="flex justify-center py-10 text-gray-500">
