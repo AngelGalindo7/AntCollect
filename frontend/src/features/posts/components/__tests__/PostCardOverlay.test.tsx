@@ -74,19 +74,19 @@ describe('PostCardOverlay', () => {
   it('shows delete option only when isOwner is true', () => {
     const { rerender } = render(<PostCardOverlay {...makeProps({ isOwner: false })} />)
     fireEvent.click(screen.getByLabelText('Options'))
-    expect(screen.queryByText('Delete')).toBeNull()
+    expect(screen.queryByText('Delete Post')).toBeNull()
 
     rerender(<PostCardOverlay {...makeProps({ isOwner: true })} />)
     // Options menu is still open or needs to be re-opened if component re-mounted
     // Actually rerender keeps state if same component.
-    expect(screen.getByText('Delete')).toBeTruthy()
+    expect(screen.getByText('Delete Post')).toBeTruthy()
   })
 
   it('calls onDeleteClick when delete button is clicked', () => {
     const onDeleteClick = vi.fn()
     render(<PostCardOverlay {...makeProps({ isOwner: true, onDeleteClick })} />)
     fireEvent.click(screen.getByLabelText('Options'))
-    fireEvent.click(screen.getByText('Delete'))
+    fireEvent.click(screen.getByText('Delete Post'))
     expect(onDeleteClick).toHaveBeenCalledTimes(1)
   })
 })

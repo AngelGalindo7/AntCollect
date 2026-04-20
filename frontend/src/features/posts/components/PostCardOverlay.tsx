@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { MoreVertical, Trash2 } from 'lucide-react';
+import React from 'react';
+import PostOptionsMenu from './PostOptionsMenu';
 
 interface PostCardOverlayProps {
   user?: { username: string; avatar_path: string | null } | null;
@@ -18,69 +18,17 @@ const PostCardOverlay: React.FC<PostCardOverlayProps> = ({
   isOwner,
   onDeleteClick 
 }) => {
-  const [showOptions, setShowOptions] = useState(false);
-  const optionsRef = useRef<HTMLDivElement>(null);
-
-  // Close options menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (optionsRef.current && !optionsRef.current.contains(event.target as Node)) {
-        setShowOptions(false);
-      }
-    };
-    if (showOptions) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showOptions]);
-
-  const handleToggleOptions = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowOptions(!showOptions);
-  };
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowOptions(false);
-    onDeleteClick?.(e);
-  };
-
   return (
-    <div className={`absolute inset-0 transition-opacity duration-200 ease ${showOptions ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease">
       {/* Dark gradient rising from bottom */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 to-transparent pointer-events-none" />
 
       {/* Options Menu — top right */}
-      <div className="absolute top-[10px] right-[10px] z-20" ref={optionsRef}>
-        <button
-          onClick={handleToggleOptions}
-          className="p-1.5 rounded-full bg-black/40 hover:bg-black/60 text-white transition-colors flex items-center justify-center"
-          aria-label="Options"
-        >
-          <MoreVertical className="w-5 h-5" />
-        </button>
-
-        {showOptions && (
-          <div className="absolute top-full right-0 mt-2 w-36 bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-30 animate-in fade-in zoom-in duration-100">
-            {isOwner && (
-              <button
-                onClick={handleDelete}
-                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors text-left"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Delete</span>
-              </button>
-            )}
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowOptions(false); }}
-              className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
+      <div className="absolute top-[10px] right-[10px] z-20">
+        <PostOptionsMenu 
+          isOwner={isOwner} 
+          onDeleteClick={onDeleteClick} 
+        />
       </div>
 
       {/* Glassmorphism pill — bottom */}
