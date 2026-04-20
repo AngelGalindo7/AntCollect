@@ -30,6 +30,38 @@ def mock_s3():
          patch("backend.utils.s3.delete_s3_object", return_value=None) as mock_delete:
         yield {"upload": mock_upload, "delete": mock_delete}
 
+
+@pytest.fixture(autouse=True, scope="session")
+def mock_image_processing():
+    """
+    Mock process_and_save_image to return a fake result dict.
+    This avoids real Pillow processing and speeds up tests.
+    """
+    fake_result = {
+        "filename": "test.jpg",
+        "mime_type": "image/jpeg",
+        "paths": {
+            "original": _FAKE_S3_URL,
+            "thumbnail": _FAKE_S3_URL,
+            "medium": _FAKE_S3_URL,
+        },
+        "sizes": {
+            "original": 100,
+            "thumbnail": 50,
+            "medium": 75,
+        },
+        "dimensions": {
+            "original": {"width": 800, "height": 600},
+            "thumbnail": {"width": 150, "height": 112},
+            "medium": {"width": 800, "height": 600},
+        },
+    }
+    with patch("backend.routers.library.process_and_save_image", return_value=fake_result), \
+         patch("backend.routers.posts.process_and_save_image", return_value=fake_result), \
+         patch("backend.routers.users.process_and_save_image", return_value=fake_result), \
+         patch("backend.routers.folders.process_and_save_image", return_value=fake_result):
+        yield
+
 from backend.database import get_db  # noqa: E402
 from backend.main import app  # noqa: E402
 

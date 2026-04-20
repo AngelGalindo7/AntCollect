@@ -35,8 +35,7 @@ def get_library(
             select(MediaAsset.json_metadata)
             .join(StickerLibraryImage, MediaAsset.id == StickerLibraryImage.asset_id)
             .where(StickerLibraryImage.sticker_id == sticker.id)
-            .order_index(StickerLibraryImage.order_index.asc())
-            .limit(1)
+            .order_by(StickerLibraryImage.order_index.asc())            .limit(1)
         ).scalar_one_or_none()
 
         library_data.append({
@@ -127,6 +126,14 @@ def upload_sticker(
         db.commit()
         return {"id": sticker.id, "message": "Sticker added to library"}
 
+    except HTTPException:
+        db.rollback()
+        for path in all_created_files:
+            try:
+                delete_file(path)
+            except Exception:
+                pass
+        raise
     except Exception as e:
         db.rollback()
         for path in all_created_files:
