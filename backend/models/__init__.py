@@ -1,11 +1,7 @@
-
 from backend.database import Base
-
 from backend.models.user import User
 
-
-
-# Post models (all together)
+# Post models
 from backend.models.post import (
     Post,
     PostLike,
@@ -13,18 +9,13 @@ from backend.models.post import (
     EngagementLog,
     PostImage,
     EngagementType
-
 )
 
-from backend.models.media_assets import (
-    MediaAsset,
-)
-
+from backend.models.media_assets import MediaAsset
 from backend.models.auth import RefreshToken
-
 from backend.models.folder import Folder, FolderPost
-
 from backend.models.trade_request import TradeRequest
+from backend.models.sticker_library import StickerLibrary, StickerLibraryImage
 
 __all__ = [
     "Base",
@@ -33,7 +24,6 @@ __all__ = [
     "PostImage",
     "PostLike",
     "PostComment",
-
     "EngagementLog",
     "EngagementType",
     "RefreshToken",
@@ -41,5 +31,6 @@ __all__ = [
     "Folder",
     "FolderPost",
     "TradeRequest",
+    "StickerLibrary",
+    "StickerLibraryImage",
 ]
-
