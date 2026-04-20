@@ -73,7 +73,8 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
     }
   };
 
-  const imageSrc = post.images?.[0]?.paths?.original ?? post.image_paths[0] ?? null;
+  const imageData = post.images?.[0];
+  const imageSrc = imageData?.paths?.original ?? post.image_paths[0] ?? null;
 
   const modalRoot = document.getElementById('modal-root');
   if (!modalRoot) return null;
@@ -107,6 +108,8 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
           <PostImageFrame
             src={imageSrc}
             alt={post.caption || `Post ${post.post_id}`}
+            originalWidth={imageData?.original_width}
+            originalHeight={imageData?.original_height}
           >
             {canTrade && (
               <TradeEntryButton

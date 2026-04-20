@@ -42,7 +42,15 @@ export type Post = {
   type: string;
   updated_at: string;
   is_liked: boolean;
-  images?: { paths: { medium: string; original: string } }[];
+  images?: {
+    paths: {
+      medium: string;
+      original: string;
+      thumbnail: string;
+    };
+    original_width: number;
+    original_height: number;
+  }[];
   user?: {
     user_id: number;
     username: string;
