@@ -241,3 +241,33 @@ class TradeRequestResponse(BaseModel):
     offered_post_ids: Optional[List[int]] = None
     status: TradeRequestStatus
     created_at: datetime
+
+
+class ReportTargetType(str, Enum):
+    post = "post"
+    user = "user"
+
+
+class ReportReason(str, Enum):
+    spam = "spam"
+    inappropriate = "inappropriate"
+    harassment = "harassment"
+    copyright = "copyright"
+    other = "other"
+
+
+class CreateReportRequest(BaseModel):
+    target_type: ReportTargetType
+    target_id: int
+    reason: ReportReason
+
+
+class ReportResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    target_type: str
+    target_id: int
+    reason: str
+    status: str
+    created_at: datetime
