@@ -8,15 +8,17 @@ interface PostCardOverlayProps {
   onLikeClick: (e: React.MouseEvent) => void;
   isOwner?: boolean;
   onDeleteClick?: (e: React.MouseEvent) => void;
+  onReportClick?: (e: React.MouseEvent) => void;
 }
 
-const PostCardOverlay: React.FC<PostCardOverlayProps> = ({ 
-  user, 
-  isLiked, 
-  likeCount, 
+const PostCardOverlay: React.FC<PostCardOverlayProps> = ({
+  user,
+  isLiked,
+  likeCount,
   onLikeClick,
   isOwner,
-  onDeleteClick 
+  onDeleteClick,
+  onReportClick,
 }) => {
   return (
     <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease">
@@ -25,9 +27,10 @@ const PostCardOverlay: React.FC<PostCardOverlayProps> = ({
 
       {/* Options Menu — top right */}
       <div className="absolute top-[10px] right-[10px] z-20">
-        <PostOptionsMenu 
-          isOwner={isOwner} 
-          onDeleteClick={onDeleteClick} 
+        <PostOptionsMenu
+          isOwner={isOwner}
+          onDeleteClick={onDeleteClick}
+          onReportClick={onReportClick}
         />
       </div>
 
