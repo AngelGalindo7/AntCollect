@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import PostCardOverlay from './PostCardOverlay';
+import ReportModal from './ReportModal';
 import type { Post } from '@/shared/types/Types';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 
@@ -15,12 +16,18 @@ interface PostCardProps {
 const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClick, onLikeToggle, onDelete }) => {
   const [isLiked, setIsLiked] = useState(post.is_liked);
   const [likeCount, setLikeCount] = useState(post.total_likes || 0);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
 
   const currentUserId = localStorage.getItem('userId');
   const isOwner = post.user?.user_id !== undefined && String(post.user.user_id) === currentUserId;
 
   const handleClick = () => {
     onClick?.(post, imageIndex);
+  };
+
+  const handleReportClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setReportModalOpen(true);
   };
 
   const handlePostDelete = async (e: React.MouseEvent) => {
@@ -98,7 +105,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
         onLikeClick={handleLikeClick}
         isOwner={isOwner}
         onDeleteClick={handlePostDelete}
+        onReportClick={handleReportClick}
       />
+
+      {reportModalOpen && (
+        <ReportModal
+          postId={post.post_id}
+          onClose={() => setReportModalOpen(false)}
+        />
+      )}
 
       {/* Trade button — uncomment block + re-enable state + restore folderType/postOwnerId props to restore
       {tradeLabel && !tradeSent && (
