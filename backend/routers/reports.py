@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from ..database import get_db
 from backend.models import Post, Report, User
-from ..schemas import CreateReportRequest, ReportResponse, ReportTargetType
+from ..schemas import CreateReportRequest, ReportResponse, ReportTargetType, UserSearch
 from ..utils.auth import authenthicate_access_token
 from ..utils.rate_limit import get_user_or_ip_key, limiter
 
@@ -40,9 +40,9 @@ async def create_report(
     request: Request,
     body: CreateReportRequest,
     db: Session = Depends(get_db),
-    user_payload: dict = Depends(authenthicate_access_token),
+    current_user: UserSearch = Depends(authenthicate_access_token),
 ) -> ReportResponse:
-    reporter_id = int(user_payload["sub"])
+    reporter_id = current_user.user_id
 
     _validate_target(body.target_type.value, body.target_id, db)
 
