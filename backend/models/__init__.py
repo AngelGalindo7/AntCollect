@@ -16,6 +16,7 @@ from backend.models.auth import RefreshToken
 from backend.models.folder import Folder, FolderPost
 from backend.models.trade_request import TradeRequest
 from backend.models.sticker_library import StickerLibrary, StickerLibraryImage
+from backend.models.report import Report
 
 __all__ = [
     "Base",
@@ -33,4 +34,5 @@ __all__ = [
     "TradeRequest",
     "StickerLibrary",
     "StickerLibraryImage",
+    "Report",
 ]
