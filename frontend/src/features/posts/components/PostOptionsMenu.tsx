@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreVertical, Trash2, X } from 'lucide-react';
+import { Flag, MoreVertical, Trash2, X } from 'lucide-react';
 
 interface PostOptionsMenuProps {
   isOwner?: boolean;
   onDeleteClick?: (e: React.MouseEvent) => void;
+  onReportClick?: (e: React.MouseEvent) => void;
 }
 
-const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({ isOwner, onDeleteClick }) => {
+const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({ isOwner, onDeleteClick, onReportClick }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -33,6 +34,12 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({ isOwner, onDeleteClic
     onDeleteClick?.(e);
   };
 
+  const handleReport = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsOpen(false);
+    onReportClick?.(e);
+  };
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -54,9 +61,17 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({ isOwner, onDeleteClic
               <span>Delete Post</span>
             </button>
           )}
-          
-          {/* Add other options here in the future (e.g., Report, Share) */}
-          
+
+          {!isOwner && (
+            <button
+              onClick={handleReport}
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 transition-colors text-left"
+            >
+              <Flag className="w-4 h-4" />
+              <span>Report Post</span>
+            </button>
+          )}
+
           <button
             onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
             className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors text-left"
