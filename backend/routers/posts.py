@@ -28,7 +28,7 @@ def upload_post(
     post_type: str=Form(...),
     is_published: bool = Form(True),
     post_images: list[UploadFile] = File(...),
-    current_user: User = Depends(authenthicate_access_token),
+    current_user: UserSearch = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
     ):
      
@@ -104,7 +104,7 @@ def upload_post(
 @router.post("/like_image")
 def like_image(
     request: LikeImageRequest, 
-    user: User = Depends(authenthicate_access_token),
+    user: UserSearch = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
 ):
 
@@ -255,7 +255,7 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: User
 def comment(
     post_id: int,
     content: str,
-    user: User = Depends(authenthicate_access_token),
+    user: UserSearch = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
 ):
 
@@ -283,7 +283,7 @@ def comment(
 @router.delete("/{post_id}")
 def delete_post(
     post_id: int,
-    current_user: User = Depends(authenthicate_access_token),
+    current_user: UserSearch = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
 ):
     post = db.query(Post).filter(Post.id == post_id).first()
