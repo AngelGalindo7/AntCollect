@@ -227,7 +227,7 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
 def search_user(
     request: SearchRequest,
     db: Session = Depends(get_db),
-    user: User = Depends(authenthicate_access_token)):
+    user: UserSearch = Depends(authenthicate_access_token)):
     
     if not request.query:
         return SearchResponse(
