@@ -7,6 +7,7 @@ from sqlalchemy import select, func
 from backend.database import get_db
 from backend.models import StickerLibrary, StickerLibraryImage, MediaAsset, User
 from backend.models.media_assets import AssetStatus
+from backend.schemas import UserSearch
 from backend.utils.auth import authenthicate_access_token, RoleChecker
 from backend.utils.files import process_and_save_image, delete_file
 
