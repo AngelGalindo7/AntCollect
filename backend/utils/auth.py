@@ -3,6 +3,7 @@ import logging
 import secrets
 from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
+from typing import List, Optional
 import jwt
 from fastapi import HTTPException, Depends, Request
 from backend.schemas import AccessRequest, UserSearch
@@ -91,6 +92,7 @@ def _decode_access_token(access_token_str: str):
         user_id = payload.get("sub")
         username = payload.get("username")
         email = payload.get("email")
+        role = payload.get("role", "user") # Default to user if not present
         payload_type = payload.get("type")
 
     except jwt.ExpiredSignatureError:
@@ -107,5 +109,26 @@ def _decode_access_token(access_token_str: str):
     return UserSearch(
         user_id=int(user_id),
         username=username,
-        email=email
+        email=email,
+        role=role
     )
+
+class RoleChecker:
+    def __init__(self, allowed_roles: List[str]):
+        self.allowed_roles = allowed_roles
+
+    def __call__(self, current_user: UserSearch = Depends(authenthicate_access_token)):
+        if current_user.role not in self.allowed_roles:
+            logger.warning(
+                "insufficient permissions",
+                extra={
+                    "user_id": current_user.user_id,
+                    "role": current_user.role,
+                    "allowed_roles": self.allowed_roles
+                }
+            )
+            raise HTTPException(
+                status_code=403, 
+                detail="You do not have permission to perform this action"
+            )
+        return current_user

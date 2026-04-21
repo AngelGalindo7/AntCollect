@@ -93,7 +93,8 @@ def refresh_token(
         new_access_token = create_access_token({
             "sub": str(user.id),
             "username": user.username,
-            "email": user.email})
+            "email": user.email,
+            "role": user.role})
         new_refresh_token_data = create_refresh_token({"sub": user.id,})
 
         # Mark as revoked and set the timestamp for the grace period

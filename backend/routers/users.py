@@ -163,7 +163,8 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
     access_token = create_access_token({
         "sub": str(db_user.id),
         "username": db_user.username,
-        "email": db_user.email
+        "email": db_user.email,
+        "role": db_user.role
                     })
     
     refresh_token_data = create_refresh_token({

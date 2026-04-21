@@ -7,7 +7,7 @@ from sqlalchemy import select, func
 from backend.database import get_db
 from backend.models import StickerLibrary, StickerLibraryImage, MediaAsset, User
 from backend.models.media_assets import AssetStatus
-from backend.utils.auth import authenthicate_access_token
+from backend.utils.auth import authenthicate_access_token, RoleChecker
 from backend.utils.files import process_and_save_image, delete_file
 
 logger = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ def upload_sticker(
     drop_date: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     images: List[UploadFile] = File(...),
-    current_user: User = Depends(authenthicate_access_token),
+    current_user: UserSearch = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
 ):
     user_id = current_user.user_id

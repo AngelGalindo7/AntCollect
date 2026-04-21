@@ -11,6 +11,7 @@ class UserSearch(BaseModel):
     user_id: int
     username: str
     email: EmailStr
+    role: str
 
 class UserResponse(BaseModel):
     id: int
