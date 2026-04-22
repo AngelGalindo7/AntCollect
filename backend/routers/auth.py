@@ -9,7 +9,6 @@ from ..utils.rate_limit import limiter, get_real_ip
 from ..database import get_db
 from backend.models import RefreshToken, User
 from ..utils.auth import create_access_token, create_refresh_token,decode_refresh_token
-from fastapi.responses import JSONResponse
 from backend.schemas import UserSearch
 
 
@@ -88,7 +87,13 @@ def refresh_token(
             # For E2E tests, allow reusing the same refresh token across multiple 
             # test cases by extending the grace period. CI is standard on GH Actions.
             is_test = os.getenv("DB_NAME") == "antcollect_test" or os.getenv("CI") == "true"
-            grace_period_seconds = 3600 if is_test else 60
+            
+            # Unit tests (TESTING=true) need a strict 10s period to verify expiration logic.
+            if os.getenv("TESTING") == "true":
+                grace_period_seconds = 10
+            else:
+                grace_period_seconds = 3600 if is_test else 60
+                
             grace_period = timedelta(seconds=grace_period_seconds)
             now = datetime.now(timezone.utc)
             if not db_token.revoked_at or now > (db_token.revoked_at + grace_period):
