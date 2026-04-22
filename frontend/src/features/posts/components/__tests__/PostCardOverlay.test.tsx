@@ -4,7 +4,7 @@ import PostCardOverlay from '../PostCardOverlay'
 
 function makeProps(overrides: Partial<Parameters<typeof PostCardOverlay>[0]> = {}) {
   return {
-    user: { username: 'alice', avatar_path: 'https://cdn.example.com/alice.jpg' },
+    postType: 'collection',
     isLiked: false,
     likeCount: 7,
     onLikeClick: vi.fn(),
@@ -15,40 +15,19 @@ function makeProps(overrides: Partial<Parameters<typeof PostCardOverlay>[0]> = {
 }
 
 describe('PostCardOverlay', () => {
-  it('renders user avatar when avatar_path is provided', () => {
-    render(<PostCardOverlay {...makeProps()} />)
-    const img = screen.getByRole('img', { name: 'alice' })
-    expect(img).toBeTruthy()
-    expect((img as HTMLImageElement).src).toContain('alice.jpg')
-  })
-
-  it('renders fallback div when avatar_path is null', () => {
-    const { container } = render(
-      <PostCardOverlay {...makeProps({ user: { username: 'bob', avatar_path: null } })} />
-    )
-    expect(screen.queryByRole('img', { name: 'bob' })).toBeNull()
-    expect(container.querySelector('div.rounded-full.bg-warm-cream')).toBeTruthy()
-  })
-
-  it('renders fallback div when user is null', () => {
-    const { container } = render(<PostCardOverlay {...makeProps({ user: null })} />)
-    expect(container.querySelector('div.rounded-full.bg-warm-cream')).toBeTruthy()
-  })
-
   it('renders the correct like count', () => {
     render(<PostCardOverlay {...makeProps({ likeCount: 42 })} />)
     expect(screen.getByText('42')).toBeTruthy()
   })
 
-  it('heart button has filled red class when isLiked is true', () => {
+  it('heart button has filled brick-red class when isLiked is true', () => {
     const { container } = render(<PostCardOverlay {...makeProps({ isLiked: true })} />)
     const heart = container.querySelector('svg.fill-brick-red')
     expect(heart).toBeTruthy()
   })
 
-  it('heart button has no fill class when isLiked is false', () => {
+  it('heart button has fill-none class when isLiked is false', () => {
     const { container } = render(<PostCardOverlay {...makeProps({ isLiked: false })} />)
-    expect(container.querySelector('svg.fill-red-500')).toBeNull()
     expect(container.querySelector('svg.fill-none')).toBeTruthy()
   })
 
@@ -57,6 +36,32 @@ describe('PostCardOverlay', () => {
     render(<PostCardOverlay {...makeProps({ onLikeClick })} />)
     fireEvent.click(screen.getByRole('button', { name: /like post/i }))
     expect(onLikeClick).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders a type indicator dot for collection', () => {
+    const { container } = render(<PostCardOverlay {...makeProps({ postType: 'collection' })} />)
+    const dot = container.querySelector('[aria-label="Collectible"]')
+    expect(dot).toBeTruthy()
+  })
+
+  it('renders a green dot for trading posts', () => {
+    const { container } = render(<PostCardOverlay {...makeProps({ postType: 'trading' })} />)
+    const dot = container.querySelector('[aria-label="Trading"]')
+    expect(dot).toBeTruthy()
+    expect(dot?.className).toContain('bg-emerald-500')
+  })
+
+  it('renders a blue dot for looking_for posts', () => {
+    const { container } = render(<PostCardOverlay {...makeProps({ postType: 'looking_for' })} />)
+    const dot = container.querySelector('[aria-label="Looking For"]')
+    expect(dot).toBeTruthy()
+    expect(dot?.className).toContain('bg-sky-500')
+  })
+
+  it('renders no type dot when postType is absent', () => {
+    const { container } = render(<PostCardOverlay {...makeProps({ postType: undefined })} />)
+    expect(container.querySelector('[aria-label="Collectible"]')).toBeNull()
+    expect(container.querySelector('[aria-label="Trading"]')).toBeNull()
   })
 
   it('options button does not propagate clicks', () => {
@@ -77,8 +82,6 @@ describe('PostCardOverlay', () => {
     expect(screen.queryByText('Delete Post')).toBeNull()
 
     rerender(<PostCardOverlay {...makeProps({ isOwner: true })} />)
-    // Options menu is still open or needs to be re-opened if component re-mounted
-    // Actually rerender keeps state if same component.
     expect(screen.getByText('Delete Post')).toBeTruthy()
   })
 
