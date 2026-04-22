@@ -115,27 +115,27 @@ const Search: React.FC<SearchProps> = ({ isHeaderSearch = false }) => {
   return (
     <div
       ref={searchRef}
-      className={`relative w-full ${!isHeaderSearch ? 'p-5 max-w-[500px]' : ''}`}
+      className={`relative w-full h-full ${!isHeaderSearch ? 'p-5 max-w-[500px]' : ''}`}
     >
-      <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="relative h-full">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
         <input
           type="text"
-          placeholder="Search stickers, users..."
+          placeholder="Search stickers, users, posts..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => query && setShowDropdown(true)}
-          className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          className={`w-full h-full pl-12 pr-4 bg-white border-none text-base placeholder-gray-400 focus:outline-none ${isHeaderSearch ? 'focus:bg-gray-50' : 'rounded-lg border border-gray-200'} transition-all`}
         />
       </div>
 
       {showDropdown && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-[1000] overflow-hidden max-h-[400px] overflow-y-auto">
+        <div className={`absolute top-full left-0 right-0 ${isHeaderSearch ? 'mt-0 border-t-0 rounded-b-xl' : 'mt-2 rounded-xl'} bg-white border border-gray-200 shadow-2xl z-[1000] overflow-hidden max-h-[500px] overflow-y-auto`}>
           {loading && (
             <div className="p-4 text-center text-sm text-gray-500">
               <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600 mr-2" />
