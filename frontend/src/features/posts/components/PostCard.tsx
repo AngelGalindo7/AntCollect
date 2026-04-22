@@ -81,7 +81,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
 
   return (
     <div
-      className="relative cursor-pointer group bg-soft-white rounded-sticker border-[3px] border-warm-gray overflow-visible shadow-soft transition-all duration-300 hover:scale-[1.02] hover:border-campus-gold/30"
+      className="relative cursor-pointer group bg-soft-white rounded-sticker border-[3px] border-warm-gray overflow-visible shadow-card transition-all duration-300 hover:scale-[1.02] hover:border-campus-gold/30"
       onClick={handleClick}
     >
       <div className="rounded-[calc(0.75rem-3px)] overflow-hidden">
