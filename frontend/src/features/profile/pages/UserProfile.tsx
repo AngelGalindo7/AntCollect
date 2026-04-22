@@ -169,7 +169,7 @@ const UserProfile: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600">Loading...</div>
+        <div className="text-lg text-espresso/60">Loading...</div>
       </div>
     );
   }
@@ -177,7 +177,7 @@ const UserProfile: React.FC = () => {
   if (!profile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600">No profile loaded</div>
+        <div className="text-lg text-espresso/60">No profile loaded</div>
       </div>
     );
   }
@@ -197,14 +197,14 @@ const UserProfile: React.FC = () => {
   return (
     <div className="w-full">
       {/* ── Section 1: Profile header bar ── */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-soft-white border-b border-warm-gray">
         <div className="flex items-start justify-between px-8 py-6 max-w-6xl mx-auto">
           {/* Left: avatar + info */}
           <div className="flex items-start gap-6">
             {/* Avatar */}
             <div className="relative shrink-0">
               <div
-                className={`w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center${uploading ? " opacity-50" : ""}`}
+                className={`w-24 h-24 rounded-full overflow-hidden bg-warm-cream flex items-center justify-center${uploading ? " opacity-50" : ""}`}
               >
                 {profile.avatar_path ? (
                   <img
@@ -213,7 +213,7 @@ const UserProfile: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-3xl font-semibold text-gray-500 select-none">
+                  <span className="text-3xl font-semibold text-espresso/50 select-none">
                     {profile.username.charAt(0).toUpperCase()}
                   </span>
                 )}
@@ -223,7 +223,7 @@ const UserProfile: React.FC = () => {
                 <>
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold hover:bg-blue-600"
+                    className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-uci-gold text-espresso flex items-center justify-center text-sm font-bold hover:bg-uci-gold/80"
                     aria-label="Upload avatar"
                   >
                     +
@@ -241,19 +241,19 @@ const UserProfile: React.FC = () => {
 
             {/* Info + stats */}
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{profile.username}</h1>
+              <h1 className="text-2xl font-bold text-espresso">{profile.username}</h1>
 
               {profile.bio ? (
-                <p className="text-sm text-gray-500 mt-1">{profile.bio}</p>
+                <p className="text-sm text-espresso/60 mt-1">{profile.bio}</p>
               ) : profile.is_owner ? (
-                <p className="text-sm text-gray-400 italic mt-1">No bio yet.</p>
+                <p className="text-sm text-espresso/40 italic mt-1">No bio yet.</p>
               ) : null}
 
               {/* Stats row */}
               <div className="flex gap-4 mt-4" data-testid="profile-stats">
                 {/* Stickers stat */}
-                <div className="flex flex-col items-center bg-gray-50 rounded-lg px-4 py-2 min-w-18">
-                  <span className="text-xs text-gray-500 mb-1">Stickers</span>
+                <div className="flex flex-col items-center bg-warm-cream rounded-lg px-4 py-2 min-w-18">
+                  <span className="text-xs text-espresso/60 mb-1">Stickers</span>
                   {profile.is_owner && editingStickers ? (
                     <input
                       type="number"
@@ -266,11 +266,11 @@ const UserProfile: React.FC = () => {
                         if (e.key === "Escape") setEditingStickers(false);
                       }}
                       autoFocus
-                      className="w-16 text-center text-lg font-semibold text-gray-900 bg-transparent border-b border-blue-400 outline-none"
+                      className="w-16 text-center text-lg font-semibold text-espresso bg-transparent border-b border-uci-gold outline-none"
                     />
                   ) : (
                     <span
-                      className={`text-lg font-semibold text-gray-900${profile.is_owner ? " cursor-pointer hover:text-blue-500" : ""}`}
+                      className={`text-lg font-semibold text-espresso${profile.is_owner ? " cursor-pointer hover:text-uci-gold" : ""}`}
                       onClick={() => {
                         if (!profile.is_owner) return;
                         setStickerDraft(profile.sticker_count);
@@ -283,9 +283,9 @@ const UserProfile: React.FC = () => {
                 </div>
 
                 {/* Folders stat */}
-                <div className="flex flex-col items-center bg-gray-50 rounded-lg px-4 py-2 min-w-18">
-                  <span className="text-xs text-gray-500 mb-1">Folders</span>
-                  <span className="text-lg font-semibold text-gray-900">{folders.length}</span>
+                <div className="flex flex-col items-center bg-warm-cream rounded-lg px-4 py-2 min-w-18">
+                  <span className="text-xs text-espresso/60 mb-1">Folders</span>
+                  <span className="text-lg font-semibold text-espresso">{folders.length}</span>
                 </div>
               </div>
             </div>
@@ -294,7 +294,7 @@ const UserProfile: React.FC = () => {
       </div>
 
       {/* ── Section 2: Tab bar ── */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-soft-white border-b border-warm-gray">
         <div className="max-w-6xl mx-auto px-8">
           <div className="flex gap-6">
             {TABS.map((tab) => (
@@ -303,8 +303,8 @@ const UserProfile: React.FC = () => {
                 onClick={() => setActiveTab(tab.value)}
                 className={`py-3 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.value
-                    ? "border-blue-500 text-blue-600 font-bold"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                    ? "border-uci-gold text-espresso font-bold"
+                    : "border-transparent text-espresso/50 hover:text-espresso"
                 }`}
               >
                 {tab.label}
