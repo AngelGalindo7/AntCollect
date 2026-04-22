@@ -718,3 +718,12 @@ $entry
 - **Fix:** Added the `CREATE EXTENSION` command to the administrative initialization steps in `cd.yml` (for production) and `ci.yml` (for testing/E2E), where elevated privileges are available. Wrapped the command in a `try-except` block in the Alembic migration to allow it to fail gracefully in restricted environments while still supporting local development.
 - **Risk:** None. The extension is now managed as part of the infrastructure setup, and the application simply consumes it.
 
+
+---
+
+## 21/04/2026 — fix(frontend component): update PostCardOverlay test selectors
+
+- **Cause:** UI changes to the PostCardOverlay component (specifically changing the fallback avatar background from bg-gray-400 to bg-gray-200) broke existing unit tests that relied on specific CSS class selectors.
+- **Trigger:** Running npm test after the UI update.
+- **Fix:** Updated the CSS selectors in PostCardOverlay.test.tsx to match the new bg-gray-200 class.
+- **Risk:** None.
