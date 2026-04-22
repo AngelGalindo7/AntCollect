@@ -134,19 +134,19 @@ const CreateFolder: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="max-w-4xl mx-auto py-8 px-4" style={{ fontFamily: "'Quicksand', sans-serif" }}>
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button
           onClick={() => navigate(-1)}
-          className="text-gray-400 hover:text-gray-700 transition-colors"
+          className="text-espresso/40 hover:text-espresso transition-colors"
           aria-label="Go back"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-xl font-bold text-gray-900">New Folder</h1>
+        <h1 className="text-xl font-bold text-espresso">New Folder</h1>
       </div>
 
       {/* Folder identity row */}
@@ -155,13 +155,13 @@ const CreateFolder: React.FC = () => {
         <button
           type="button"
           onClick={() => avatarInputRef.current?.click()}
-          className="relative w-20 h-20 rounded-full overflow-hidden bg-purple-100 flex items-center justify-center shrink-0 group hover:ring-2 hover:ring-purple-400 transition-all"
+          className="relative w-20 h-20 rounded-full overflow-hidden bg-warm-cream flex items-center justify-center shrink-0 group hover:ring-2 hover:ring-uci-gold transition-all"
           aria-label="Choose folder avatar"
         >
           {avatarPreview ? (
             <img src={avatarPreview} alt="Folder avatar" className="w-full h-full object-cover" />
           ) : (
-            <svg className="w-9 h-9 text-purple-300" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-9 h-9 text-espresso/25" fill="currentColor" viewBox="0 0 24 24">
               <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
             </svg>
           )}
@@ -189,26 +189,26 @@ const CreateFolder: React.FC = () => {
             placeholder="Folder name"
             value={name}
             onChange={(e) => { setName(e.target.value); setError(null); }}
-            className="w-full text-lg font-semibold bg-transparent border-b-2 border-gray-200 focus:border-purple-400 outline-none py-1 placeholder-gray-300 transition-colors"
+            className="w-full text-lg font-semibold bg-transparent border-b-2 border-warm-gray focus:border-uci-gold outline-none py-1 placeholder-espresso/30 transition-colors text-espresso"
             maxLength={80}
           />
-          {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
+          {error && <p className="text-sm text-brick-red mt-1">{error}</p>}
         </div>
       </div>
 
       {/* Folder type selector */}
       <div className="mb-8">
-        <p className="text-sm font-medium text-gray-700 mb-3">Folder type</p>
+        <p className="text-xs font-bold text-espresso/50 uppercase tracking-widest mb-3">Folder type</p>
         <div className="flex gap-3">
           {FOLDER_TYPES.map((ft) => (
             <button
               key={ft.value}
               type="button"
               onClick={() => setFolderType(ft.value)}
-              className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+              className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
                 folderType === ft.value
-                  ? 'bg-purple-600 border-purple-600 text-white'
-                  : 'bg-white border-gray-300 text-gray-600 hover:border-purple-400 hover:text-purple-600'
+                  ? 'bg-uci-gold border-uci-gold text-espresso'
+                  : 'bg-warm-cream/60 border-warm-gray text-espresso/60 hover:border-uci-gold hover:text-espresso'
               }`}
             >
               {ft.label}
@@ -218,14 +218,14 @@ const CreateFolder: React.FC = () => {
       </div>
 
       {/* Post selection grid */}
-      <p className="text-sm text-gray-500 mb-4">
-        Select posts to add — {selectedIds.size} selected
+      <p className="text-xs font-bold text-espresso/50 uppercase tracking-widest mb-4">
+        Select posts — {selectedIds.size} selected
       </p>
 
       {loadingPosts ? (
-        <div className="text-center py-16 text-gray-400">Loading your posts…</div>
+        <div className="text-center py-16 text-espresso/40">Loading your posts…</div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">No posts yet.</div>
+        <div className="text-center py-16 text-espresso/40">No posts yet.</div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-10">
           {posts.map((post) => {
@@ -237,8 +237,8 @@ const CreateFolder: React.FC = () => {
                 onClick={() => togglePost(post.post_id)}
                 className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
                   selected
-                    ? 'border-purple-500 ring-2 ring-purple-300'
-                    : 'border-transparent hover:border-gray-300'
+                    ? 'border-uci-gold ring-2 ring-uci-gold/40'
+                    : 'border-transparent hover:border-warm-gray'
                 }`}
               >
                 {thumb ? (
@@ -248,8 +248,8 @@ const CreateFolder: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-full h-full bg-warm-cream flex items-center justify-center">
+                    <svg className="w-8 h-8 text-espresso/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01" />
                     </svg>
                   </div>
@@ -262,8 +262,8 @@ const CreateFolder: React.FC = () => {
 
                 {/* Checkmark when selected */}
                 {selected && (
-                  <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-uci-gold flex items-center justify-center">
+                    <svg className="w-4 h-4 text-espresso" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
@@ -278,7 +278,7 @@ const CreateFolder: React.FC = () => {
       <div className="flex items-center justify-end gap-3">
         <button
           onClick={() => navigate(-1)}
-          className="px-5 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          className="px-5 py-2 text-sm text-espresso/50 hover:text-espresso transition-colors"
           disabled={saving}
         >
           Cancel
@@ -286,7 +286,7 @@ const CreateFolder: React.FC = () => {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-6 py-2 text-sm font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+          className="px-6 py-2 text-sm font-bold bg-uci-gold text-espresso rounded-xl hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {saving ? 'Saving…' : 'Save Folder'}
         </button>
