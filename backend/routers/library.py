@@ -44,7 +44,7 @@ def get_library(
             "title": sticker.title,
             "petr_dropper": sticker.petr_dropper,
             "drop_date": sticker.drop_date,
-            "thumbnail": primary_image["paths"]["thumbnail"] if primary_image else None
+            "thumbnail": primary_image["paths"]["medium"] if primary_image else None
         })
     
     return library_data
