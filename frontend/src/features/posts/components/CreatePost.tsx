@@ -6,22 +6,22 @@ const POST_TYPES = [
     value: 'collection',
     label: 'Collectible',
     desc: 'Something I own',
-    active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/50',
-    idle: 'bg-warm-cream/80 text-espresso/60 hover:bg-uci-gold/20',
+    active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/30',
+    idle: 'bg-warm-cream/60 text-espresso/50 hover:bg-uci-gold/20',
   },
   {
     value: 'trading',
     label: 'Trading',
     desc: 'Available to trade',
-    active: 'bg-emerald-500 text-white ring-2 ring-emerald-400/50',
-    idle: 'bg-warm-cream/80 text-espresso/60 hover:bg-emerald-100',
+    active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/30',
+    idle: 'bg-warm-cream/60 text-espresso/50 hover:bg-uci-gold/20',
   },
   {
     value: 'looking_for',
     label: 'Looking For',
     desc: 'I want this one',
-    active: 'bg-sky-500 text-white ring-2 ring-sky-400/50',
-    idle: 'bg-warm-cream/80 text-espresso/60 hover:bg-sky-100',
+    active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/30',
+    idle: 'bg-warm-cream/60 text-espresso/50 hover:bg-uci-gold/20',
   },
 ] as const;
 
@@ -163,7 +163,7 @@ function CreatePost({ onSuccess }: CreatePostProps) {
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
           rows={3}
-          className="w-full px-4 py-3 border border-warm-gray rounded-xl focus:ring-2 focus:ring-uci-gold outline-none resize-none bg-white/60 text-espresso placeholder-espresso/30 text-sm"
+          className="w-full px-4 py-3 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none resize-none bg-white/70 text-espresso placeholder-warm-gray text-sm"
         />
       </div>
 
