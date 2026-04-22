@@ -1,2 +1,11 @@
 @import "tailwindcss";
 
+@theme {
+  --color-petr-blue: #003087;
+  --color-uci-blue: #375A93;
+  --color-uci-gold: #FFD200;
+  --color-action-blue: #0064A4;
+  --color-input-border: #CCCCCC;
+  --color-soft-gray: #F5F5F5;
+  --color-dark-text: #333333;
+}
