@@ -2,35 +2,33 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 
-
 interface UserResult {
   id: number;
   username: string;
   avatar_path?: string;
 }
+
 interface QuickSearchResponse {
   query: string;
   users: UserResult[];
   posts: null;
 }
 
-const Search: React.FC = () => {
+interface SearchProps {
+  isHeaderSearch?: boolean;
+}
+
+const Search: React.FC<SearchProps> = ({ isHeaderSearch = false }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-
   const [error, setError] = useState<string | null>(null);
   
   const navigate = useNavigate();
-  
-  // Ref to store the timeout ID
   const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
-  
 
-
-  // Function to search users
   const quickSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       setResults([]);
@@ -65,24 +63,20 @@ const Search: React.FC = () => {
     }
   }, []);
 
-  // Debounced search while typing
   useEffect(() => {
-    // Clear the previous timeout
     if (debounceTimeout.current) {
       clearTimeout(debounceTimeout.current);
     }
 
-    // Only search if there's a query
     if (query.trim()) {
       debounceTimeout.current = setTimeout(() => {
         quickSearch(query);
       }, 300);
     } else {
-      setResults([]); // Clear results if query is empty
+      setResults([]);
       setShowDropdown(false);
     }
 
-    // Cleanup function
     return () => {
       if (debounceTimeout.current) {
         clearTimeout(debounceTimeout.current);
@@ -90,26 +84,18 @@ const Search: React.FC = () => {
     };
   }, [query, quickSearch]);
 
-  
-  // Handle Enter - Navigate to search results page
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && query.trim()) {
-      // Clear debounce and dropdown
       if (debounceTimeout.current) {
         clearTimeout(debounceTimeout.current);
       }
       setShowDropdown(false);
-      
-      // Navigate to search results page with query param
       navigate(`/search?q=${encodeURIComponent(query)}`);
     }
   };
 
-  // Handle user click
   const handleUserClick = (username: string) => {
-    console.log(username)
     navigate(`/${username}`);
-    // Clear search after navigation
     setQuery("");
     setResults([]);
     setShowDropdown(false);
@@ -121,99 +107,104 @@ const Search: React.FC = () => {
         setShowDropdown(false);
       }
     };
-
-
     
     document.addEventListener("mousedown", handleClickOutside); 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-
-return (
+  return (
     <div
       ref={searchRef}
-      style={{ position: "relative", padding: "20px", maxWidth: "500px" }}
+      className={`relative w-full ${!isHeaderSearch ? 'p-5 max-w-[500px]' : ''}`}
     >
-      <input
-        type="text"
-        placeholder="Search users..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onFocus={() => query && setShowDropdown(true)}
-        style={{
-          width: "100%",
-          padding: "10px",
-          fontSize: "16px",
-          border: "1px solid #ccc",
-          borderRadius: "4px",
-        }}
-      />
-      
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input
+          type="text"
+          placeholder="Search stickers, users..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => query && setShowDropdown(true)}
+          className="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-full text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+        />
+      </div>
 
       {showDropdown && (
-        <div style={{
-          position: "absolute",
-          top: "100%",
-          left: 0,
-          right: 0,
-          backgroundColor: "white",
-          border: "1px solid #ccc",
-          borderRadius: "4px",
-          marginTop: "4px",
-          maxHeight: "300px",
-          overflowY: "auto",
-          zIndex: 1000,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-        }}>
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl z-[1000] overflow-hidden max-h-[400px] overflow-y-auto">
+          {loading && (
+            <div className="p-4 text-center text-sm text-gray-500">
+              <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600 mr-2" />
+              Searching...
+            </div>
+          )}
+          
+          {error && !loading && (
+            <div className="p-4 text-sm text-red-500">
+              {error}
+            </div>
+          )}
 
-      {loading && (<div style={{ marginTop: "10px" }}>Searching...</div>
-      )}
-      
-      {error && !loading && (
-        <div style={{ padding: "10px", color: "red" }}>
-          Error: {error}
-        </div>
-      )}
+          {!loading && !error && results.length > 0 && (
+            <ul className="py-2">
+              <li className="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                Users
+              </li>
+              {results.map((user) => (
+                <li
+                  key={user.id}
+                  className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex items-center gap-3 transition-colors"
+                  onClick={() => handleUserClick(user.username)}
+                >
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden shrink-0">
+                    {user.avatar_path ? (
+                      <img 
+                        src={user.avatar_path} 
+                        alt={user.username}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-blue-600 text-xs font-bold">
+                        {user.username.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">@{user.username}</span>
+                </li>
+              ))}
+              <li 
+                className="px-4 py-2 mt-1 border-t border-gray-50 hover:bg-gray-50 cursor-pointer text-xs text-blue-600 font-medium transition-colors"
+                onClick={() => {
+                  setShowDropdown(false);
+                  navigate(`/search?q=${encodeURIComponent(query)}`);
+                }}
+              >
+                Search all posts for "{query}"
+              </li>
+            </ul>
+          )}
 
-      {!loading && !error && results.length > 0 && (
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          {results.map((user) => (
-            <li
-              key={user.id}
-              style={{
-                padding: "10px",
-                borderBottom: "1px solid #eee",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-              }}
-              onClick={() => handleUserClick(user.username)}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f5f5f5"}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
-            >
-            {user.avatar_path && (
-                    <img 
-                      src={user.avatar_path} 
-                      alt={user.username}
-                      style={{ width: "32px", height: "32px", borderRadius: "50%" }}
-                    />
-                  )}
-              <strong>{user.username}</strong>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {!loading && !error && results.length === 0 && query && (
-        <div style={{ padding: "10px", color: "#666" }}>
-          No users found. Press Enter to search posts.
+          {!loading && !error && results.length === 0 && query && (
+            <div className="p-4 text-sm text-gray-500 text-center">
+              No users found. <br />
+              <button 
+                className="mt-2 text-blue-600 font-medium hover:underline"
+                onClick={() => {
+                  setShowDropdown(false);
+                  navigate(`/search?q=${encodeURIComponent(query)}`);
+                }}
+              >
+                Search for posts instead
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
-  )}
-  </div>
   );
 };
  
