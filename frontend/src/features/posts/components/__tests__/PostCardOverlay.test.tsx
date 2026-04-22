@@ -27,12 +27,12 @@ describe('PostCardOverlay', () => {
       <PostCardOverlay {...makeProps({ user: { username: 'bob', avatar_path: null } })} />
     )
     expect(screen.queryByRole('img', { name: 'bob' })).toBeNull()
-    expect(container.querySelector('div.rounded-full.bg-gray-200')).toBeTruthy()
+    expect(container.querySelector('div.rounded-full.bg-warm-cream')).toBeTruthy()
   })
 
   it('renders fallback div when user is null', () => {
     const { container } = render(<PostCardOverlay {...makeProps({ user: null })} />)
-    expect(container.querySelector('div.rounded-full.bg-gray-200')).toBeTruthy()
+    expect(container.querySelector('div.rounded-full.bg-warm-cream')).toBeTruthy()
   })
 
   it('renders the correct like count', () => {
@@ -42,7 +42,7 @@ describe('PostCardOverlay', () => {
 
   it('heart button has filled red class when isLiked is true', () => {
     const { container } = render(<PostCardOverlay {...makeProps({ isLiked: true })} />)
-    const heart = container.querySelector('svg.fill-red-500')
+    const heart = container.querySelector('svg.fill-brick-red')
     expect(heart).toBeTruthy()
   })
 
