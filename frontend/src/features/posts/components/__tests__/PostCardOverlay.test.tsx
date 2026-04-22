@@ -27,12 +27,12 @@ describe('PostCardOverlay', () => {
       <PostCardOverlay {...makeProps({ user: { username: 'bob', avatar_path: null } })} />
     )
     expect(screen.queryByRole('img', { name: 'bob' })).toBeNull()
-    expect(container.querySelector('div.rounded-full.bg-gray-400')).toBeTruthy()
+    expect(container.querySelector('div.rounded-full.bg-gray-200')).toBeTruthy()
   })
 
   it('renders fallback div when user is null', () => {
     const { container } = render(<PostCardOverlay {...makeProps({ user: null })} />)
-    expect(container.querySelector('div.rounded-full.bg-gray-400')).toBeTruthy()
+    expect(container.querySelector('div.rounded-full.bg-gray-200')).toBeTruthy()
   })
 
   it('renders the correct like count', () => {
