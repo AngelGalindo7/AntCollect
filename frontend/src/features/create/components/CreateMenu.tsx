@@ -12,19 +12,16 @@ const ITEMS = [
     key: 'post',
     title: 'New Post',
     desc: 'Share a sticker you found or traded',
-    dot: 'bg-uci-gold',
   },
   {
     key: 'folder',
     title: 'New Folder',
     desc: 'Organize your collection for others to see',
-    dot: 'bg-brick-red',
   },
   {
     key: 'catalog',
     title: 'Catalog Entry',
     desc: 'Add a missing sticker to the community database',
-    dot: 'bg-emerald-500',
   },
 ] as const;
 
@@ -62,7 +59,6 @@ const CreateMenu: React.FC<CreateMenuProps> = ({ onSelectPost, onSelectFolder, o
               i < ITEMS.length - 1 ? 'border-b border-warm-gray/30' : ''
             }`}
           >
-            <span className={`w-2 h-2 rounded-full shrink-0 ${item.dot}`} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-espresso">{item.title}</p>
               <p className="text-xs text-espresso/50 mt-0.5">{item.desc}</p>
