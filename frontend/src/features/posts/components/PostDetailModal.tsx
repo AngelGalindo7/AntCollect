@@ -121,13 +121,13 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   className="w-9 h-9 rounded-full object-cover ring-2 ring-uci-gold/40 shrink-0"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-warm-cream ring-2 ring-uci-gold/40 flex items-center justify-center text-espresso font-bold text-sm shrink-0">
+                <div className="w-9 h-9 rounded-full bg-warm-cream ring-2 ring-uci-gold/40 flex items-center justify-center text-espresso font-medium text-sm shrink-0">
                   {post.user.username.charAt(0).toUpperCase()}
                 </div>
               )}
               <div className="flex flex-col items-start min-w-0">
                 <span className="text-xs text-espresso/50 font-medium leading-none mb-0.5">Posted by</span>
-                <span className="text-sm font-bold text-espresso leading-none">@{post.user.username}</span>
+                <span className="text-sm font-medium text-espresso leading-none">@{post.user.username}</span>
               </div>
               <svg className="w-4 h-4 text-espresso/30 ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -153,7 +153,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="absolute top-4 left-4 bg-brick-red hover:bg-brick-red/90 text-white px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2 shadow-soft"
+                className="absolute top-4 left-4 bg-brick-red hover:bg-brick-red/90 text-white px-4 py-2 rounded-full text-xs font-medium uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2 shadow-soft"
                 title="Delete Post"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,7 +166,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
           {/* Caption bar */}
           <div className="bg-warm-cream/60 px-6 py-4">
-            <p className="text-espresso text-lg font-black uppercase tracking-tight truncate">
+            <p className="text-espresso/70 text-sm leading-relaxed">
               {post.caption || 'Untitled Post'}
             </p>
           </div>
