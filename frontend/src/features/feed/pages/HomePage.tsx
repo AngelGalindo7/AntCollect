@@ -3,8 +3,6 @@ import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import type { Post, TopPostsResponse, PostWithEngagement, GridItem, FolderType } from "@/shared/types/Types";
 import { fetchWithAuth } from "@/shared/api/api";
-import Search from "@/features/search/components/Search";
-
 import { API_BASE } from '@/shared/api/api';
 
 const HomePage: React.FC = () => {
