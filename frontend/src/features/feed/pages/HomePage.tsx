@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
-import Search from "@/features/search/components/Search";
 import type { Post, TopPostsResponse, PostWithEngagement, GridItem, FolderType } from "@/shared/types/Types";
 import { fetchWithAuth } from "@/shared/api/api";
 
@@ -97,13 +96,6 @@ const HomePage: React.FC = () => {
 
     return (
         <div className="w-full">
-            {/* Search Bar - Kept consistent with Profile view */}
-            <div className="bg-white border-b border-gray-200 px-4 py-4">
-                <div className="max-w-6xl mx-auto">
-                    <Search />
-                </div>
-            </div>
-
             {/* Page Title / Header */}
             <div className="bg-white border-b border-gray-200 px-4 py-6">
                 <div className="max-w-6xl mx-auto">

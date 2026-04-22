@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
-import Search from "@/features/search/components/Search";
 import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useParams, useNavigate } from "react-router-dom";
 
@@ -290,11 +289,6 @@ const UserProfile: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Right: search */}
-          <div className="shrink-0">
-            <Search />
           </div>
         </div>
       </div>

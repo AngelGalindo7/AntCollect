@@ -111,13 +111,6 @@ const SearchResultsPage: React.FC = () => {
 
   return (
     <div className="w-full">
-      {/* Search Bar - Kept consistent with HomePage and Profile view */}
-      <div className="bg-white border-b border-gray-200 px-4 py-4">
-        <div className="max-w-6xl mx-auto">
-          <Search />
-        </div>
-      </div>
-
       {/* Page Title / Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-6">
         <div className="max-w-6xl mx-auto">
