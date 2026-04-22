@@ -94,7 +94,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
       >
         {/* Trade panel slides in to the left of the image */}
         {tradeOpen && canTrade && (
-          <div className="bg-white rounded-l-2xl shadow-2xl border-r border-gray-100 h-full animate-slide-in-left">
+          <div className="bg-soft-white rounded-l-sticker shadow-soft border-2 border-warm-gray border-r-0 h-full animate-slide-in-left">
             <TradeOfferPanel
               targetPost={post}
               postOwnerId={postOwnerId!}
@@ -104,7 +104,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
         )}
 
         {/* Image + overlays */}
-        <div className={`relative ${tradeOpen ? 'rounded-r-lg' : 'rounded-lg'}`}>
+        <div className={`relative ${tradeOpen ? 'rounded-r-sticker' : 'rounded-sticker'} border-[3px] border-warm-gray bg-soft-white overflow-hidden shadow-soft`}>
           <PostImageFrame
             src={imageSrc}
             alt={post.caption || `Post ${post.post_id}`}
@@ -118,30 +118,36 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
               />
             )}
 
-            {/* Delete button overlay for owners on profile page */}
+            {/* Delete button overlay for owners on profile page — uses Brick Red */}
             {canDelete && (
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="absolute top-4 left-4 bg-red-500/90 hover:bg-red-600 text-white px-3 py-1.5 rounded-full text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 shadow-lg"
+                className="absolute top-4 left-4 bg-brick-red hover:bg-brick-red/90 text-white px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2 shadow-soft"
                 title="Delete Post"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </button>
             )}
           </PostImageFrame>
 
-          {/* Caption + likes bar below image */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-4 py-3 rounded-b-lg">
-            <p className="text-white text-sm font-medium truncate">
+          {/* Caption + likes bar below image — using espresso text on soft-white */}
+          <div className="bg-soft-white border-t border-warm-gray px-6 py-4">
+            <p className="text-espresso text-lg font-black uppercase tracking-tight truncate">
               {post.caption || 'Untitled Post'}
             </p>
-            <p className="text-white/70 text-xs mt-0.5">
-              {post.total_likes ?? 0} {post.total_likes === 1 ? 'like' : 'likes'}
-            </p>
+            <div className="flex items-center justify-between mt-1">
+                <p className="text-espresso/50 text-xs font-bold uppercase tracking-widest">
+                {post.total_likes ?? 0} {post.total_likes === 1 ? 'Collector Liked' : 'Collectors Liked'}
+                </p>
+                <div className="flex items-center gap-2">
+                     <span className="w-2 h-2 rounded-full bg-campus-gold" />
+                     <span className="text-[10px] text-espresso/40 font-bold uppercase">Ready to Trade</span>
+                </div>
+            </div>
           </div>
         </div>
 

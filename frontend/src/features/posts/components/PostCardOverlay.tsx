@@ -35,26 +35,28 @@ const PostCardOverlay: React.FC<PostCardOverlayProps> = ({
       </div>
 
       {/* Info row — positioned below the image in the gap */}
-      <div className="absolute top-[calc(100%+8px)] left-0 right-0 z-10 flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white border border-gray-200 shadow-lg transform transition-all duration-300 ease-out translate-y-[-12px] group-hover:translate-y-0 pointer-events-auto">
+      <div className="absolute top-[calc(100%+8px)] left-[-3px] right-[-3px] z-10 flex items-center gap-3 px-3 py-2.5 rounded-xl bg-soft-white border-2 border-warm-gray shadow-soft transform transition-all duration-300 ease-out translate-y-[-12px] group-hover:translate-y-0 pointer-events-auto">
         {user?.avatar_path ? (
           <img
             src={user.avatar_path}
             alt={user.username}
-            className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-100 shadow-sm"
+            className="w-9 h-9 rounded-full object-cover shrink-0 border-2 border-warm-gray shadow-sm"
           />
         ) : (
-          <div className="w-6 h-6 rounded-full bg-gray-200 shrink-0" />
+          <div className="w-9 h-9 rounded-full bg-warm-cream border-2 border-warm-gray flex items-center justify-center shrink-0 text-espresso font-bold text-xs">
+            {user?.username?.charAt(0).toUpperCase()}
+          </div>
         )}
 
-        <span className="text-sm font-bold text-gray-900 truncate">{user?.username}</span>
+        <span className="text-sm font-bold text-espresso truncate">@{user?.username}</span>
 
         <button
           onClick={onLikeClick}
-          className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-100 text-gray-700 hover:text-red-600 hover:bg-red-50 transition-all"
+          className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-warm-cream border border-warm-gray text-espresso hover:text-brick-red hover:bg-brick-red/5 transition-all"
           aria-label={isLiked ? 'Unlike post' : 'Like post'}
         >
           <svg
-            className={`w-4 h-4 transition-colors duration-200 ${isLiked ? 'fill-red-500 text-red-500' : 'fill-none text-gray-500'}`}
+            className={`w-4 h-4 transition-colors duration-200 ${isLiked ? 'fill-brick-red text-brick-red' : 'fill-none text-espresso'}`}
             stroke="currentColor"
             strokeWidth={2.5}
             viewBox="0 0 24 24"

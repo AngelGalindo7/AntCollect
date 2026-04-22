@@ -109,13 +109,13 @@ const SearchResultsPage: React.FC = () => {
   }
 
   return (
-    <div className="w-full">
-      {/* Page Title / Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-6">
-        <div className="max-w-6xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900">Search Results</h1>
-          <p className="text-gray-600 mt-2">
-            {query ? `Results for "${query}"` : "Enter a search query"}
+    <div className="w-full space-y-6">
+      {/* Search Header */}
+      <div className="bg-soft-white border-b border-warm-gray px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-black text-espresso uppercase tracking-tighter">Search Results</h1>
+          <p className="text-espresso/60 mt-1 font-medium italic">
+            {query ? `Showing results for "${query}"` : "Enter a search query in the header"}
           </p>
         </div>
       </div>

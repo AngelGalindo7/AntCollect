@@ -16,9 +16,10 @@ interface QuickSearchResponse {
 
 interface SearchProps {
   isHeaderSearch?: boolean;
+  className?: string;
 }
 
-const Search: React.FC<SearchProps> = ({ isHeaderSearch = false }) => {
+const Search: React.FC<SearchProps> = ({ isHeaderSearch = false, className = "" }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -115,7 +116,7 @@ const Search: React.FC<SearchProps> = ({ isHeaderSearch = false }) => {
   return (
     <div
       ref={searchRef}
-      className={`relative w-full h-full ${!isHeaderSearch ? 'p-5 max-w-[500px]' : ''}`}
+      className={`relative w-full h-full ${className} ${!isHeaderSearch && !className ? 'p-5 max-w-[500px]' : ''}`}
     >
       <div className="relative h-full">
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -130,7 +131,7 @@ const Search: React.FC<SearchProps> = ({ isHeaderSearch = false }) => {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => query && setShowDropdown(true)}
-          className={`w-full h-full pl-12 pr-4 bg-white border-none text-base placeholder-gray-400 focus:outline-none ${isHeaderSearch ? 'focus:bg-gray-50' : 'rounded-lg border border-gray-200'} transition-all`}
+          className={`w-full h-full pl-12 pr-4 bg-white border-none placeholder-gray-400 focus:outline-none ${isHeaderSearch ? 'py-2 text-base focus:bg-gray-50' : 'py-4 text-lg rounded-xl border-2 border-warm-gray shadow-soft'} transition-all`}
         />
       </div>
 

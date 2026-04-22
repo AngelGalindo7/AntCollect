@@ -87,14 +87,14 @@ const TradeOfferPanel: React.FC<TradeOfferPanelProps> = ({
 
   if (sent) {
     return (
-      <div className="w-64 flex flex-col items-center justify-center gap-3 py-8 px-4">
-        <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-          <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      <div className="w-64 flex flex-col items-center justify-center gap-3 py-8 px-4 bg-soft-white rounded-l-2xl">
+        <div className="w-12 h-12 rounded-full bg-campus-gold/10 flex items-center justify-center">
+          <svg className="w-6 h-6 text-campus-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <p className="text-sm font-medium text-gray-800 text-center">Request sent!</p>
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-sm font-bold text-espresso text-center uppercase tracking-wide">Request sent!</p>
+        <p className="text-xs text-espresso/60 text-center">
           {filledPosts.length > 0
             ? `Offering ${filledPosts.length} sticker${filledPosts.length > 1 ? 's' : ''}`
             : 'Showing interest'}
@@ -105,10 +105,10 @@ const TradeOfferPanel: React.FC<TradeOfferPanelProps> = ({
 
   return (
     <>
-      <div className="w-64 flex flex-col gap-4 py-4 px-3">
+      <div className="w-64 flex flex-col gap-4 py-4 px-3 bg-soft-white rounded-l-2xl">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Your offer</h3>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <h3 className="text-sm font-bold text-espresso uppercase tracking-wider">Your offer</h3>
+          <p className="text-xs text-espresso/50 mt-1 leading-relaxed">
             Add stickers you're willing to trade, or send with none.
           </p>
         </div>
@@ -120,13 +120,13 @@ const TradeOfferPanel: React.FC<TradeOfferPanelProps> = ({
         />
 
         {error && (
-          <p className="text-xs text-red-500">{error}</p>
+          <p className="text-xs text-brick-red font-medium">{error}</p>
         )}
 
         <button
           onClick={handleSend}
           disabled={sending}
-          className="w-full py-2.5 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 disabled:opacity-50 transition-colors"
+          className="w-full py-3 rounded-xl bg-campus-gold text-espresso text-sm font-black hover:bg-campus-gold/90 disabled:opacity-50 transition-all shadow-soft active:scale-[0.98] uppercase tracking-widest"
         >
           {sending ? 'Sending…' : 'Send Request'}
         </button>
