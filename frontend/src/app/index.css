@@ -7,16 +7,17 @@
   --color-action-gold: #F2A900;
   --color-campus-blue: #1B365D;
   --color-campus-gold: #F2A900;
-  --color-warm-cream: #F6F4F0;
-  --color-soft-white: #FFFFFF;
+  --color-warm-cream: #EFE9DF;
+  --color-soft-white: #FAF8F4;
   --color-brick-red: #C85A3A;
   --color-espresso: #332D2A;
-  --color-warm-gray: #E5E0D8;
-  
-  --color-input-border: #E5E0D8;
-  --color-soft-gray: #E5E0D8;
+  --color-warm-gray: #DDD4C5;
+
+  --color-input-border: #DDD4C5;
+  --color-soft-gray: #DDD4C5;
   --color-dark-text: #332D2A;
 
   --radius-sticker: 0.75rem;
-  --shadow-soft: 0 4px 20px -2px rgba(51, 45, 42, 0.08);
+  --shadow-soft: 0 4px 20px -2px rgba(101, 67, 33, 0.10);
+  --shadow-card: 0 3px 16px -2px rgba(120, 76, 30, 0.16), 0 1px 4px 0px rgba(101, 67, 33, 0.07);
 }
