@@ -22,7 +22,7 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Search Bar Container */}
-        <div className="flex-1 max-w-2xl">
+        <div className="flex-1 max-w-2xl" data-testid="header-search">
           <Search isHeaderSearch />
         </div>
 

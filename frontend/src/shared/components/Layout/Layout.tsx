@@ -45,11 +45,11 @@ const Layout: React.FC = () => {
 
         {/* Main content area */}
         {isChatRoute ? (
-          <main className="flex-1 overflow-hidden">
+          <main data-testid="main-content" className="flex-1 overflow-hidden">
             <Outlet />
           </main>
         ) : (
-          <main className="flex-1 bg-gray-100 overflow-auto">
+          <main data-testid="main-content" className="flex-1 bg-gray-100 overflow-auto">
             <div className="max-w-7xl mx-auto p-4">
               <Outlet />
             </div>

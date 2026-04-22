@@ -250,7 +250,7 @@ const UserProfile: React.FC = () => {
               ) : null}
 
               {/* Stats row */}
-              <div className="flex gap-4 mt-4">
+              <div className="flex gap-4 mt-4" data-testid="profile-stats">
                 {/* Stickers stat */}
                 <div className="flex flex-col items-center bg-gray-50 rounded-lg px-4 py-2 min-w-18">
                   <span className="text-xs text-gray-500 mb-1">Stickers</span>

@@ -32,10 +32,8 @@ test('sticker count is inline-editable', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
 
   // Target the individual stat box (flex-col) containing the "Stickers" label.
-  // Using div.flex-col avoids matching the outer flex container that holds both
-  // stat boxes, which would make the numeric span filter ambiguous once a folder
-  // exists (Folders count is also a digit).
   const stickersBox = page
+    .getByTestId('profile-stats')
     .locator('div.flex-col')
     .filter({ has: page.locator('span', { hasText: 'Stickers' }) });
   const stickerValue = stickersBox
