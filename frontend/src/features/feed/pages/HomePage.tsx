@@ -94,12 +94,9 @@ const HomePage: React.FC = () => {
     }
 
     return (
-        <div className="w-full space-y-8">
-            <h1 className="text-3xl font-black text-espresso uppercase tracking-tighter">Explore</h1>
-            
+        <div className="w-full">
             {/* Posts Grid Layout */}
-            <div className="bg-transparent">
-                {posts.length > 0 ? (
+            <div className="bg-transparent">                {posts.length > 0 ? (
                     <PostGridLayout
                         items={posts.map((p): GridItem => ({ kind: 'post', data: p }))}
                         onPostClick={handlePostClick}
