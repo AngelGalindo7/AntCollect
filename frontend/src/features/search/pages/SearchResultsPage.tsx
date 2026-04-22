@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import type { Post, GridItem, FolderType } from "@/shared/types/Types";
-import Search from '@/features/search/components/Search';
 import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
