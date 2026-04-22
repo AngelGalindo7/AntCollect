@@ -5,7 +5,6 @@ const POST_TYPES = [
   {
     value: 'collection',
     label: 'Collectible',
-    emoji: '✨',
     desc: 'Something I own',
     active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/50',
     idle: 'bg-warm-cream/80 text-espresso/60 hover:bg-uci-gold/20',
@@ -13,7 +12,6 @@ const POST_TYPES = [
   {
     value: 'trading',
     label: 'Trading',
-    emoji: '🔄',
     desc: 'Available to trade',
     active: 'bg-emerald-500 text-white ring-2 ring-emerald-400/50',
     idle: 'bg-warm-cream/80 text-espresso/60 hover:bg-emerald-100',
@@ -21,7 +19,6 @@ const POST_TYPES = [
   {
     value: 'looking_for',
     label: 'Looking For',
-    emoji: '🔍',
     desc: 'I want this one',
     active: 'bg-sky-500 text-white ring-2 ring-sky-400/50',
     idle: 'bg-warm-cream/80 text-espresso/60 hover:bg-sky-100',
@@ -104,7 +101,6 @@ function CreatePost({ onSuccess }: CreatePostProps) {
                 postType === t.value ? t.active : t.idle
               }`}
             >
-              <span className="text-xl">{t.emoji}</span>
               <span className="leading-tight">{t.label}</span>
               <span className={`text-[10px] font-medium leading-tight ${postType === t.value ? 'opacity-80' : 'opacity-50'}`}>
                 {t.desc}
@@ -141,9 +137,11 @@ function CreatePost({ onSuccess }: CreatePostProps) {
         ) : (
           <label
             htmlFor="cp-file-upload"
-            className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-warm-gray rounded-2xl cursor-pointer hover:border-uci-gold hover:bg-uci-gold/10 transition-all"
+            className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-warm-gray rounded-2xl cursor-pointer hover:border-uci-gold hover:bg-uci-gold/10 transition-all gap-2"
           >
-            <span className="text-3xl mb-1">📎</span>
+            <svg className="w-6 h-6 text-espresso/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
             <span className="text-sm font-semibold text-espresso/50">Click to add sticker images</span>
             <input
               id="cp-file-upload"
