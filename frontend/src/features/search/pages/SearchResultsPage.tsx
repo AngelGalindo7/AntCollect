@@ -95,7 +95,7 @@ const SearchResultsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-gray-600">Searching...</div>
+        <div className="text-lg text-espresso/60">Searching...</div>
       </div>
     );
   }
@@ -113,7 +113,7 @@ const SearchResultsPage: React.FC = () => {
       {/* Search Header */}
       <div className="bg-soft-white border-b border-warm-gray px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-black text-espresso uppercase tracking-tighter">Search Results</h1>
+          <h1 className="text-3xl font-medium text-espresso uppercase tracking-tighter">Search Results</h1>
           <p className="text-espresso/60 mt-1 font-medium italic">
             {query ? `Showing results for "${query}"` : "Enter a search query in the header"}
           </p>
@@ -122,17 +122,17 @@ const SearchResultsPage: React.FC = () => {
 
       {/* Matching Users Section */}
       {results && results.users.length > 0 && (
-        <div className="bg-white border-b border-gray-200 px-4 py-6">
+        <div className="bg-soft-white border-b border-warm-gray px-4 py-6">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">People</h2>
+            <h2 className="text-xl font-medium text-espresso mb-4">People</h2>
             <div className="space-y-3">
               {results.users.map((user) => (
                 <div
                   key={user.id}
                   onClick={() => handleUserClick(user.username)}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-warm-cream cursor-pointer transition-colors"
                 >
-                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                  <div className="w-12 h-12 rounded-full bg-warm-cream flex items-center justify-center overflow-hidden">
                     {user.avatar_path ? (
                       <img
                         src={user.avatar_path}
@@ -140,15 +140,15 @@ const SearchResultsPage: React.FC = () => {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="text-gray-500 text-lg font-semibold">
+                      <span className="text-espresso/50 text-lg font-medium">
                         {user.username.charAt(0).toUpperCase()}
                       </span>
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{user.username}</p>
+                    <p className="font-medium text-espresso">{user.username}</p>
                     {user.post_count !== undefined && (
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-espresso/50">
                         {user.post_count} {user.post_count === 1 ? "post" : "posts"}
                       </p>
                     )}
@@ -163,9 +163,9 @@ const SearchResultsPage: React.FC = () => {
       {/* Posts Grid Layout */}
       {results && results.posts.length > 0 ? (
         <>
-          <div className="bg-white border-b border-gray-200 px-4 py-4">
+          <div className="bg-soft-white border-b border-warm-gray px-4 py-4">
             <div className="max-w-6xl mx-auto">
-              <h2 className="text-xl font-semibold text-gray-900">Posts</h2>
+              <h2 className="text-xl font-medium text-espresso">Posts</h2>
             </div>
           </div>
           <PostGridLayout 
@@ -176,7 +176,7 @@ const SearchResultsPage: React.FC = () => {
         </>
       ) : (
         results && results.users.length === 0 && (
-          <div className="flex justify-center py-10 text-gray-500">
+          <div className="flex justify-center py-10 text-espresso/50">
             No results found for "{query}".
           </div>
         )
