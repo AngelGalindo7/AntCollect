@@ -19,13 +19,14 @@ const Layout: React.FC = () => {
   const activeConversationId = chatMatch?.params.conversationId ?? null;
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <Header />
-      
-      <div className="flex flex-1 overflow-hidden">
-        <SideBar unreadCount={unreadCount} isChatRoute={isChatRoute} />
+    <div className="flex h-screen overflow-hidden">
+      <SideBar unreadCount={unreadCount} isChatRoute={isChatRoute} />
 
-        {/* Conversation panel — pinned inline on chat routes, hidden otherwise */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header />
+        
+        <div className="flex flex-1 overflow-hidden">
+          {/* Conversation panel — pinned inline on chat routes, hidden otherwise */}
         {isChatRoute && (
           <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full shrink-0">
             <div className="p-4 border-b border-gray-100 shrink-0">
@@ -56,8 +57,9 @@ const Layout: React.FC = () => {
           </main>
         )}
       </div>
+    </div>
 
-      {isCreateMenuOpen && (
+    {isCreateMenuOpen && (
         <CreateMenu
           onSelectPost={openCreatePostModal}
           onSelectFolder={() => { closeCreateMenu(); navigate('/create-folder'); }}
