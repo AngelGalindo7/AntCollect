@@ -197,8 +197,8 @@ const UserProfile: React.FC = () => {
   return (
     <div className="w-full">
       {/* ── Section 1: Profile header bar ── */}
-      <div className="bg-soft-white border-b border-warm-gray">
-        <div className="flex items-start justify-between px-8 py-6 max-w-6xl mx-auto">
+      <div className="pt-2 pb-6">
+        <div className="flex items-start justify-between px-4 max-w-6xl mx-auto">
           {/* Left: avatar + info */}
           <div className="flex items-start gap-6">
             {/* Avatar */}
@@ -252,7 +252,7 @@ const UserProfile: React.FC = () => {
               {/* Stats row */}
               <div className="flex gap-4 mt-4" data-testid="profile-stats">
                 {/* Stickers stat */}
-                <div className="flex flex-col items-center bg-warm-cream rounded-lg px-4 py-2 min-w-18">
+                <div className="flex flex-col items-center bg-soft-white rounded-lg px-4 py-2 min-w-18">
                   <span className="text-xs text-espresso/60 mb-1">Stickers</span>
                   {profile.is_owner && editingStickers ? (
                     <input
@@ -283,7 +283,7 @@ const UserProfile: React.FC = () => {
                 </div>
 
                 {/* Folders stat */}
-                <div className="flex flex-col items-center bg-warm-cream rounded-lg px-4 py-2 min-w-18">
+                <div className="flex flex-col items-center bg-soft-white rounded-lg px-4 py-2 min-w-18">
                   <span className="text-xs text-espresso/60 mb-1">Folders</span>
                   <span className="text-lg font-semibold text-espresso">{folders.length}</span>
                 </div>
@@ -294,8 +294,8 @@ const UserProfile: React.FC = () => {
       </div>
 
       {/* ── Section 2: Tab bar ── */}
-      <div className="bg-soft-white border-b border-warm-gray">
-        <div className="max-w-6xl mx-auto px-8">
+      <div className="border-b border-warm-gray">
+        <div className="max-w-6xl mx-auto px-4">
           <div className="flex gap-6">
             {TABS.map((tab) => (
               <button
