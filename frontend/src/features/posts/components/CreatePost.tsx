@@ -1,117 +1,183 @@
 import React, { useState } from 'react';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 
-const PostType = {
-  LOOKING_FOR: "looking_for",
-  COLLECTION: "collection",
-  TRADING: "trading",
-} as const;
-type PostType = typeof PostType[keyof typeof PostType];
+const POST_TYPES = [
+  {
+    value: 'collection',
+    label: 'Collectible',
+    emoji: '✨',
+    desc: 'Something I own',
+    active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/50',
+    idle: 'bg-warm-cream/80 text-espresso/60 hover:bg-uci-gold/20',
+  },
+  {
+    value: 'trading',
+    label: 'Trading',
+    emoji: '🔄',
+    desc: 'Available to trade',
+    active: 'bg-emerald-500 text-white ring-2 ring-emerald-400/50',
+    idle: 'bg-warm-cream/80 text-espresso/60 hover:bg-emerald-100',
+  },
+  {
+    value: 'looking_for',
+    label: 'Looking For',
+    emoji: '🔍',
+    desc: 'I want this one',
+    active: 'bg-sky-500 text-white ring-2 ring-sky-400/50',
+    idle: 'bg-warm-cream/80 text-espresso/60 hover:bg-sky-100',
+  },
+] as const;
+
+type PostTypeValue = typeof POST_TYPES[number]['value'];
 
 interface CreatePostProps {
   onSuccess?: () => void;
 }
 
 function CreatePost({ onSuccess }: CreatePostProps) {
+  const [caption, setCaption] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [postType, setPostType] = useState<PostTypeValue>('collection');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [caption, setCaption] = useState('');
-    const [files, setFiles] = useState<File[]>([]);
-    const [postType, setPostType] = useState<PostType>(PostType.COLLECTION);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const picked = Array.from(e.target.files);
+    setFiles(picked);
+    setPreviews(picked.map((f) => URL.createObjectURL(f)));
+  };
 
+  const removeFile = (i: number) => {
+    setFiles((prev) => prev.filter((_, idx) => idx !== i));
+    setPreviews((prev) => prev.filter((_, idx) => idx !== i));
+  };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files) {
-        setFiles(Array.from(e.target.files));
-      }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-    
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     const formData = new FormData();
-
     formData.append('caption', caption);
     formData.append('is_published', 'true');
     formData.append('post_type', postType);
-    
-    files.forEach((file) => {
-        formData.append('post_images', file);
-    });
+    files.forEach((file) => formData.append('post_images', file));
 
-    try { 
-        const response = await fetchWithAuth(`${API_BASE}/posts/upload-post`, {
-            method: 'POST',
-            body: formData,
-            credentials: 'include',
-        });
-    
-    const text = await response.text();
-    console.log('Response:', text); // See what you're actually getting
-    
-    setCaption('');
-    setFiles([]);
-    setPostType(PostType.COLLECTION);
-
-    if (onSuccess) {
-      onSuccess();
+    try {
+      await fetchWithAuth(`${API_BASE}/posts/upload-post`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      setCaption('');
+      setFiles([]);
+      setPreviews([]);
+      setPostType('collection');
+      onSuccess?.();
+    } catch (err) {
+      console.error('Upload error:', err);
+    } finally {
+      setIsSubmitting(false);
     }
+  };
 
-    } catch (err) { 
-        console.error('Upload error:', err);
-    }
-};
-
-
-return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-lg p-6 bg-white rounded-lg border border-gray-200">
-  
-
-  <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-700">Post Type</label>
-            <select 
-              value={postType}
-              onChange={(e) => setPostType(e.target.value as PostType)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value={PostType.COLLECTION}>Collection</option>
-              <option value={PostType.LOOKING_FOR}>Looking For</option>
-              <option value={PostType.TRADING}>Trading</option>
-            </select>
-          </div>
-
-  <textarea 
-    placeholder="Write a caption..." 
-    value={caption}
-    onChange={(e) => setCaption(e.target.value)}
-    rows={3}
-    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-  />
-  
-  <div>
-    <input 
-      type="file" 
-      multiple
-      accept="image/*"
-      onChange={handleFileChange}
-      id="file-upload"
-      className="hidden"
-    />
-    <label 
-      htmlFor="file-upload"
-      className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition"
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-5 w-full max-w-lg p-7 rounded-3xl shadow-2xl"
+      style={{ background: '#FDFCF0', fontFamily: "'Quicksand', sans-serif" }}
     >
-      <span className="text-sm text-gray-600">{files.length > 0 ? `${files.length} file(s) selected` : 'Click to upload images'}</span>
-    </label>
-  </div>
-  
-  <button 
-    type="submit"
-    className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
-  >
-    Post
-  </button>
-</form>
-)
+      <div>
+        <h2 className="text-xl font-bold text-espresso">New Post</h2>
+        <p className="text-sm text-espresso/50 mt-0.5">Share a sticker with the community</p>
+      </div>
+
+      {/* Post type selector */}
+      <div>
+        <p className="text-xs font-bold text-espresso/50 uppercase tracking-widest mb-2">What kind of post?</p>
+        <div className="grid grid-cols-3 gap-2">
+          {POST_TYPES.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setPostType(t.value)}
+              className={`flex flex-col items-center gap-1 py-3 px-2 rounded-2xl font-bold text-sm transition-all ${
+                postType === t.value ? t.active : t.idle
+              }`}
+            >
+              <span className="text-xl">{t.emoji}</span>
+              <span className="leading-tight">{t.label}</span>
+              <span className={`text-[10px] font-medium leading-tight ${postType === t.value ? 'opacity-80' : 'opacity-50'}`}>
+                {t.desc}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Image upload */}
+      <div>
+        <p className="text-xs font-bold text-espresso/50 uppercase tracking-widest mb-2">Images</p>
+        {previews.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {previews.map((src, i) => (
+              <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden">
+                <img src={src} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeFile(i)}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-espresso/70 text-white text-xs flex items-center justify-center leading-none hover:bg-brick-red transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            <label className="w-20 h-20 flex items-center justify-center border-2 border-dashed border-warm-gray rounded-xl cursor-pointer hover:border-uci-gold hover:bg-uci-gold/10 transition-all text-espresso/40">
+              <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </label>
+          </div>
+        ) : (
+          <label
+            htmlFor="cp-file-upload"
+            className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-warm-gray rounded-2xl cursor-pointer hover:border-uci-gold hover:bg-uci-gold/10 transition-all"
+          >
+            <span className="text-3xl mb-1">📎</span>
+            <span className="text-sm font-semibold text-espresso/50">Click to add sticker images</span>
+            <input
+              id="cp-file-upload"
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </label>
+        )}
+      </div>
+
+      {/* Caption */}
+      <div>
+        <p className="text-xs font-bold text-espresso/50 uppercase tracking-widest mb-2">Caption</p>
+        <textarea
+          placeholder="What's this sticker all about?"
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          rows={3}
+          className="w-full px-4 py-3 border border-warm-gray rounded-xl focus:ring-2 focus:ring-uci-gold outline-none resize-none bg-white/60 text-espresso placeholder-espresso/30 text-sm"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={isSubmitting || files.length === 0}
+        className="w-full py-3 bg-uci-gold hover:bg-amber-400 text-espresso font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
+      >
+        {isSubmitting ? 'Posting…' : 'Share Post'}
+      </button>
+    </form>
+  );
 }
 
 export default CreatePost;
