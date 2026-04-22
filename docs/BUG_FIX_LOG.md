@@ -4,6 +4,15 @@ Entry heading: `DD/MM/YYYY — fix(scope component): short title`
 Body: 3–6 bullets — cause, fix, downstream risk. No code blocks.
 Scopes: `frontend` · `backend` · `messaging` · `infra` · `docs`
 
+
+---
+
+## 21/04/2026 — fix(backend routers): NameError and type mismatch after adding user roles
+
+- **Cause:** Adding `role` to the authentication payload changed the return type of `authenthicate_access_token` from a `dict` to a `UserSearch` Pydantic model. Several routers (`library.py`, `reports.py`) were either missing the `UserSearch` import or still attempting to access the payload as a dictionary (e.g., `user_payload['sub']`), causing `NameError` and `TypeError` at runtime.
+- **Trigger:** Any authenticated request to the affected endpoints (`/library/upload`, `/reports`) or any attempt to import the `app` (including in tests) after the roles migration.
+- **Fix:** Added missing `UserSearch` imports to `library.py` and `reports.py`. Updated `create_report` to correctly use `current_user.user_id`. Refactored `posts.py` and `users.py` to use consistent `UserSearch` type hints for the authentication dependency.
+- **Risk:** None. The fixes align the routers with the new schema-based authentication return type.
 ---
 
 ## 16/04/2026 — fix(backend routers): CORS headers missing on 500 responses
