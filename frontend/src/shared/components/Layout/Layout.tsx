@@ -17,13 +17,14 @@ const Layout: React.FC = () => {
   const chatMatch = useMatch('/messages/:conversationId');
   const isChatRoute = !!chatMatch;
   const activeConversationId = chatMatch?.params.conversationId ?? null;
+  const isLibraryRoute = !!useMatch('/library');
 
   return (
     <div className="flex h-screen overflow-hidden">
       <SideBar unreadCount={unreadCount} isChatRoute={isChatRoute} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
+        {!isChatRoute && !isLibraryRoute && <Header />}
         
         <div className="flex flex-1 overflow-hidden">
           {/* Conversation panel — pinned inline on chat routes, hidden otherwise */}
