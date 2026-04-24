@@ -202,32 +202,27 @@ const UserProfile: React.FC = () => {
           {/* Left: avatar + info */}
           <div className="flex items-start gap-6">
             {/* Avatar */}
-            <div className="relative shrink-0">
-              <div
-                className={`w-24 h-24 rounded-full overflow-hidden bg-warm-cream flex items-center justify-center${uploading ? " opacity-50" : ""}`}
-              >
-                {profile.avatar_path ? (
-                  <img
-                    src={profile.avatar_path}
-                    alt={profile.username}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="text-3xl font-semibold text-espresso/50 select-none">
-                    {profile.username.charAt(0).toUpperCase()}
+            <div className="shrink-0">
+              {profile.is_owner ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`group relative w-24 h-24 rounded-full overflow-hidden bg-warm-cream flex items-center justify-center${uploading ? " opacity-50" : ""}`}
+                  aria-label="Upload avatar"
+                >
+                  {profile.avatar_path ? (
+                    <img src={profile.avatar_path} alt={profile.username} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-3xl font-semibold text-espresso/50 select-none">
+                      {profile.username.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
                   </span>
-                )}
-              </div>
-
-              {profile.is_owner && (
-                <>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-uci-gold text-espresso flex items-center justify-center text-sm font-bold hover:bg-uci-gold/80"
-                    aria-label="Upload avatar"
-                  >
-                    +
-                  </button>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -235,7 +230,17 @@ const UserProfile: React.FC = () => {
                     className="hidden"
                     onChange={handleAvatarFileChange}
                   />
-                </>
+                </button>
+              ) : (
+                <div className="w-24 h-24 rounded-full overflow-hidden bg-warm-cream flex items-center justify-center">
+                  {profile.avatar_path ? (
+                    <img src={profile.avatar_path} alt={profile.username} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-3xl font-semibold text-espresso/50 select-none">
+                      {profile.username.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
 
@@ -250,10 +255,10 @@ const UserProfile: React.FC = () => {
               ) : null}
 
               {/* Stats row */}
-              <div className="flex gap-4 mt-4" data-testid="profile-stats">
+              <div className="flex gap-6 mt-4" data-testid="profile-stats">
                 {/* Stickers stat */}
-                <div className="flex flex-col items-center bg-soft-white rounded-lg px-4 py-2 min-w-18">
-                  <span className="text-xs text-espresso/60 mb-1">Stickers</span>
+                <div className="flex flex-col items-center">
+                  <span className="text-xs text-espresso/60 mb-0.5">Stickers</span>
                   {profile.is_owner && editingStickers ? (
                     <input
                       type="number"
@@ -283,8 +288,8 @@ const UserProfile: React.FC = () => {
                 </div>
 
                 {/* Folders stat */}
-                <div className="flex flex-col items-center bg-soft-white rounded-lg px-4 py-2 min-w-18">
-                  <span className="text-xs text-espresso/60 mb-1">Folders</span>
+                <div className="flex flex-col items-center">
+                  <span className="text-xs text-espresso/60 mb-0.5">Folders</span>
                   <span className="text-lg font-semibold text-espresso">{folders.length}</span>
                 </div>
               </div>
@@ -315,15 +320,17 @@ const UserProfile: React.FC = () => {
       </div>
 
       {/* ── Section 3: Mixed grid (folders first, then filtered posts) ── */}
-      <PostGridLayout
-        items={gridItems}
-        onPostClick={handlePostClick}
-        onLikeToggle={handleLikeToggle}
-        onPostDelete={handlePostDelete}
-        onFolderClick={handleFolderClick}
-        folderType={tabFolderType}
-        postOwnerId={profile.user_id}
-      />
+      <div className="mt-6">
+        <PostGridLayout
+          items={gridItems}
+          onPostClick={handlePostClick}
+          onLikeToggle={handleLikeToggle}
+          onPostDelete={handlePostDelete}
+          onFolderClick={handleFolderClick}
+          folderType={tabFolderType}
+          postOwnerId={profile.user_id}
+        />
+      </div>
 
       {selectedPost && (
         <PostDetailModal
