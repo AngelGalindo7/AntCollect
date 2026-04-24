@@ -70,7 +70,7 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
       {items.map((item) => {
         const key = item.kind === 'folder' ? `folder-${item.data.id}` : `post-${item.data.post_id}`;
         return (
-          <div key={key} className="break-inside-avoid mb-12">
+          <div key={key} className="break-inside-avoid mb-6">
             {renderItem(item)}
           </div>
         );
