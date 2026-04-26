@@ -38,18 +38,27 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
   // Only allow deletion if the callback is provided (intended for Profile page)
   const canDelete = isOwn && !!onDeleteSuccess;
 
+  const images = post.images ?? [];
+  const [activeIdx, setActiveIdx] = useState(0);
+  const currentImg = images[activeIdx];
+  const canNav = images.length > 1;
+
   // Scroll lock
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // Escape to close
+  // Escape to close, arrow keys to navigate
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') setActiveIdx(i => Math.max(0, i - 1));
+      if (e.key === 'ArrowRight') setActiveIdx(i => Math.min(images.length - 1, i + 1));
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [onClose, images.length]);
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
@@ -75,8 +84,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
     }
   };
 
-  const imageData = post.images?.[0];
-  const imageSrc = imageData?.paths?.original ?? post.image_paths[0] ?? null;
+  const imageSrc = currentImg?.paths?.original ?? post.image_paths[activeIdx] ?? null;
 
   const modalRoot = document.getElementById('modal-root');
   if (!modalRoot) return null;
@@ -138,8 +146,8 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
           <PostImageFrame
             src={imageSrc}
             alt={post.caption || `Post ${post.post_id}`}
-            originalWidth={imageData?.original_width}
-            originalHeight={imageData?.original_height}
+            originalWidth={currentImg?.original_width}
+            originalHeight={currentImg?.original_height}
           >
             {canTrade && (
               <TradeEntryButton
@@ -162,7 +170,45 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </button>
             )}
+
+            {/* Carousel navigation */}
+            {canNav && activeIdx > 0 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setActiveIdx(i => i - 1); }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/60 text-white rounded-full p-2 transition-colors"
+                aria-label="Previous image"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+            {canNav && activeIdx < images.length - 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setActiveIdx(i => i + 1); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/60 text-white rounded-full p-2 transition-colors"
+                aria-label="Next image"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
           </PostImageFrame>
+
+          {/* Dot indicators */}
+          {canNav && (
+            <div className="flex gap-1.5 justify-center py-2 bg-warm-cream/60">
+              {images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveIdx(i)}
+                  className={`w-2 h-2 rounded-full transition-colors ${i === activeIdx ? 'bg-uci-gold' : 'bg-warm-gray/50 hover:bg-warm-gray'}`}
+                  aria-label={`Image ${i + 1}`}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Caption bar */}
           <div className="bg-warm-cream/60 px-6 py-4">
