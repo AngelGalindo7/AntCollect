@@ -116,6 +116,7 @@ class UserProfileResponse(BaseModel):
     username: str
     bio: Optional[str] = None
     avatar_path: Optional[str] = None
+    background_path: Optional[str] = None
     sticker_count: int
     is_owner: bool
     posts: List[PostBase]
@@ -142,6 +143,7 @@ class UserMeResponse(BaseModel):
     email: str
     bio: Optional[str] = None
     avatar_path: Optional[str] = None
+    background_path: Optional[str] = None
 
 class UpdateProfileRequest(BaseModel):
     username: Optional[str] = Field(default=None, min_length=3, max_length=50)
@@ -150,6 +152,9 @@ class UpdateProfileRequest(BaseModel):
 
 class AvatarUpdateResponse(BaseModel):
     avatar_path: str
+
+class BackgroundUpdateResponse(BaseModel):
+    background_path: str
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
