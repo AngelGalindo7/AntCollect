@@ -215,7 +215,7 @@ const UserProfile: React.FC = () => {
   return (
     <div className="w-full">
       {/* ── Section 1: Profile header with background ── */}
-      <div className="relative w-full overflow-hidden min-h-75">
+      <div className="relative w-full overflow-hidden">
         {/* Background layer */}
         {profile.background_path ? (
           <img
