@@ -126,7 +126,7 @@ const Search: React.FC<SearchProps> = ({ isHeaderSearch = false, className = "" 
         </div>
         <input
           type="text"
-          placeholder="Search stickers, users, posts..."
+          placeholder="Search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
