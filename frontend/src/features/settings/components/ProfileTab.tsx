@@ -8,6 +8,7 @@ interface UserMe {
   email: string;
   bio: string | null;
   avatar_path: string | null;
+  background_path: string | null;
 }
 
 function fetchMe(): Promise<UserMe> {
@@ -20,6 +21,7 @@ function fetchMe(): Promise<UserMe> {
 export default function ProfileTab() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bgFileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: user, isLoading } = useQuery({ queryKey: ['me'], queryFn: fetchMe });
 
@@ -75,6 +77,20 @@ export default function ProfileTab() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['me'] }),
   });
 
+  const backgroundMutation = useMutation({
+    mutationFn: (file: File) => {
+      const form = new FormData();
+      form.append('file', file);
+      return fetchWithAuth(`${API_BASE}/users/me/background`, { method: 'POST', body: form }).then(
+        async (r) => {
+          if (!r.ok) throw new Error('Background upload failed');
+          return r.json();
+        }
+      );
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['me'] }),
+  });
+
   if (isLoading) return <p className="text-sm text-gray-500">Loading…</p>;
   if (!user) return null;
 
@@ -110,6 +126,37 @@ export default function ProfileTab() {
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) avatarMutation.mutate(file);
+            e.target.value = '';
+          }}
+        />
+      </div>
+
+      {/* Background image */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Profile Background</label>
+        <div className="relative w-full h-28 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+          {user.background_path ? (
+            <img src={user.background_path} alt="background" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
+              No background set
+            </div>
+          )}
+          <button
+            onClick={() => bgFileInputRef.current?.click()}
+            className="absolute bottom-2 right-2 bg-white/90 hover:bg-white text-sm text-gray-700 font-medium px-3 py-1 rounded-md border border-gray-200 transition-colors"
+          >
+            {backgroundMutation.isPending ? 'Uploading…' : user.background_path ? 'Change' : 'Upload'}
+          </button>
+        </div>
+        <input
+          ref={bgFileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) backgroundMutation.mutate(file);
             e.target.value = '';
           }}
         />
