@@ -7,6 +7,7 @@ from PIL import Image
 from typing import Dict
 
 from .s3 import upload_image_bytes, delete_s3_object, s3_key_from_url
+from .image_processing import handle_transparent_images, strip_metadata
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
@@ -58,18 +59,6 @@ def validate_image(file: UploadFile):
         raise HTTPException(400, "Invalid or corrupted image file")
 
 
-def handle_transparent_images(image):
-    if image.mode in ('RGBA', 'LA', 'P'):
-        background = Image.new('RGB', image.size, (255, 255, 255))
-        if image.mode != 'RGBA':
-            image = image.convert('RGBA')
-        background.paste(image, mask=image.split()[-1])
-        image = background
-    elif image.mode != 'RGB':
-        image = image.convert('RGB')
-    return image
-
-
 def process_and_save_image(file: UploadFile, user_id: int, folder_prefix: str = "posts") -> Dict:
     check_file_size(file)
     validate_image(file)
@@ -83,6 +72,7 @@ def process_and_save_image(file: UploadFile, user_id: int, folder_prefix: str = 
         image = Image.open(io.BytesIO(contents))
         original_width, original_height = image.size
         image = handle_transparent_images(image)
+        image = strip_metadata(image)
 
         # original
         buf = io.BytesIO()
