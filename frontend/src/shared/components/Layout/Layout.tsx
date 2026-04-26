@@ -20,13 +20,14 @@ const Layout: React.FC = () => {
   const isLibraryRoute = !!useMatch('/library');
   const isSettingsRoute = !!useMatch('/settings');
   const isCreateFolderRoute = !!useMatch('/create-folder');
+  const isProfileRoute = !!useMatch('/:username');
 
   return (
     <div className="flex h-screen overflow-hidden">
       <SideBar unreadCount={unreadCount} isChatRoute={isChatRoute} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {!isChatRoute && !isLibraryRoute && !isSettingsRoute && !isCreateFolderRoute && <Header />}
+        {!isChatRoute && !isLibraryRoute && !isSettingsRoute && !isCreateFolderRoute && !isProfileRoute && <Header />}
         
         <div className="flex flex-1 overflow-hidden">
           {/* Conversation panel — pinned inline on chat routes, hidden otherwise */}
