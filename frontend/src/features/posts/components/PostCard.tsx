@@ -84,6 +84,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
       className="relative cursor-pointer group bg-soft-white rounded-sticker overflow-hidden shadow-card transition-all duration-300 hover:scale-[1.02]"
       onClick={handleClick}
     >
+      {post.image_paths.length > 1 && (
+        <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-black/50 text-white text-[10px] font-medium px-1.5 py-0.5 rounded-full">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
+          {post.image_paths.length}
+        </div>
+      )}
+
       {imagePath ? (
         <img
           src={imagePath}
