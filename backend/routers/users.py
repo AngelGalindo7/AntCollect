@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, ChangePasswordRequest
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, BackgroundUpdateResponse, ChangePasswordRequest
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token
 from ..utils.files import process_and_save_image, delete_file
 from typing import List
@@ -83,6 +83,31 @@ def update_avatar(
         delete_file(old_avatar_path)
 
     return AvatarUpdateResponse(avatar_path=new_avatar_path)
+
+
+@router.post("/me/background", response_model=BackgroundUpdateResponse)
+@limiter.limit("5/hour", key_func=get_user_or_ip_key)
+def update_background(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token)
+):
+    db_user = db.query(User).filter(User.id == user.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    old_background_path = db_user.background_path
+    result = process_and_save_image(file, user.user_id)
+    new_background_path = result["paths"]["original"]
+
+    db_user.background_path = new_background_path
+    db.commit()
+
+    if old_background_path and old_background_path != new_background_path:
+        delete_file(old_background_path)
+
+    return BackgroundUpdateResponse(background_path=new_background_path)
 
 
 @router.post("/me/password")
@@ -415,6 +440,7 @@ def retrieve_user(
         username=target_user.username,
         bio=target_user.bio,
         avatar_path=target_user.avatar_path,
+        background_path=target_user.background_path,
         sticker_count=target_user.sticker_count,
         is_owner=is_owner,
         posts=posts,
