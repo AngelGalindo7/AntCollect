@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet, useNavigate, useMatch } from 'react-router-dom';
 import { SideBar } from './SideBar';
 import Header from './Header';
+import Search from '@/features/search/components/Search';
 import { useUIStore } from '@/shared/store/useUIStore';
 import CreatePost from '@/features/posts/components/CreatePost';
 import CreateMenu from '@/features/create/components/CreateMenu';
@@ -28,6 +29,13 @@ const Layout: React.FC = () => {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {!isChatRoute && !isLibraryRoute && !isSettingsRoute && !isCreateFolderRoute && !isProfileRoute && <Header />}
+        {isProfileRoute && (
+          <div className="h-10 bg-warm-cream flex items-center shrink-0">
+            <div className="w-56 h-full">
+              <Search isHeaderSearch />
+            </div>
+          </div>
+        )}
         
         <div className="flex flex-1 overflow-hidden">
           {/* Conversation panel — pinned inline on chat routes, hidden otherwise */}
