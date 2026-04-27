@@ -17,6 +17,7 @@ from backend.models.folder import Folder, FolderPost
 from backend.models.trade_request import TradeRequest
 from backend.models.sticker_library import StickerLibrary, StickerLibraryImage
 from backend.models.report import Report
+from backend.models.canvas import UserCanvas
 
 __all__ = [
     "Base",
@@ -35,4 +36,5 @@ __all__ = [
     "StickerLibrary",
     "StickerLibraryImage",
     "Report",
+    "UserCanvas",
 ]
