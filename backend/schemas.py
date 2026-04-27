@@ -161,6 +161,20 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+class CanvasSaveRequest(BaseModel):
+    canvas_json: dict
+
+class CanvasResponse(BaseModel):
+    canvas_json: Optional[dict] = None
+    preview_path: Optional[str] = None
+
+class CanvasPreviewResponse(BaseModel):
+    preview_path: str
+
+class CanvasAssetUploadResponse(BaseModel):
+    asset_url: str
+
+
 class FolderCreate(BaseModel):
     name: str
     description: Optional[str] = None
