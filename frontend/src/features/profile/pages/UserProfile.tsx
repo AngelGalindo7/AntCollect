@@ -1,12 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
-import { CanvasPreview } from "@/features/canvas/components/CanvasPreview";
-import { CanvasEditor } from "@/features/canvas/components/CanvasEditor";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchWithAuth, API_BASE } from "@/shared/api/api";
-import { getMyCanvas, getPublicCanvasPreview } from "@/features/canvas/api/canvasApi";
-import type { CanvasState } from "@/features/canvas/types/canvas";
 import { useParams, useNavigate } from "react-router-dom";
 
 type TabValue = "collection" | "looking_for" | "trading";
@@ -46,16 +42,11 @@ const UserProfile: React.FC = () => {
   const [editingStickers, setEditingStickers] = useState(false);
   const [stickerDraft, setStickerDraft] = useState<number>(0);
 
-  // Canvas state
-  const [canvasPreview, setCanvasPreview] = useState<string | null>(null);
-  const [isCanvasEditorOpen, setIsCanvasEditorOpen] = useState(false);
-  const [canvasInitialState, setCanvasInitialState] = useState<CanvasState | null>(null);
-
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
       try {
-        const [profileRes, foldersRes, previewPath] = await Promise.all([
+        const [profileRes, foldersRes] = await Promise.all([
           fetchWithAuth(`${API_BASE}/users/get_user_`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -65,9 +56,7 @@ const UserProfile: React.FC = () => {
           fetchWithAuth(`${API_BASE}/folders/user/${username}`, {
             credentials: "include",
           }),
-          getPublicCanvasPreview(String(username)),
         ]);
-        setCanvasPreview(previewPath);
 
         if (!profileRes.ok) throw new Error(`Failed to load profile: ${profileRes.status}`);
 
@@ -171,16 +160,6 @@ const UserProfile: React.FC = () => {
       console.error(err);
       setProfile((p) => p ? { ...p, sticker_count: previous } : p);
     }
-  };
-
-  const handleOpenEditor = async () => {
-    try {
-      const data = await getMyCanvas();
-      setCanvasInitialState(data.canvas_json);
-    } catch {
-      setCanvasInitialState(null);
-    }
-    setIsCanvasEditorOpen(true);
   };
 
   const handlePostClick = (post: Post) => setSelectedPost(post);
@@ -369,13 +348,6 @@ const UserProfile: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Section 1.5: Canvas showcase strip ── */}
-      <CanvasPreview
-        previewPath={canvasPreview}
-        isOwner={profile.is_owner}
-        onEditClick={handleOpenEditor}
-      />
-
       {/* ── Section 2: Tab bar ── */}
       <div className="border-b border-warm-gray">
         <div className="max-w-6xl mx-auto px-4">
@@ -409,15 +381,6 @@ const UserProfile: React.FC = () => {
           postOwnerId={profile.user_id}
         />
       </div>
-
-      {isCanvasEditorOpen && (
-        <CanvasEditor
-          initialState={canvasInitialState}
-          posts={profile.posts}
-          onClose={() => setIsCanvasEditorOpen(false)}
-          onSaveSuccess={(path) => setCanvasPreview(path)}
-        />
-      )}
 
       {selectedPost && (
         <PostDetailModal
