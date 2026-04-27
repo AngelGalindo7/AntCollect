@@ -329,37 +329,41 @@ const UserProfile: React.FC = () => {
               </p>
             ) : null}
 
-            {/* Stats — four independent pills */}
-            <div className="flex items-center gap-1.5 flex-wrap" data-testid="profile-stats">
-              <span className="bg-white/60 rounded-md px-2 py-0.5 text-xs text-espresso/60">Stickers</span>
-              {profile.is_owner && editingStickers ? (
-                <input
-                  type="number"
-                  min={0}
-                  value={stickerDraft}
-                  onChange={(e) => setStickerDraft(Number(e.target.value))}
-                  onBlur={() => handleStickerCommit(stickerDraft)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleStickerCommit(stickerDraft);
-                    if (e.key === "Escape") setEditingStickers(false);
-                  }}
-                  autoFocus
-                  className="bg-white/60 rounded-md px-2 py-0.5 w-16 text-center text-sm font-semibold text-espresso border-b border-uci-gold outline-none"
-                />
-              ) : (
-                <span
-                  className={`bg-white/60 rounded-md px-2 py-0.5 text-sm font-semibold text-espresso${profile.is_owner ? " cursor-pointer hover:text-uci-gold" : ""}`}
-                  onClick={() => {
-                    if (!profile.is_owner) return;
-                    setStickerDraft(profile.sticker_count);
-                    setEditingStickers(true);
-                  }}
-                >
-                  {profile.sticker_count}
-                </span>
-              )}
-              <span className="bg-white/60 rounded-md px-2 py-0.5 text-xs text-espresso/60">Folders</span>
-              <span className="bg-white/60 rounded-md px-2 py-0.5 text-sm font-semibold text-espresso">{folders.length}</span>
+            {/* Stats — each stat in its own flex-col pill */}
+            <div className="flex items-center gap-3 flex-wrap" data-testid="profile-stats">
+              <div className="flex flex-col items-center bg-white/60 rounded-md px-2 py-0.5">
+                <span className="text-xs text-espresso/60">Stickers</span>
+                {profile.is_owner && editingStickers ? (
+                  <input
+                    type="number"
+                    min={0}
+                    value={stickerDraft}
+                    onChange={(e) => setStickerDraft(Number(e.target.value))}
+                    onBlur={() => handleStickerCommit(stickerDraft)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleStickerCommit(stickerDraft);
+                      if (e.key === "Escape") setEditingStickers(false);
+                    }}
+                    autoFocus
+                    className="w-16 text-center text-sm font-semibold text-espresso border-b border-uci-gold outline-none bg-transparent"
+                  />
+                ) : (
+                  <span
+                    className={`text-sm font-semibold text-espresso${profile.is_owner ? " cursor-pointer hover:text-uci-gold" : ""}`}
+                    onClick={() => {
+                      if (!profile.is_owner) return;
+                      setStickerDraft(profile.sticker_count);
+                      setEditingStickers(true);
+                    }}
+                  >
+                    {profile.sticker_count}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col items-center bg-white/60 rounded-md px-2 py-0.5">
+                <span className="text-xs text-espresso/60">Folders</span>
+                <span className="text-sm font-semibold text-espresso">{folders.length}</span>
+              </div>
             </div>
           </div>
         </div>
