@@ -11,7 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from .routers import auth, users, posts, folders, trade_requests, library, reports
+from .routers import auth, users, posts, folders, trade_requests, library, reports, canvas
 from .utils.logging_config import configure_logging, request_id_var
 from .utils.rate_limit import get_real_ip, limiter
 
@@ -159,6 +159,7 @@ app.include_router(folders.router)
 app.include_router(trade_requests.router)
 app.include_router(library.router)
 app.include_router(reports.router)
+app.include_router(canvas.router)
 
 
 @app.get("/health")
