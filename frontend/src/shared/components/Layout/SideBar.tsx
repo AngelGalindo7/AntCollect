@@ -154,8 +154,8 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
 
   return (
     <>
-      <aside className="relative w-20 bg-campus-blue flex flex-col h-full z-20 shadow-2xl">
-        <nav className="flex-1 p-4 flex flex-col gap-4">
+      <aside className="relative w-14 bg-campus-blue flex flex-col h-full z-20 shadow-2xl">
+        <nav className="flex-1 p-2 flex flex-col gap-2">
 
           <NavLink to="/" className={getNavLinkClass}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,7 +238,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
       {/* Messages slide-out panel — only shown on non-chat routes */}
       {!isChatRoute && (
         <div
-          className={`absolute left-20 top-0 h-full bg-white border-r border-gray-200 transition-all duration-200 overflow-hidden z-10 ${messagesOpen ? 'w-80' : 'w-0'
+          className={`absolute left-14 top-0 h-full bg-white border-r border-gray-200 transition-all duration-200 overflow-hidden z-10 ${messagesOpen ? 'w-80' : 'w-0'
             }`}
         >
           <div className="w-80 h-full flex flex-col">
@@ -259,7 +259,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
 
       {/* Trade requests slide-out panel */}
       <div
-        className={`absolute left-20 top-0 h-full bg-white border-r border-gray-200 transition-all duration-200 overflow-hidden z-10 ${tradeRequestsOpen ? 'w-80' : 'w-0'
+        className={`absolute left-14 top-0 h-full bg-white border-r border-gray-200 transition-all duration-200 overflow-hidden z-10 ${tradeRequestsOpen ? 'w-80' : 'w-0'
           }`}
       >
         <div className="w-80 h-full flex flex-col">
