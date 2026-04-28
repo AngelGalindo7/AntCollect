@@ -32,8 +32,11 @@ _rembg_session = None
 def _get_rembg_session():
     global _rembg_session
     if _rembg_session is None:
-        from rembg import new_session
-        _rembg_session = new_session("u2net_lite")
+        try:
+            from rembg import new_session
+            _rembg_session = new_session("u2net_lite")
+        except BaseException as exc:
+            raise RuntimeError("rembg unavailable") from exc
     return _rembg_session
 
 
@@ -143,7 +146,7 @@ def remove_image_background(
     try:
         from rembg import remove as rembg_remove
         output_bytes = rembg_remove(image_bytes, session=_get_rembg_session())
-    except Exception:
+    except BaseException:
         raise HTTPException(500, "Background removal failed")
 
     key = f"canvas_assets/{user.user_id}/{uuid.uuid4()}.png"
