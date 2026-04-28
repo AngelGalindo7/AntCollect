@@ -1,15 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
+import { CanvasPreview } from "@/features/canvas/components/CanvasPreview";
+import { InlineCanvasEditor } from "@/features/canvas/components/InlineCanvasEditor";
+import { getPublicCanvasPreview } from "@/features/canvas/api/canvasApi";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useParams, useNavigate } from "react-router-dom";
 
-type TabValue = "collection" | "looking_for" | "trading";
+type TabValue = "showcase" | "collection" | "looking_for" | "trading";
 
 const TABS: { label: string; value: TabValue }[] = [
-  { label: "Collection", value: "collection" },
-  { label: "Looking For", value: "looking_for" },
+  { label: "Showcase",     value: "showcase" },
+  { label: "Collection",   value: "collection" },
+  { label: "Looking For",  value: "looking_for" },
   { label: "Trading Away", value: "trading" },
 ];
 
@@ -26,9 +30,13 @@ const UserProfile: React.FC = () => {
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState<TabValue>("collection");
+  const [activeTab, setActiveTab] = useState<TabValue>("showcase");
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+
+  // Canvas showcase state
+  const [canvasPreviewPath, setCanvasPreviewPath] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Avatar upload state
   const [uploading, setUploading] = useState(false);
@@ -82,6 +90,10 @@ const UserProfile: React.FC = () => {
           const folderData: Folder[] = await foldersRes.json();
           setFolders(folderData);
         }
+
+        // Fetch canvas preview (public endpoint — no auth needed)
+        const previewPath = await getPublicCanvasPreview(String(username)).catch(() => null);
+        setCanvasPreviewPath(previewPath);
       } catch (err) {
         console.error(err);
       } finally {
@@ -91,6 +103,12 @@ const UserProfile: React.FC = () => {
 
     fetchAll();
   }, [username, refreshKey]);
+
+  // Reset to showcase tab when navigating to a different profile
+  useEffect(() => {
+    setActiveTab("showcase");
+    setIsEditing(false);
+  }, [username]);
 
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -188,7 +206,7 @@ const UserProfile: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-espresso/60">Loading...</div>
+        <div className="text-lg text-espresso/60">Loading…</div>
       </div>
     );
   }
@@ -201,22 +219,34 @@ const UserProfile: React.FC = () => {
     );
   }
 
+  // ── Canvas edit mode: takes over the full page ──
+  if (isEditing) {
+    return (
+      <InlineCanvasEditor
+        username={profile.username}
+        avatarPath={profile.avatar_path}
+        posts={profile.posts}
+        onClose={() => setIsEditing(false)}
+        onSaveSuccess={(path) => {
+          setCanvasPreviewPath(path);
+          setIsEditing(false);
+        }}
+      />
+    );
+  }
+
+  const tabFolderType: FolderType = activeTab !== "showcase" ? (activeTab as FolderType) : "collection";
   const filteredPosts = profile.posts.filter((p) => p.type === activeTab);
   const filteredFolders = folders.filter((f) => f.folder_type === activeTab);
-
   const gridItems: GridItem[] = [
-    ...filteredFolders.map((f): GridItem => ({ kind: 'folder', data: f })),
-    ...filteredPosts.map((p): GridItem => ({ kind: 'post', data: p })),
+    ...filteredFolders.map((f): GridItem => ({ kind: "folder", data: f })),
+    ...filteredPosts.map((p): GridItem => ({ kind: "post", data: p })),
   ];
-
-  // activeTab values match FolderType exactly: 'collection' | 'looking_for' | 'trading'
-  const tabFolderType: FolderType = activeTab;
 
   return (
     <div className="w-full">
       {/* ── Section 1: Profile header with background ── */}
       <div className="relative w-full overflow-hidden">
-        {/* Background layer */}
         {profile.background_path ? (
           <img
             src={profile.background_path}
@@ -227,7 +257,6 @@ const UserProfile: React.FC = () => {
           <div className="absolute inset-0 bg-warm-gray/20" />
         )}
 
-        {/* Background upload button — owner only, top-right */}
         {profile.is_owner && (
           <>
             <button
@@ -248,9 +277,7 @@ const UserProfile: React.FC = () => {
           </>
         )}
 
-        {/* Profile content over background */}
         <div className="relative z-10 flex items-start gap-6 px-4 py-8 max-w-6xl mx-auto">
-          {/* Avatar with white ring */}
           <div className="shrink-0">
             {profile.is_owner ? (
               <button
@@ -290,14 +317,11 @@ const UserProfile: React.FC = () => {
             )}
           </div>
 
-          {/* Info: each element gets its own white pill */}
           <div className="flex flex-col gap-2 pt-1">
-            {/* Username pill */}
             <h1 className="bg-white/60 rounded-md px-2 py-0.5 w-fit text-2xl font-bold text-espresso">
               {profile.username}
             </h1>
 
-            {/* Bio pill */}
             {profile.bio ? (
               <p className="bg-white/60 rounded-md px-2 py-0.5 w-fit text-sm text-espresso/70">
                 {profile.bio}
@@ -308,7 +332,6 @@ const UserProfile: React.FC = () => {
               </p>
             ) : null}
 
-            {/* Stats — each stat in its own flex-col pill */}
             <div className="flex items-center gap-3 flex-wrap" data-testid="profile-stats">
               <div className="flex flex-col items-center bg-white/60 rounded-md px-2 py-0.5">
                 <span className="text-xs text-espresso/60">Stickers</span>
@@ -369,18 +392,28 @@ const UserProfile: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Section 3: Mixed grid (folders first, then filtered posts) ── */}
-      <div className="mt-6">
-        <PostGridLayout
-          items={gridItems}
-          onPostClick={handlePostClick}
-          onLikeToggle={handleLikeToggle}
-          onPostDelete={handlePostDelete}
-          onFolderClick={handleFolderClick}
-          folderType={tabFolderType}
-          postOwnerId={profile.user_id}
-        />
-      </div>
+      {/* ── Section 3: Tab content ── */}
+      {activeTab === "showcase" ? (
+        <div className="py-6">
+          <CanvasPreview
+            previewPath={canvasPreviewPath}
+            isOwner={profile.is_owner}
+            onEditClick={() => setIsEditing(true)}
+          />
+        </div>
+      ) : (
+        <div className="mt-6">
+          <PostGridLayout
+            items={gridItems}
+            onPostClick={handlePostClick}
+            onLikeToggle={handleLikeToggle}
+            onPostDelete={handlePostDelete}
+            onFolderClick={handleFolderClick}
+            folderType={tabFolderType}
+            postOwnerId={profile.user_id}
+          />
+        </div>
+      )}
 
       {selectedPost && (
         <PostDetailModal
