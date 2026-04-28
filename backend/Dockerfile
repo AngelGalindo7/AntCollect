@@ -12,6 +12,10 @@ WORKDIR /app
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download the u2net_lite model so the first remove-bg request doesn't
+# pay the internet-download penalty at runtime (would cause a 504 gateway timeout).
+RUN python -c "from rembg import new_session; new_session('u2netp')"
+
 # Copy the rest of the backend code
 COPY backend/ ./backend/
 COPY alembic/ ./alembic/
