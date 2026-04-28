@@ -174,6 +174,12 @@ class CanvasPreviewResponse(BaseModel):
 class CanvasAssetUploadResponse(BaseModel):
     asset_url: str
 
+class RemoveBgRequest(BaseModel):
+    image_url: str
+
+class RemoveBgResponse(BaseModel):
+    processed_url: str
+
 
 class FolderCreate(BaseModel):
     name: str

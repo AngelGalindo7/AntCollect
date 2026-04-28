@@ -1,5 +1,6 @@
 import uuid
 import logging
+import urllib.request
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from sqlalchemy.orm import Session
@@ -9,7 +10,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from backend.database import get_db
 from backend.models import User
 from backend.models.canvas import UserCanvas
-from backend.schemas import CanvasSaveRequest, CanvasResponse, CanvasPreviewResponse, CanvasAssetUploadResponse, UserSearch
+from backend.schemas import CanvasSaveRequest, CanvasResponse, CanvasPreviewResponse, CanvasAssetUploadResponse, RemoveBgRequest, RemoveBgResponse, UserSearch
 from backend.utils.auth import authenthicate_access_token
 from backend.utils.files import check_file_size, validate_image
 from backend.utils.s3 import upload_image_bytes
@@ -112,6 +113,33 @@ def upload_canvas_asset(
     asset_url = upload_image_bytes(key, contents, file.content_type or "image/jpeg")
 
     return CanvasAssetUploadResponse(asset_url=asset_url)
+
+
+@router.post("/me/remove-bg", response_model=RemoveBgResponse)
+@limiter.limit("10/hour", key_func=get_user_or_ip_key)
+def remove_image_background(
+    request: Request,
+    body: RemoveBgRequest,
+    user: UserSearch = Depends(authenthicate_access_token),
+):
+    from rembg import remove as rembg_remove
+
+    try:
+        req = urllib.request.Request(body.image_url, headers={"User-Agent": "PetrCollect/1.0"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            image_bytes = resp.read()
+    except Exception:
+        raise HTTPException(400, "Could not fetch image")
+
+    try:
+        output_bytes = rembg_remove(image_bytes)
+    except Exception:
+        raise HTTPException(500, "Background removal failed")
+
+    key = f"canvas_assets/{user.user_id}/{uuid.uuid4()}.png"
+    processed_url = upload_image_bytes(key, output_bytes, "image/png")
+
+    return RemoveBgResponse(processed_url=processed_url)
 
 
 @router.get("/{username}/preview", response_model=CanvasPreviewResponse)
