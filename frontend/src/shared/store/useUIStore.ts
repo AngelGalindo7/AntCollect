@@ -7,6 +7,9 @@ interface UIState {
   isCreatePostModalOpen: boolean;
   openCreatePostModal: () => void;
   closeCreatePostModal: () => void;
+  isCanvasEditorOpen: boolean;
+  openCanvasEditor: () => void;
+  closeCanvasEditor: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -16,4 +19,7 @@ export const useUIStore = create<UIState>((set) => ({
   isCreatePostModalOpen: false,
   openCreatePostModal: () => set({ isCreatePostModalOpen: true, isCreateMenuOpen: false }),
   closeCreatePostModal: () => set({ isCreatePostModalOpen: false }),
+  isCanvasEditorOpen: false,
+  openCanvasEditor: () => set({ isCanvasEditorOpen: true, isCreateMenuOpen: false }),
+  closeCanvasEditor: () => set({ isCanvasEditorOpen: false }),
 }));
