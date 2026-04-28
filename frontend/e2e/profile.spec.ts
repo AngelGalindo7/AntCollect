@@ -29,7 +29,7 @@ test('own profile renders the avatar upload button', async ({ page }) => {
 
 test('showcase tab is the default active tab on profile load', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
-  const showcaseTab = page.getByRole('button', { name: 'Showcase' });
+  const showcaseTab = page.getByRole('button', { name: 'Showcase', exact: true });
   await expect(showcaseTab).toBeVisible();
   await expect(showcaseTab).toHaveClass(/border-uci-gold/);
 });
