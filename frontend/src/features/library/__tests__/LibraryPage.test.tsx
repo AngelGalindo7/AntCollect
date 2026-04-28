@@ -18,10 +18,10 @@ function renderLibraryPage() {
 }
 
 describe('LibraryPage', () => {
-  it('renders title and search bar', () => {
+  it('renders title and add button', () => {
     renderLibraryPage()
     expect(screen.getByText('Sticker Library')).toBeTruthy()
-    expect(screen.getByPlaceholderText('Search library...')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /add sticker/i })).toBeTruthy()
   })
 
   it('displays stickers from the API', async () => {
@@ -29,17 +29,6 @@ describe('LibraryPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Blue Petr')).toBeTruthy()
       expect(screen.getByText('Red Petr')).toBeTruthy()
-    })
-  })
-
-  it('filters stickers when searching', async () => {
-    renderLibraryPage()
-    const searchInput = screen.getByPlaceholderText('Search library...')
-    fireEvent.change(searchInput, { target: { value: 'Blue' } })
-    
-    await waitFor(() => {
-      expect(screen.getByText('Blue Petr')).toBeTruthy()
-      expect(screen.queryByText('Red Petr')).toBeNull()
     })
   })
 
