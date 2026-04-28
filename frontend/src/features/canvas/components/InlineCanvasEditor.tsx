@@ -3,7 +3,7 @@ import type Konva from 'konva';
 import { CanvasStage } from './CanvasStage';
 import { CanvasBottomTray } from './CanvasBottomTray';
 import { useCanvasState, CANVAS_WIDTH, CANVAS_HEIGHT } from '../hooks/useCanvasState';
-import { getMyCanvas, saveCanvas, uploadCanvasPreview } from '../api/canvasApi';
+import { getMyCanvas, saveCanvas, uploadCanvasPreview, removeBackground } from '../api/canvasApi';
 import type { BackgroundConfig, CanvasState } from '../types/canvas';
 import type { Post } from '../../../shared/types/Types';
 
@@ -92,6 +92,8 @@ function InlineCanvasEditorInner({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
+  const [removeBgError, setRemoveBgError] = useState<string | null>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
 
@@ -132,6 +134,39 @@ function InlineCanvasEditorInner({
     window.addEventListener('keydown', handle);
     return () => window.removeEventListener('keydown', handle);
   }, [isDirty, onClose]);
+
+  const handleToggleRemoveBg = async () => {
+    if (!selectedId) return;
+    const node = nodes.find((n) => n.id === selectedId);
+    if (!node) return;
+
+    setRemoveBgError(null);
+
+    if (node.bgRemoved) {
+      updateNode(selectedId, { image_url: node.originalUrl ?? node.image_url, bgRemoved: false });
+      return;
+    }
+
+    if (node.removedBgUrl) {
+      updateNode(selectedId, { image_url: node.removedBgUrl, bgRemoved: true });
+      return;
+    }
+
+    setIsRemovingBg(true);
+    try {
+      const processedUrl = await removeBackground(node.image_url);
+      updateNode(selectedId, {
+        image_url: processedUrl,
+        originalUrl: node.image_url,
+        removedBgUrl: processedUrl,
+        bgRemoved: true,
+      });
+    } catch {
+      setRemoveBgError('Remove BG failed — try again');
+    } finally {
+      setIsRemovingBg(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!stageRef.current) return;
@@ -226,6 +261,59 @@ function InlineCanvasEditorInner({
         </div>
       </div>
 
+      {/* ── Node toolbar (appears when an image is selected) ── */}
+      {selectedId && (() => {
+        const selectedNode = nodes.find((n) => n.id === selectedId);
+        return (
+          <div className="flex items-center gap-3 px-4 bg-neutral-850 border-b border-neutral-700 shrink-0" style={{ height: '40px', backgroundColor: '#1a1a1a' }}>
+            <span className="text-xs text-neutral-500 select-none">Image</span>
+            <div className="w-px h-4 bg-neutral-700" />
+            <button
+              onClick={handleToggleRemoveBg}
+              disabled={isRemovingBg}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50 ${
+                selectedNode?.bgRemoved
+                  ? 'bg-uci-gold text-espresso'
+                  : 'bg-neutral-700 text-neutral-200 hover:bg-neutral-600'
+              }`}
+            >
+              {isRemovingBg ? (
+                <>
+                  <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Removing…
+                </>
+              ) : (
+                <>
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 3l18 18M9 9a3 3 0 004.243 4.243M6.343 6.343A8 8 0 0019.657 19.657M6.343 6.343A8 8 0 0019.657 6.343" />
+                  </svg>
+                  {selectedNode?.bgRemoved ? 'BG Removed' : 'Remove BG'}
+                </>
+              )}
+            </button>
+            {removeBgError && (
+              <span className="text-red-400 text-xs">{removeBgError}</span>
+            )}
+            <div className="flex-1" />
+            <button
+              onClick={() => { removeNode(selectedId); setSelectedId(null); }}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium bg-neutral-700 text-red-400 hover:bg-red-900/40 hover:text-red-300 transition-colors"
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                <path d="M10 11v6M14 11v6" />
+                <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+              </svg>
+              Delete
+            </button>
+          </div>
+        );
+      })()}
+
       {/* ── Canvas area ── */}
       <div
         ref={canvasAreaRef}
@@ -236,7 +324,7 @@ function InlineCanvasEditorInner({
           nodes={nodes}
           background={background}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={(id) => { setSelectedId(id); setRemoveBgError(null); }}
           onNodeUpdate={updateNode}
           onNodeDelete={removeNode}
           scale={scale}
