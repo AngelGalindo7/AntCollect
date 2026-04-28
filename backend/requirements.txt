@@ -16,3 +16,4 @@ httpx
 slowapi
 limits
 python-json-logger>=2.0,<3
+rembg
