@@ -2,6 +2,7 @@ import logging
 import os
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -101,7 +102,18 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    from backend.routers.canvas import _get_rembg_session
+    try:
+        _get_rembg_session()
+        logger.info("rembg session pre-warmed")
+    except Exception:
+        logger.warning("rembg session pre-warm failed; will retry on first request")
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
 
 
