@@ -24,8 +24,22 @@ test.afterAll(async ({ request }) => {
 
 test('own profile renders the avatar upload button', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
-  // UserProfile.tsx renders this button only when profile.is_owner is true.
   await expect(page.getByRole('button', { name: 'Upload avatar' })).toBeVisible();
+});
+
+test('showcase tab is the default active tab on profile load', async ({ page }) => {
+  await page.goto(`/${process.env.TEST_USERNAME}`);
+  const showcaseTab = page.getByRole('button', { name: 'Showcase' });
+  await expect(showcaseTab).toBeVisible();
+  await expect(showcaseTab).toHaveClass(/border-uci-gold/);
+});
+
+test('owner sees showcase canvas or create CTA in showcase tab', async ({ page }) => {
+  await page.goto(`/${process.env.TEST_USERNAME}`);
+  // Either the saved canvas preview image or the "Create your showcase" CTA must be visible.
+  const cta = page.getByRole('button', { name: /create your showcase/i });
+  const editBtn = page.getByRole('button', { name: /edit canvas/i });
+  await expect(cta.or(editBtn)).toBeVisible();
 });
 
 test('sticker count is inline-editable', async ({ page }) => {
@@ -61,8 +75,8 @@ test('visiting a different user profile shows no avatar upload button', async ({
 
 test('clicking a folder card navigates to /folders/:folderId', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
-  // FolderCard renders data-testid="folder-card" on its outer div.
-  // Clicking anywhere inside the card triggers navigation.
+  // Default tab is Showcase — switch to Collection to see folder cards.
+  await page.getByRole('button', { name: 'Collection' }).click();
   await page.locator('[data-testid="folder-card"]').first().click();
   await expect(page).toHaveURL(/\/folders\/\d+/);
 });
