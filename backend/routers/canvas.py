@@ -26,7 +26,7 @@ router = APIRouter(
 _MAX_PNG_SIZE = 15 * 1024 * 1024  # 15 MB ceiling for exported canvas PNG
 
 # Cached rembg session — loaded once on first use, reused for all subsequent requests.
-# u2net_lite is ~4.7 MB vs ~170 MB for u2net and 3-4x faster on CPU at acceptable quality.
+# u2netp is ~4.7 MB vs ~170 MB for u2net and 3-4x faster on CPU at acceptable quality.
 _rembg_session = None
 
 def _get_rembg_session():
@@ -34,7 +34,7 @@ def _get_rembg_session():
     if _rembg_session is None:
         try:
             from rembg import new_session
-            _rembg_session = new_session("u2net_lite")
+            _rembg_session = new_session("u2netp")
         except BaseException as exc:
             raise RuntimeError("rembg unavailable") from exc
     return _rembg_session
