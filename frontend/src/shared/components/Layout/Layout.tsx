@@ -6,13 +6,18 @@ import Search from '@/features/search/components/Search';
 import { useUIStore } from '@/shared/store/useUIStore';
 import CreatePost from '@/features/posts/components/CreatePost';
 import CreateMenu from '@/features/create/components/CreateMenu';
+import { CanvasEditorLoader } from '@/features/canvas/components/CanvasEditorLoader';
 import { useUnreadCount } from '@/features/messaging/index';
 import { ConversationList } from '@/features/messaging/components/ConversationList';
 import { ConversationSearch } from '@/features/messaging/components/ConversationSearch';
 
 const Layout: React.FC = () => {
   const navigate = useNavigate();
-  const { isCreateMenuOpen, closeCreateMenu, openCreatePostModal, isCreatePostModalOpen, closeCreatePostModal } = useUIStore();
+  const {
+    isCreateMenuOpen, closeCreateMenu,
+    openCreatePostModal, isCreatePostModalOpen, closeCreatePostModal,
+    isCanvasEditorOpen, openCanvasEditor, closeCanvasEditor,
+  } = useUIStore();
   const unreadCount = useUnreadCount();
 
   const chatMatch = useMatch('/messages/:conversationId');
@@ -76,9 +81,12 @@ const Layout: React.FC = () => {
           onSelectPost={openCreatePostModal}
           onSelectFolder={() => { closeCreateMenu(); navigate('/create-folder'); }}
           onSelectCatalog={() => { closeCreateMenu(); navigate('/library'); }}
+          onSelectCanvas={openCanvasEditor}
           onClose={closeCreateMenu}
         />
       )}
+
+      {isCanvasEditorOpen && <CanvasEditorLoader onClose={closeCanvasEditor} />}
 
       {isCreatePostModalOpen && (
         <div
