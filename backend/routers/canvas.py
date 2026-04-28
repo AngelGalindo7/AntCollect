@@ -25,6 +25,17 @@ router = APIRouter(
 
 _MAX_PNG_SIZE = 15 * 1024 * 1024  # 15 MB ceiling for exported canvas PNG
 
+# Cached rembg session — loaded once on first use, reused for all subsequent requests.
+# u2net_lite is ~4.7 MB vs ~170 MB for u2net and 3-4x faster on CPU at acceptable quality.
+_rembg_session = None
+
+def _get_rembg_session():
+    global _rembg_session
+    if _rembg_session is None:
+        from rembg import new_session
+        _rembg_session = new_session("u2net_lite")
+    return _rembg_session
+
 
 @router.get("/me", response_model=CanvasResponse)
 def get_my_canvas(
@@ -122,8 +133,6 @@ def remove_image_background(
     body: RemoveBgRequest,
     user: UserSearch = Depends(authenthicate_access_token),
 ):
-    from rembg import remove as rembg_remove
-
     try:
         req = urllib.request.Request(body.image_url, headers={"User-Agent": "PetrCollect/1.0"})
         with urllib.request.urlopen(req, timeout=15) as resp:
@@ -132,7 +141,8 @@ def remove_image_background(
         raise HTTPException(400, "Could not fetch image")
 
     try:
-        output_bytes = rembg_remove(image_bytes)
+        from rembg import remove as rembg_remove
+        output_bytes = rembg_remove(image_bytes, session=_get_rembg_session())
     except Exception:
         raise HTTPException(500, "Background removal failed")
 
