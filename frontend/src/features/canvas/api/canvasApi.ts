@@ -41,6 +41,17 @@ export async function uploadCanvasAsset(file: File): Promise<string> {
   return data.asset_url as string;
 }
 
+export async function removeBackground(imageUrl: string): Promise<string> {
+  const res = await fetchWithAuth(`${API_BASE}/canvas/me/remove-bg`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image_url: imageUrl }),
+  });
+  if (!res.ok) throw new Error('Background removal failed');
+  const data = await res.json();
+  return data.processed_url as string;
+}
+
 export async function getPublicCanvasPreview(username: string): Promise<string | null> {
   const res = await fetch(`${API_BASE}/canvas/${username}/preview`);
   if (res.status === 404) return null;

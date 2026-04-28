@@ -11,6 +11,9 @@ export interface CanvasNode {
   rotation: number;
   scaleX: number;
   scaleY: number;
+  bgRemoved?: boolean;
+  originalUrl?: string;
+  removedBgUrl?: string;
 }
 
 export interface BackgroundConfig {
