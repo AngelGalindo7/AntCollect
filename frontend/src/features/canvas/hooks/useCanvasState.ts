@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import type { CanvasNode, CanvasState, BackgroundConfig, NodeSource } from '../types/canvas';
 
-export const CANVAS_WIDTH = 1200;
-export const CANVAS_HEIGHT = 400;
+export const CANVAS_WIDTH = 1440;
+export const CANVAS_HEIGHT = 810;
 
 const DEFAULT_BACKGROUND: BackgroundConfig = { type: 'color', value: '#f5f0e8' };
 

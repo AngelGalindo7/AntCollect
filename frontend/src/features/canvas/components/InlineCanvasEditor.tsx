@@ -21,7 +21,6 @@ const PRESETS: { label: string; bg: BackgroundConfig }[] = [
 ];
 
 const HEADER_H = 52;
-const TRAY_H = 152;
 
 function dataURLtoBlob(dataUrl: string): Blob {
   const [header, data] = dataUrl.split(',');
@@ -55,7 +54,7 @@ export function InlineCanvasEditor({ username, avatarPath, posts, onClose, onSav
     return (
       <div
         className="flex items-center justify-center w-full bg-neutral-950"
-        style={{ height: `calc(100vh - ${HEADER_H}px - ${TRAY_H}px)` }}
+        style={{ height: CANVAS_HEIGHT }}
       >
         <p className="text-neutral-400 text-sm">Loading canvas…</p>
       </div>
@@ -97,27 +96,14 @@ function InlineCanvasEditorInner({
   const stageRef = useRef<Konva.Stage>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
 
-  const [scale, setScale] = useState(() =>
-    Math.min(
-      1,
-      (window.innerWidth - 80) / CANVAS_WIDTH,
-      (window.innerHeight - HEADER_H - TRAY_H - 32) / CANVAS_HEIGHT,
-    ),
-  );
+  const [scale, setScale] = useState(() => (window.innerWidth - 32) / CANVAS_WIDTH);
 
-  // Lock body scroll while editor is open
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  // Fit canvas to container using ResizeObserver
+  // Scale to fill container width; height follows the canvas aspect ratio
   useLayoutEffect(() => {
     const el = canvasAreaRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      setScale(Math.min(1, (width - 32) / CANVAS_WIDTH, (height - 32) / CANVAS_HEIGHT));
+      setScale(entry.contentRect.width / CANVAS_WIDTH);
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -192,7 +178,7 @@ function InlineCanvasEditorInner({
   };
 
   return (
-    <div className="flex flex-col w-full" style={{ height: '100vh' }}>
+    <div className="flex flex-col w-full">
       {/* ── Collapsed header ── */}
       <div
         className="flex items-center gap-3 px-4 bg-neutral-900 border-b border-neutral-700 shrink-0"
@@ -238,7 +224,7 @@ function InlineCanvasEditorInner({
         {/* Actions */}
         <div className="flex items-center gap-2 shrink-0">
           {saveError && (
-            <span className="text-red-400 text-xs max-w-[160px] truncate" title={saveError}>
+            <span className="text-red-400 text-xs max-w-40 truncate" title={saveError}>
               {saveError}
             </span>
           )}
@@ -317,7 +303,8 @@ function InlineCanvasEditorInner({
       {/* ── Canvas area ── */}
       <div
         ref={canvasAreaRef}
-        className="flex-1 flex items-center justify-center bg-neutral-950 overflow-hidden min-h-0"
+        className="flex items-center justify-center bg-neutral-950"
+        style={{ height: CANVAS_HEIGHT * scale }}
       >
         <CanvasStage
           ref={stageRef}
