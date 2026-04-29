@@ -113,6 +113,29 @@ def _decode_access_token(access_token_str: str):
         role=role
     )
 
+def create_google_pending_token(google_id: str, email: str, display_name: str) -> str:
+    payload = {
+        "google_id": google_id,
+        "email": email,
+        "display_name": display_name,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=10),
+        "type": "google_pending",
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+
+def decode_google_pending_token(token: str) -> dict:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Setup session expired, please sign in with Google again")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid setup token")
+    if payload.get("type") != "google_pending":
+        raise HTTPException(status_code=401, detail="Invalid token type")
+    return payload
+
+
 class RoleChecker:
     def __init__(self, allowed_roles: List[str]):
         self.allowed_roles = allowed_roles
