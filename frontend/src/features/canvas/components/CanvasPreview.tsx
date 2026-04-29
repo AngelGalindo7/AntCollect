@@ -8,9 +8,10 @@ export function CanvasPreview({ previewPath, isOwner, onEditClick }: Props) {
   if (!previewPath && !isOwner) return null;
 
   return (
-    <div className="relative w-full">
-      {previewPath ? (
-        <div className="relative w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
+    <div className="relative w-full px-4 py-4">
+      <div className="max-w-233.75 mx-auto">
+        {previewPath ? (
+        <div className="relative w-full overflow-hidden rounded-xl" style={{ aspectRatio: '16/9' }}>
           <img
             src={previewPath}
             alt="Sticker showcase"
@@ -28,7 +29,7 @@ export function CanvasPreview({ previewPath, isOwner, onEditClick }: Props) {
       ) : (
         <button
           onClick={onEditClick}
-          className="w-full border-2 border-dashed border-warm-gray/40 hover:border-warm-gray/70 transition-colors flex flex-col items-center justify-center gap-2 py-10 text-warm-gray/60 hover:text-warm-gray/90"
+          className="w-full rounded-xl border-2 border-dashed border-warm-gray/40 hover:border-warm-gray/70 transition-colors flex flex-col items-center justify-center gap-2 py-10 text-warm-gray/60 hover:text-warm-gray/90"
           style={{ aspectRatio: '16/9' }}
         >
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -37,7 +38,8 @@ export function CanvasPreview({ previewPath, isOwner, onEditClick }: Props) {
           <span className="text-sm font-medium">Create your showcase</span>
           <span className="text-xs">Arrange your stickers into a canvas</span>
         </button>
-      )}
+        )}
+      </div>
     </div>
   );
 }
