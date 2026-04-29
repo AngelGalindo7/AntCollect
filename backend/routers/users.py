@@ -122,6 +122,9 @@ def change_password(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    if not db_user.password_hash:
+        raise HTTPException(status_code=400, detail="This account uses Google sign-in and has no password to change.")
+
     if not verify_password(payload.current_password, db_user.password_hash):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
 
@@ -178,7 +181,10 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
 
     if not db_user:
         raise HTTPException(status_code=400, detail="Invalid email or password")
-    
+
+    if not db_user.password_hash:
+        raise HTTPException(status_code=400, detail="This account uses Google sign-in. Please use the Google button to log in.")
+
     if not verify_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=400, detail="Invalid email or password")
     
