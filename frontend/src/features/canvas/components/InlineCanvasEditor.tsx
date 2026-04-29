@@ -85,10 +85,11 @@ function InlineCanvasEditorInner({
   onClose,
   onSaveSuccess,
 }: InnerProps) {
-  const { nodes, background, isDirty, addNode, updateNode, removeNode, changeBackground, markClean, getCanvasJson } =
+  const { nodes, background, isDirty, addNode, updateNode, removeNode, moveNodeUp, moveNodeDown, changeBackground, markClean, getCanvasJson } =
     useCanvasState(initialState);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [keepRatio, setKeepRatio] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
@@ -262,14 +263,67 @@ function InlineCanvasEditorInner({
       {/* ── Node toolbar (appears when an image is selected) ── */}
       {selectedId && (() => {
         const selectedNode = nodes.find((n) => n.id === selectedId);
+        const nodeIdx = nodes.findIndex((n) => n.id === selectedId);
+        const isTop = nodeIdx === nodes.length - 1;
+        const isBottom = nodeIdx === 0;
         return (
-          <div className="flex items-center gap-3 px-4 bg-neutral-850 border-b border-neutral-700 shrink-0" style={{ height: '40px', backgroundColor: '#1a1a1a' }}>
-            <span className="text-xs text-neutral-500 select-none">Image</span>
-            <div className="w-px h-4 bg-neutral-700" />
+          <div className="flex items-center gap-3 px-4 bg-neutral-850 border-b border-neutral-700 shrink-0 overflow-x-auto" style={{ height: '40px', backgroundColor: '#1a1a1a', scrollbarWidth: 'none' }}>
+            <span className="text-xs text-neutral-500 select-none shrink-0">Image</span>
+            <div className="w-px h-4 bg-neutral-700 shrink-0" />
+
+            {/* Transform mode */}
+            <div className="flex items-center rounded-md overflow-hidden border border-neutral-700 shrink-0">
+              <button
+                onClick={() => setKeepRatio(true)}
+                title="Proportional resize"
+                className={`px-2.5 py-1 text-xs font-medium transition-colors ${keepRatio ? 'bg-neutral-600 text-neutral-100' : 'text-neutral-400 hover:text-neutral-200'}`}
+              >
+                Proportional
+              </button>
+              <button
+                onClick={() => setKeepRatio(false)}
+                title="Free resize — drag any edge or corner"
+                className={`px-2.5 py-1 text-xs font-medium transition-colors ${!keepRatio ? 'bg-neutral-600 text-neutral-100' : 'text-neutral-400 hover:text-neutral-200'}`}
+              >
+                Free
+              </button>
+            </div>
+
+            <div className="w-px h-4 bg-neutral-700 shrink-0" />
+
+            {/* Z-order */}
+            <button
+              onClick={() => moveNodeDown(selectedId)}
+              disabled={isBottom}
+              title="Send backward"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-700 text-neutral-200 hover:bg-neutral-600 disabled:opacity-30 transition-colors shrink-0"
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="17 11 12 6 7 11" />
+                <line x1="12" y1="6" x2="12" y2="18" />
+              </svg>
+              Back
+            </button>
+            <button
+              onClick={() => moveNodeUp(selectedId)}
+              disabled={isTop}
+              title="Bring forward"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-700 text-neutral-200 hover:bg-neutral-600 disabled:opacity-30 transition-colors shrink-0"
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="17 13 12 18 7 13" />
+                <line x1="12" y1="18" x2="12" y2="6" />
+              </svg>
+              Forward
+            </button>
+
+            <div className="w-px h-4 bg-neutral-700 shrink-0" />
+
+            {/* Remove BG */}
             <button
               onClick={handleToggleRemoveBg}
               disabled={isRemovingBg}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50 ${
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50 shrink-0 ${
                 selectedNode?.bgRemoved
                   ? 'bg-uci-gold text-espresso'
                   : 'bg-neutral-700 text-neutral-200 hover:bg-neutral-600'
@@ -293,12 +347,15 @@ function InlineCanvasEditorInner({
               )}
             </button>
             {removeBgError && (
-              <span className="text-red-400 text-xs">{removeBgError}</span>
+              <span className="text-red-400 text-xs shrink-0">{removeBgError}</span>
             )}
+
             <div className="flex-1" />
+
+            {/* Delete */}
             <button
               onClick={() => { removeNode(selectedId); setSelectedId(null); }}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium bg-neutral-700 text-red-400 hover:bg-red-900/40 hover:text-red-300 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium bg-neutral-700 text-red-400 hover:bg-red-900/40 hover:text-red-300 transition-colors shrink-0"
             >
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="3 6 5 6 21 6" />
@@ -323,6 +380,7 @@ function InlineCanvasEditorInner({
           nodes={nodes}
           background={background}
           selectedId={selectedId}
+          keepRatio={keepRatio}
           onSelect={(id) => { setSelectedId(id); setRemoveBgError(null); }}
           onNodeUpdate={updateNode}
           onNodeDelete={removeNode}
