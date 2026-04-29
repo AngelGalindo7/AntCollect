@@ -8,12 +8,13 @@ import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../hooks/useCanvasState';
 interface Props {
   node: CanvasNodeType;
   isSelected: boolean;
+  keepRatio: boolean;
   onSelect: () => void;
   onUpdate: (attrs: Partial<CanvasNodeType>) => void;
   onDelete: () => void;
 }
 
-export function CanvasNode({ node, isSelected, onSelect, onUpdate, onDelete }: Props) {
+export function CanvasNode({ node, isSelected, keepRatio, onSelect, onUpdate, onDelete }: Props) {
   const [image, status] = useImage(node.image_url, 'anonymous');
   const imageRef = useRef<Konva.Image>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -93,9 +94,15 @@ export function CanvasNode({ node, isSelected, onSelect, onUpdate, onDelete }: P
       {isSelected && (
         <Transformer
           ref={transformerRef}
-          keepRatio
-          enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
-          boundBoxFunc={(oldBox, newBox) => (newBox.width < 30 ? oldBox : newBox)}
+          keepRatio={keepRatio}
+          enabledAnchors={
+            keepRatio
+              ? ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+              : ['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']
+          }
+          boundBoxFunc={(oldBox, newBox) =>
+            newBox.width < 30 || newBox.height < 30 ? oldBox : newBox
+          }
         />
       )}
     </>
