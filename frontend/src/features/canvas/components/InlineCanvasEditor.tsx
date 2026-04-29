@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type Konva from 'konva';
 import { CanvasStage } from './CanvasStage';
