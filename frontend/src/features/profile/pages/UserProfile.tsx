@@ -394,24 +394,22 @@ const UserProfile: React.FC = () => {
       {/* ── Section 3: Tab content ── */}
       {activeTab === "showcase" ? (
         isEditing ? (
-          <div className="max-w-6xl mx-auto px-4 py-6">
-            <InlineCanvasEditor
-              username={profile.username}
-              avatarPath={profile.avatar_path}
-              posts={profile.posts}
-              onClose={() => setIsEditing(false)}
-              onSaveSuccess={(path) => {
-                setCanvasPreviewPath(path);
-                setIsEditing(false);
-              }}
+          <InlineCanvasEditor
+            posts={profile.posts}
+            onClose={() => setIsEditing(false)}
+            onSaveSuccess={(path) => {
+              setCanvasPreviewPath(path);
+              setIsEditing(false);
+            }}
+          />
+        ) : (
+          <div className="py-6">
+            <CanvasPreview
+              previewPath={canvasPreviewPath}
+              isOwner={profile.is_owner}
+              onEditClick={() => setIsEditing(true)}
             />
           </div>
-        ) : (
-          <CanvasPreview
-            previewPath={canvasPreviewPath}
-            isOwner={profile.is_owner}
-            onEditClick={() => setIsEditing(true)}
-          />
         )
       ) : (
         <div className="max-w-6xl mx-auto px-4 mt-6">

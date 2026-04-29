@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ChangeEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import type Konva from 'konva';
 import { CanvasStage } from './CanvasStage';
-import { CanvasBottomTray } from './CanvasBottomTray';
 import { useCanvasState, CANVAS_WIDTH, CANVAS_HEIGHT } from '../hooks/useCanvasState';
-import { getMyCanvas, saveCanvas, uploadCanvasPreview, removeBackground } from '../api/canvasApi';
-import type { BackgroundConfig, CanvasState } from '../types/canvas';
+import { getMyCanvas, saveCanvas, uploadCanvasPreview, removeBackground, uploadCanvasAsset } from '../api/canvasApi';
+import { fetchWithAuth, API_BASE } from '../../../shared/api/api';
+import type { BackgroundConfig, CanvasNode, CanvasState, NodeSource } from '../types/canvas';
 import type { Post } from '../../../shared/types/Types';
 
 const PRESETS: { label: string; bg: BackgroundConfig }[] = [
@@ -20,8 +21,6 @@ const PRESETS: { label: string; bg: BackgroundConfig }[] = [
   { label: 'Forest',   bg: { type: 'gradient', value: '#1b4332', gradientEnd: '#40916c', angle: 135 } },
 ];
 
-const HEADER_H = 52;
-
 function dataURLtoBlob(dataUrl: string): Blob {
   const [header, data] = dataUrl.split(',');
   const mime = header.match(/:(.*?);/)?.[1] ?? 'image/png';
@@ -31,15 +30,296 @@ function dataURLtoBlob(dataUrl: string): Blob {
   return new Blob([arr], { type: mime });
 }
 
+interface LibrarySticker {
+  id: number;
+  title: string;
+  thumbnail: string | null;
+}
+
+// ── Left panel: image picker ──────────────────────────────────────────────────
+
+function LeftPanel({ posts, onNodeAdd }: { posts: Post[]; onNodeAdd: (url: string, source: NodeSource) => void }) {
+  const [tab, setTab] = useState<'library' | 'posts' | 'upload'>('library');
+  const [search, setSearch] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: stickers = [], isLoading } = useQuery<LibrarySticker[]>({
+    queryKey: ['library', search],
+    queryFn: () =>
+      fetchWithAuth(`${API_BASE}/library/?search=${encodeURIComponent(search)}`).then((r) => r.json()),
+    enabled: tab === 'library',
+  });
+
+  const postImages = posts.flatMap((p) =>
+    ((p as any).images ?? [])
+      .filter((img: any) => img?.paths?.medium)
+      .map((img: any) => ({ url: img.paths.medium as string, caption: p.caption })),
+  );
+
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadCanvasAsset(file);
+      onNodeAdd(url, 'upload');
+    } catch {
+      // silent — user can retry
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const tabCls = (t: string) =>
+    `flex-1 py-1.5 text-xs font-medium rounded-md transition-colors ${
+      tab === t ? 'bg-espresso text-white' : 'text-neutral-500 hover:text-espresso'
+    }`;
+
+  const thumbCls =
+    'aspect-square rounded-lg overflow-hidden border border-neutral-200 hover:border-neutral-400 hover:scale-[1.04] active:scale-95 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-uci-gold/60 bg-neutral-100';
+
+  return (
+    <div className="w-64 shrink-0 bg-white border-r border-neutral-200 flex flex-col">
+      <div className="p-3 border-b border-neutral-100 shrink-0">
+        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mb-2">Add to Canvas</p>
+        <div className="flex bg-neutral-100 rounded-lg p-0.5 gap-0.5">
+          <button onClick={() => setTab('library')} className={tabCls('library')}>Library</button>
+          <button onClick={() => setTab('posts')} className={tabCls('posts')}>Posts</button>
+          <button onClick={() => setTab('upload')} className={tabCls('upload')}>Upload</button>
+        </div>
+      </div>
+
+      {tab === 'library' && (
+        <div className="px-3 py-2 border-b border-neutral-100 shrink-0">
+          <input
+            type="text"
+            placeholder="Search stickers…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-2.5 py-1.5 text-xs bg-neutral-50 border border-neutral-200 rounded-lg placeholder-neutral-400 focus:outline-none focus:border-neutral-400"
+          />
+        </div>
+      )}
+
+      {tab === 'upload' && (
+        <div className="px-3 py-2 border-b border-neutral-100 shrink-0">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="w-full py-2 bg-espresso hover:bg-espresso/90 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            {uploading ? 'Uploading…' : '+ Upload image'}
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto p-2.5">
+        {tab === 'library' && (
+          isLoading ? (
+            <div className="grid grid-cols-3 gap-1.5">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="aspect-square bg-neutral-100 animate-pulse rounded-lg" />
+              ))}
+            </div>
+          ) : stickers.length === 0 ? (
+            <p className="text-neutral-400 text-xs text-center py-8">No stickers found</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-1.5">
+              {stickers.filter((s) => s.thumbnail).map((s) => (
+                <button key={s.id} onClick={() => onNodeAdd(s.thumbnail!, 'library')} title={s.title} className={thumbCls}>
+                  <img src={s.thumbnail!} alt={s.title} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )
+        )}
+
+        {tab === 'posts' && (
+          postImages.length === 0 ? (
+            <p className="text-neutral-400 text-xs text-center py-8">No post images yet</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-1.5">
+              {postImages.map((img, i) => (
+                <button key={i} onClick={() => onNodeAdd(img.url, 'post')} title={img.caption} className={thumbCls}>
+                  <img src={img.url} alt={img.caption} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )
+        )}
+
+        {tab === 'upload' && (
+          <p className="text-neutral-400 text-xs text-center py-8">
+            Click <span className="text-neutral-600 font-medium">+ Upload image</span> above to add from your device
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Right panel: controls ─────────────────────────────────────────────────────
+
+interface RightPanelProps {
+  background: BackgroundConfig;
+  onChangeBackground: (bg: BackgroundConfig) => void;
+  selectedId: string | null;
+  nodes: CanvasNode[];
+  keepRatio: boolean;
+  onSetKeepRatio: (v: boolean) => void;
+  isRemovingBg: boolean;
+  removeBgError: string | null;
+  onToggleRemoveBg: () => void;
+  onMoveNodeUp: (id: string) => void;
+  onMoveNodeDown: (id: string) => void;
+  onDeleteNode: (id: string) => void;
+  isDirty: boolean;
+  isSaving: boolean;
+  saveError: string | null;
+  onSave: () => void;
+  onDiscard: () => void;
+}
+
+function RightPanel({
+  background, onChangeBackground,
+  selectedId, nodes, keepRatio, onSetKeepRatio,
+  isRemovingBg, removeBgError, onToggleRemoveBg,
+  onMoveNodeUp, onMoveNodeDown, onDeleteNode,
+  isDirty, isSaving, saveError, onSave, onDiscard,
+}: RightPanelProps) {
+  const selectedNode = nodes.find((n) => n.id === selectedId);
+  const nodeIdx = nodes.findIndex((n) => n.id === selectedId);
+  const isTop = nodeIdx === nodes.length - 1;
+  const isBottom = nodeIdx === 0;
+
+  return (
+    <div className="w-64 shrink-0 bg-white border-l border-neutral-200 flex flex-col">
+      {/* Background presets */}
+      <div className="p-3 border-b border-neutral-100 shrink-0">
+        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mb-2.5">Background</p>
+        <div className="flex flex-wrap gap-2">
+          {PRESETS.map((p) => (
+            <button
+              key={p.label}
+              title={p.label}
+              onClick={() => onChangeBackground(p.bg)}
+              className={`w-6 h-6 rounded-full border-2 transition-all ${
+                background.value === p.bg.value
+                  ? 'border-espresso scale-110 shadow'
+                  : 'border-neutral-300 hover:border-neutral-500 hover:scale-105'
+              }`}
+              style={
+                p.bg.type === 'color'
+                  ? { background: p.bg.value }
+                  : { background: `linear-gradient(135deg, ${p.bg.value}, ${p.bg.gradientEnd})` }
+              }
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Node controls — only shown when an image is selected */}
+      {selectedId && selectedNode && (
+        <div className="p-3 border-b border-neutral-100 shrink-0">
+          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mb-2.5">Selected Image</p>
+
+          <p className="text-xs text-neutral-500 mb-1.5">Resize mode</p>
+          <div className="flex rounded-lg overflow-hidden border border-neutral-200 mb-3">
+            <button
+              onClick={() => onSetKeepRatio(true)}
+              className={`flex-1 py-1.5 text-xs font-medium transition-colors ${keepRatio ? 'bg-espresso text-white' : 'text-neutral-500 hover:text-espresso'}`}
+            >
+              Proportional
+            </button>
+            <button
+              onClick={() => onSetKeepRatio(false)}
+              className={`flex-1 py-1.5 text-xs font-medium transition-colors ${!keepRatio ? 'bg-espresso text-white' : 'text-neutral-500 hover:text-espresso'}`}
+            >
+              Free
+            </button>
+          </div>
+
+          <p className="text-xs text-neutral-500 mb-1.5">Layer order</p>
+          <div className="flex gap-1.5 mb-3">
+            <button
+              onClick={() => onMoveNodeDown(selectedId)}
+              disabled={isBottom}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 text-neutral-700 hover:bg-neutral-200 disabled:opacity-30 transition-colors"
+            >
+              Send Back
+            </button>
+            <button
+              onClick={() => onMoveNodeUp(selectedId)}
+              disabled={isTop}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 text-neutral-700 hover:bg-neutral-200 disabled:opacity-30 transition-colors"
+            >
+              Bring Fwd
+            </button>
+          </div>
+
+          <button
+            onClick={onToggleRemoveBg}
+            disabled={isRemovingBg}
+            className={`w-full py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 mb-1.5 ${
+              selectedNode.bgRemoved
+                ? 'bg-uci-gold text-espresso'
+                : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+            }`}
+          >
+            {isRemovingBg ? 'Removing BG…' : selectedNode.bgRemoved ? 'BG Removed ✓' : 'Remove BG'}
+          </button>
+          {removeBgError && <p className="text-red-500 text-xs mb-2">{removeBgError}</p>}
+
+          <button
+            onClick={() => onDeleteNode(selectedId)}
+            className="w-full py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+          >
+            Delete Image
+          </button>
+        </div>
+      )}
+
+      <div className="flex-1" />
+
+      {/* Save / Discard */}
+      <div className="p-3 border-t border-neutral-100 space-y-2 shrink-0">
+        {saveError && <p className="text-red-500 text-xs">{saveError}</p>}
+        {isDirty && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+            <p className="text-amber-600 text-xs">Unsaved changes</p>
+          </div>
+        )}
+        <button
+          onClick={onSave}
+          disabled={isSaving || !isDirty}
+          className="w-full py-2 bg-uci-gold text-espresso text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-40 transition-opacity"
+        >
+          {isSaving ? 'Saving…' : 'Save'}
+        </button>
+        <button
+          onClick={onDiscard}
+          className="w-full py-2 text-neutral-500 hover:text-espresso text-sm rounded-lg transition-colors"
+        >
+          Discard
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Shell (async canvas load) ─────────────────────────────────────────────────
+
 interface Props {
-  username: string;
-  avatarPath: string | null;
   posts: Post[];
   onClose: () => void;
   onSaveSuccess: (previewPath: string) => void;
 }
 
-export function InlineCanvasEditor({ username, avatarPath, posts, onClose, onSaveSuccess }: Props) {
+export function InlineCanvasEditor({ posts, onClose, onSaveSuccess }: Props) {
   const [initialState, setInitialState] = useState<CanvasState | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -52,19 +332,18 @@ export function InlineCanvasEditor({ username, avatarPath, posts, onClose, onSav
 
   if (!ready) {
     return (
-      <div
-        className="flex items-center justify-center w-full bg-neutral-950"
-        style={{ height: CANVAS_HEIGHT }}
-      >
-        <p className="text-neutral-400 text-sm">Loading canvas…</p>
+      <div className="flex w-full border border-neutral-200 rounded-xl overflow-hidden" style={{ minHeight: 400 }}>
+        <div className="w-64 shrink-0 bg-white border-r border-neutral-200" />
+        <div className="flex-1 bg-neutral-100 flex items-center justify-center">
+          <p className="text-neutral-400 text-sm">Loading canvas…</p>
+        </div>
+        <div className="w-64 shrink-0 bg-white border-l border-neutral-200" />
       </div>
     );
   }
 
   return (
     <InlineCanvasEditorInner
-      username={username}
-      avatarPath={avatarPath}
       posts={posts}
       initialState={initialState}
       onClose={onClose}
@@ -73,20 +352,18 @@ export function InlineCanvasEditor({ username, avatarPath, posts, onClose, onSav
   );
 }
 
+// ── Inner (renders once canvas state is loaded) ───────────────────────────────
+
 interface InnerProps extends Props {
   initialState: CanvasState | null;
 }
 
-function InlineCanvasEditorInner({
-  username,
-  avatarPath,
-  posts,
-  initialState,
-  onClose,
-  onSaveSuccess,
-}: InnerProps) {
-  const { nodes, background, isDirty, addNode, updateNode, removeNode, moveNodeUp, moveNodeDown, changeBackground, markClean, getCanvasJson } =
-    useCanvasState(initialState);
+function InlineCanvasEditorInner({ posts, initialState, onClose, onSaveSuccess }: InnerProps) {
+  const {
+    nodes, background, isDirty,
+    addNode, updateNode, removeNode, moveNodeUp, moveNodeDown,
+    changeBackground, markClean, getCanvasJson,
+  } = useCanvasState(initialState);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [keepRatio, setKeepRatio] = useState(true);
@@ -96,16 +373,8 @@ function InlineCanvasEditorInner({
   const [removeBgError, setRemoveBgError] = useState<string | null>(null);
   const stageRef = useRef<Konva.Stage>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
 
-  const [scale, setScale] = useState(() => window.innerWidth / CANVAS_WIDTH);
-
-  // Lock body scroll while editor is open (overlay covers full viewport)
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  // Scale canvas to fill viewport width; height scrolls freely
   useLayoutEffect(() => {
     const el = canvasAreaRef.current;
     if (!el) return;
@@ -116,7 +385,6 @@ function InlineCanvasEditorInner({
     return () => ro.disconnect();
   }, []);
 
-  // Escape to discard
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -132,19 +400,15 @@ function InlineCanvasEditorInner({
     if (!selectedId) return;
     const node = nodes.find((n) => n.id === selectedId);
     if (!node) return;
-
     setRemoveBgError(null);
-
     if (node.bgRemoved) {
       updateNode(selectedId, { image_url: node.originalUrl ?? node.image_url, bgRemoved: false });
       return;
     }
-
     if (node.removedBgUrl) {
       updateNode(selectedId, { image_url: node.removedBgUrl, bgRemoved: true });
       return;
     }
-
     setIsRemovingBg(true);
     try {
       const processedUrl = await removeBackground(node.image_url);
@@ -191,188 +455,16 @@ function InlineCanvasEditorInner({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-auto bg-neutral-950">
-      {/* ── Collapsed header ── */}
-      <div
-        className="flex items-center gap-3 px-4 bg-neutral-900 border-b border-neutral-700 shrink-0"
-        style={{ height: `${HEADER_H}px` }}
-      >
-        {/* Avatar + username */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-7 h-7 rounded-full overflow-hidden bg-neutral-700 flex items-center justify-center shrink-0">
-            {avatarPath ? (
-              <img src={avatarPath} alt={username} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-[11px] font-bold text-neutral-300 select-none">
-                {username.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
-          <span className="text-neutral-200 text-sm font-semibold leading-none">{username}</span>
-        </div>
+    <div className="flex w-full border border-neutral-200 rounded-xl overflow-hidden">
+      <LeftPanel
+        posts={posts}
+        onNodeAdd={(url, source) => addNode(url, source)}
+      />
 
-        <div className="w-px h-5 bg-neutral-700 shrink-0 mx-1" />
-
-        {/* Background presets */}
-        <div className="flex items-center gap-1.5 flex-1 overflow-x-auto py-1 min-w-0" style={{ scrollbarWidth: 'none' }}>
-          {PRESETS.map((p) => (
-            <button
-              key={p.label}
-              title={p.label}
-              onClick={() => changeBackground(p.bg)}
-              className={`w-5 h-5 rounded-full border-2 shrink-0 transition-all ${
-                background.value === p.bg.value
-                  ? 'border-white scale-110 shadow-sm'
-                  : 'border-neutral-600 hover:border-neutral-400 hover:scale-105'
-              }`}
-              style={
-                p.bg.type === 'color'
-                  ? { background: p.bg.value }
-                  : { background: `linear-gradient(135deg, ${p.bg.value}, ${p.bg.gradientEnd})` }
-              }
-            />
-          ))}
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center gap-2 shrink-0">
-          {saveError && (
-            <span className="text-red-400 text-xs max-w-40 truncate" title={saveError}>
-              {saveError}
-            </span>
-          )}
-          {isDirty && (
-            <span className="w-2 h-2 rounded-full bg-yellow-400 shrink-0" title="Unsaved changes" />
-          )}
-          <button
-            onClick={handleDiscard}
-            className="px-3 py-1.5 text-neutral-400 hover:text-neutral-200 text-xs rounded-lg transition-colors"
-          >
-            Discard
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving || !isDirty}
-            className="px-4 py-1.5 bg-uci-gold text-espresso text-xs font-semibold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-40"
-          >
-            {isSaving ? 'Saving…' : 'Save'}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Node toolbar (appears when an image is selected) ── */}
-      {selectedId && (() => {
-        const selectedNode = nodes.find((n) => n.id === selectedId);
-        const nodeIdx = nodes.findIndex((n) => n.id === selectedId);
-        const isTop = nodeIdx === nodes.length - 1;
-        const isBottom = nodeIdx === 0;
-        return (
-          <div className="flex items-center gap-3 px-4 bg-neutral-850 border-b border-neutral-700 shrink-0 overflow-x-auto" style={{ height: '40px', backgroundColor: '#1a1a1a', scrollbarWidth: 'none' }}>
-            <span className="text-xs text-neutral-500 select-none shrink-0">Image</span>
-            <div className="w-px h-4 bg-neutral-700 shrink-0" />
-
-            {/* Transform mode */}
-            <div className="flex items-center rounded-md overflow-hidden border border-neutral-700 shrink-0">
-              <button
-                onClick={() => setKeepRatio(true)}
-                title="Proportional resize"
-                className={`px-2.5 py-1 text-xs font-medium transition-colors ${keepRatio ? 'bg-neutral-600 text-neutral-100' : 'text-neutral-400 hover:text-neutral-200'}`}
-              >
-                Proportional
-              </button>
-              <button
-                onClick={() => setKeepRatio(false)}
-                title="Free resize — drag any edge or corner"
-                className={`px-2.5 py-1 text-xs font-medium transition-colors ${!keepRatio ? 'bg-neutral-600 text-neutral-100' : 'text-neutral-400 hover:text-neutral-200'}`}
-              >
-                Free
-              </button>
-            </div>
-
-            <div className="w-px h-4 bg-neutral-700 shrink-0" />
-
-            {/* Z-order */}
-            <button
-              onClick={() => moveNodeDown(selectedId)}
-              disabled={isBottom}
-              title="Send backward"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-700 text-neutral-200 hover:bg-neutral-600 disabled:opacity-30 transition-colors shrink-0"
-            >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="17 11 12 6 7 11" />
-                <line x1="12" y1="6" x2="12" y2="18" />
-              </svg>
-              Back
-            </button>
-            <button
-              onClick={() => moveNodeUp(selectedId)}
-              disabled={isTop}
-              title="Bring forward"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-700 text-neutral-200 hover:bg-neutral-600 disabled:opacity-30 transition-colors shrink-0"
-            >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="17 13 12 18 7 13" />
-                <line x1="12" y1="18" x2="12" y2="6" />
-              </svg>
-              Forward
-            </button>
-
-            <div className="w-px h-4 bg-neutral-700 shrink-0" />
-
-            {/* Remove BG */}
-            <button
-              onClick={handleToggleRemoveBg}
-              disabled={isRemovingBg}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50 shrink-0 ${
-                selectedNode?.bgRemoved
-                  ? 'bg-uci-gold text-espresso'
-                  : 'bg-neutral-700 text-neutral-200 hover:bg-neutral-600'
-              }`}
-            >
-              {isRemovingBg ? (
-                <>
-                  <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  Removing…
-                </>
-              ) : (
-                <>
-                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 3l18 18M9 9a3 3 0 004.243 4.243M6.343 6.343A8 8 0 0019.657 19.657M6.343 6.343A8 8 0 0019.657 6.343" />
-                  </svg>
-                  {selectedNode?.bgRemoved ? 'BG Removed' : 'Remove BG'}
-                </>
-              )}
-            </button>
-            {removeBgError && (
-              <span className="text-red-400 text-xs shrink-0">{removeBgError}</span>
-            )}
-
-            <div className="flex-1" />
-
-            {/* Delete */}
-            <button
-              onClick={() => { removeNode(selectedId); setSelectedId(null); }}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium bg-neutral-700 text-red-400 hover:bg-red-900/40 hover:text-red-300 transition-colors shrink-0"
-            >
-              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                <path d="M10 11v6M14 11v6" />
-                <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
-              </svg>
-              Delete
-            </button>
-          </div>
-        );
-      })()}
-
-      {/* ── Canvas area ── */}
+      {/* Canvas — fills available space between the two panels */}
       <div
         ref={canvasAreaRef}
-        className="flex items-center justify-center bg-neutral-950"
+        className="flex-1 overflow-hidden"
         style={{ height: CANVAS_HEIGHT * scale }}
       >
         <CanvasStage
@@ -388,8 +480,25 @@ function InlineCanvasEditorInner({
         />
       </div>
 
-      {/* ── Image picker tray ── */}
-      <CanvasBottomTray posts={posts} onNodeAdd={(url, source) => addNode(url, source)} />
+      <RightPanel
+        background={background}
+        onChangeBackground={changeBackground}
+        selectedId={selectedId}
+        nodes={nodes}
+        keepRatio={keepRatio}
+        onSetKeepRatio={setKeepRatio}
+        isRemovingBg={isRemovingBg}
+        removeBgError={removeBgError}
+        onToggleRemoveBg={handleToggleRemoveBg}
+        onMoveNodeUp={moveNodeUp}
+        onMoveNodeDown={moveNodeDown}
+        onDeleteNode={(id) => { removeNode(id); setSelectedId(null); }}
+        isDirty={isDirty}
+        isSaving={isSaving}
+        saveError={saveError}
+        onSave={handleSave}
+        onDiscard={handleDiscard}
+      />
     </div>
   );
 }
