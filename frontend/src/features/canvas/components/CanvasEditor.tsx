@@ -113,6 +113,7 @@ export function CanvasEditor({ initialState, posts, onClose, onSaveSuccess }: Pr
             nodes={nodes}
             background={background}
             selectedId={selectedId}
+            keepRatio
             onSelect={setSelectedId}
             onNodeUpdate={updateNode}
             onNodeDelete={removeNode}
