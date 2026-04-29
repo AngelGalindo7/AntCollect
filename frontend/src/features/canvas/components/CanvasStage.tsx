@@ -9,6 +9,7 @@ interface Props {
   nodes: CanvasNode[];
   background: BackgroundConfig;
   selectedId: string | null;
+  keepRatio: boolean;
   onSelect: (id: string | null) => void;
   onNodeUpdate: (id: string, attrs: Partial<CanvasNode>) => void;
   onNodeDelete: (id: string) => void;
@@ -16,7 +17,7 @@ interface Props {
 }
 
 export const CanvasStage = forwardRef<Konva.Stage, Props>(
-  ({ nodes, background, selectedId, onSelect, onNodeUpdate, onNodeDelete, scale }, ref) => {
+  ({ nodes, background, selectedId, keepRatio, onSelect, onNodeUpdate, onNodeDelete, scale }, ref) => {
     const stageContainerRef = useRef<HTMLDivElement>(null);
 
     const bgFill =
@@ -53,6 +54,7 @@ export const CanvasStage = forwardRef<Konva.Stage, Props>(
                 key={node.id}
                 node={node}
                 isSelected={selectedId === node.id}
+                keepRatio={keepRatio}
                 onSelect={() => onSelect(node.id)}
                 onUpdate={(attrs) => onNodeUpdate(node.id, attrs)}
                 onDelete={() => onNodeDelete(node.id)}
