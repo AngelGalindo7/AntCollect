@@ -219,22 +219,6 @@ const UserProfile: React.FC = () => {
     );
   }
 
-  // ── Canvas edit mode: takes over the full page ──
-  if (isEditing) {
-    return (
-      <InlineCanvasEditor
-        username={profile.username}
-        avatarPath={profile.avatar_path}
-        posts={profile.posts}
-        onClose={() => setIsEditing(false)}
-        onSaveSuccess={(path) => {
-          setCanvasPreviewPath(path);
-          setIsEditing(false);
-        }}
-      />
-    );
-  }
-
   const tabFolderType: FolderType = activeTab !== "showcase" ? (activeTab as FolderType) : "collection";
   const filteredPosts = profile.posts.filter((p) => p.type === activeTab);
   const filteredFolders = folders.filter((f) => f.folder_type === activeTab);
@@ -394,15 +378,28 @@ const UserProfile: React.FC = () => {
 
       {/* ── Section 3: Tab content ── */}
       {activeTab === "showcase" ? (
-        <div className="py-6">
+        isEditing ? (
+          <div className="max-w-6xl mx-auto px-4 py-6">
+            <InlineCanvasEditor
+              username={profile.username}
+              avatarPath={profile.avatar_path}
+              posts={profile.posts}
+              onClose={() => setIsEditing(false)}
+              onSaveSuccess={(path) => {
+                setCanvasPreviewPath(path);
+                setIsEditing(false);
+              }}
+            />
+          </div>
+        ) : (
           <CanvasPreview
             previewPath={canvasPreviewPath}
             isOwner={profile.is_owner}
             onEditClick={() => setIsEditing(true)}
           />
-        </div>
+        )
       ) : (
-        <div className="mt-6">
+        <div className="max-w-6xl mx-auto px-4 mt-6">
           <PostGridLayout
             items={gridItems}
             onPostClick={handlePostClick}

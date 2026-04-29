@@ -58,6 +58,10 @@ const Layout: React.FC = () => {
           <main data-testid="main-content" className="flex-1 overflow-hidden bg-warm-cream">
             <Outlet />
           </main>
+        ) : isProfileRoute ? (
+          <main data-testid="main-content" className="flex-1 bg-warm-cream overflow-auto text-espresso">
+            <Outlet />
+          </main>
         ) : (
           <main data-testid="main-content" className="flex-1 bg-warm-cream overflow-auto text-espresso">
             <div className="max-w-7xl mx-auto p-4">
