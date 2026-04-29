@@ -188,6 +188,7 @@ jobs:
           echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
           echo "GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}" >> .env
           echo "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" >> .env
+          echo "COOKIE_SECURE=true" >> .env
 
       # ── Copy configuration to EC2 ────────────────────────────────────────
       - name: Copy docker-compose and .env to EC2
