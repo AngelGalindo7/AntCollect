@@ -14,6 +14,8 @@ import SettingsPage from '@/features/settings/pages/SettingsPage';
 import CreateFolder from '@/features/create/pages/CreateFolder';
 import FolderPage from '@/features/create/pages/FolderPage';
 import LibraryPage from '@/features/library/pages/LibraryPage';
+import SetupProfile from '@/features/auth/pages/SetupProfile';
+import AuthComplete from '@/features/auth/pages/AuthComplete';
 
 function RequireAuth() {
   return localStorage.getItem('userId') ? <Outlet /> : <Navigate to="/Login" replace />;
@@ -58,6 +60,8 @@ function App(){
     <Routes>
         <Route path="/Login" element={<LogIn />} />
         <Route path="/CreateAccount" element={<SignUp />}/>
+        <Route path="/setup-profile" element={<SetupProfile />} />
+        <Route path="/auth/complete" element={<AuthComplete />} />
 
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
