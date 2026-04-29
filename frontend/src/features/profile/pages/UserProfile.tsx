@@ -17,6 +17,11 @@ const TABS: { label: string; value: TabValue }[] = [
   { label: "Trading Away", value: "trading" },
 ];
 
+function swapAvatarSize(path: string | null, size: 'medium' | 'original'): string | null {
+  if (!path) return null;
+  return path.replace('/thumbnail/', `/${size}/`);
+}
+
 const CameraIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -271,7 +276,12 @@ const UserProfile: React.FC = () => {
                 aria-label="Upload avatar"
               >
                 {profile.avatar_path ? (
-                  <img src={profile.avatar_path} alt={profile.username} className="w-full h-full object-cover" />
+                  <img
+                    src={swapAvatarSize(profile.avatar_path, 'medium') ?? ''}
+                    srcSet={`${swapAvatarSize(profile.avatar_path, 'original')} 2x`}
+                    alt={profile.username}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <span className="text-3xl font-semibold text-espresso/50 select-none">
                     {profile.username.charAt(0).toUpperCase()}
@@ -291,7 +301,12 @@ const UserProfile: React.FC = () => {
             ) : (
               <div className="w-24 h-24 rounded-full ring-4 ring-white overflow-hidden bg-warm-cream flex items-center justify-center">
                 {profile.avatar_path ? (
-                  <img src={profile.avatar_path} alt={profile.username} className="w-full h-full object-cover" />
+                  <img
+                    src={swapAvatarSize(profile.avatar_path, 'medium') ?? ''}
+                    srcSet={`${swapAvatarSize(profile.avatar_path, 'original')} 2x`}
+                    alt={profile.username}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <span className="text-3xl font-semibold text-espresso/50 select-none">
                     {profile.username.charAt(0).toUpperCase()}
