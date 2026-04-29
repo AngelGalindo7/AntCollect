@@ -12,7 +12,7 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    token: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     issued_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=text('CURRENT_TIMESTAMP'),nullable=False)
     expires_at: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked: Mapped[bool] = mapped_column(Boolean, server_default=text('false'), nullable=False)

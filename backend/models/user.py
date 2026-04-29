@@ -17,7 +17,8 @@ class User(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     username: Mapped[str] =  mapped_column(String(50), nullable=False, unique=True)
     email: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    google_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
     role: Mapped[UserRole] = mapped_column(
         String(20), nullable=False, default=UserRole.USER, server_default=text("'user'")
     )
