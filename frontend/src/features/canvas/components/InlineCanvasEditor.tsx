@@ -96,9 +96,15 @@ function InlineCanvasEditorInner({
   const stageRef = useRef<Konva.Stage>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
 
-  const [scale, setScale] = useState(() => (window.innerWidth - 32) / CANVAS_WIDTH);
+  const [scale, setScale] = useState(() => window.innerWidth / CANVAS_WIDTH);
 
-  // Scale to fill container width; height follows the canvas aspect ratio
+  // Lock body scroll while editor is open (overlay covers full viewport)
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  // Scale canvas to fill viewport width; height scrolls freely
   useLayoutEffect(() => {
     const el = canvasAreaRef.current;
     if (!el) return;
@@ -184,7 +190,7 @@ function InlineCanvasEditorInner({
   };
 
   return (
-    <div className="flex flex-col w-full">
+    <div className="fixed inset-0 z-50 flex flex-col overflow-auto bg-neutral-950">
       {/* ── Collapsed header ── */}
       <div
         className="flex items-center gap-3 px-4 bg-neutral-900 border-b border-neutral-700 shrink-0"
