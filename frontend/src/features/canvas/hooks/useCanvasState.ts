@@ -47,6 +47,28 @@ export function useCanvasState(initial: CanvasState | null) {
     setIsDirty(true);
   }, []);
 
+  const moveNodeUp = useCallback((id: string) => {
+    setNodes((prev) => {
+      const idx = prev.findIndex((n) => n.id === id);
+      if (idx === -1 || idx === prev.length - 1) return prev;
+      const next = [...prev];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      return next;
+    });
+    setIsDirty(true);
+  }, []);
+
+  const moveNodeDown = useCallback((id: string) => {
+    setNodes((prev) => {
+      const idx = prev.findIndex((n) => n.id === id);
+      if (idx <= 0) return prev;
+      const next = [...prev];
+      [next[idx], next[idx - 1]] = [next[idx - 1], next[idx]];
+      return next;
+    });
+    setIsDirty(true);
+  }, []);
+
   const markClean = useCallback(() => setIsDirty(false), []);
 
   const getCanvasJson = useCallback(
@@ -54,5 +76,5 @@ export function useCanvasState(initial: CanvasState | null) {
     [background, nodes],
   );
 
-  return { nodes, background, isDirty, addNode, updateNode, removeNode, changeBackground, markClean, getCanvasJson };
+  return { nodes, background, isDirty, addNode, updateNode, removeNode, moveNodeUp, moveNodeDown, changeBackground, markClean, getCanvasJson };
 }
