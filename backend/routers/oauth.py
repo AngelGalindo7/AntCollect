@@ -93,7 +93,7 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
         )
 
     if token_resp.status_code != 200:
-        logger.warning("google token exchange failed", extra={"status": token_resp.status_code})
+        logger.warning("google token exchange failed", extra={"event": "oauth.google_token_error", "status": token_resp.status_code})
         raise HTTPException(status_code=400, detail="Failed to exchange authorization code")
 
     raw_id_token = token_resp.json().get("id_token")
@@ -108,7 +108,7 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
             GOOGLE_CLIENT_ID,
         )
     except ValueError as exc:
-        logger.warning("google id token verification failed", extra={"error": str(exc)})
+        logger.warning("google id token verification failed", extra={"event": "oauth.google_idtoken_invalid", "error": str(exc)})
         raise HTTPException(status_code=400, detail="Google ID token verification failed")
 
     if not id_info.get("email_verified"):
@@ -124,6 +124,7 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     # Returning user — google_id already linked
     existing_by_google = db.query(User).filter(User.google_id == google_id).first()
     if existing_by_google:
+        logger.info("google login: returning user", extra={"event": "oauth.google_login", "user_id": existing_by_google.id})
         return _login_and_redirect(existing_by_google, db)
 
     # Existing email/password account — silently link and log in
@@ -131,9 +132,11 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     if existing_by_email:
         existing_by_email.google_id = google_id
         db.commit()
+        logger.info("google login: linked existing account", extra={"event": "oauth.google_account_linked", "user_id": existing_by_email.id})
         return _login_and_redirect(existing_by_email, db)
 
     # New user — send to username picker
+    logger.info("google login: new user, redirecting to setup", extra={"event": "oauth.google_new_user"})
     pending_token = create_google_pending_token(google_id, email, display_name)
     secure, domain = _cookie_cfg()
     response = RedirectResponse(url=f"{FRONTEND_URL}/setup-profile?name={quote(display_name)}")
@@ -177,6 +180,7 @@ def google_complete(
     user = User(username=username, email=email, google_id=google_id, password_hash=None)
     db.add(user)
     db.flush()
+    logger.info("google signup: account created", extra={"event": "oauth.google_signup", "user_id": user.id})
 
     refresh_token_data = create_refresh_token({"sub": user.id})
     db.add(RefreshToken(
