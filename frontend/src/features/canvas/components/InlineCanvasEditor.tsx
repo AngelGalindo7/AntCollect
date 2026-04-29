@@ -160,7 +160,13 @@ function InlineCanvasEditorInner({
     setIsSaving(true);
     try {
       await saveCanvas(getCanvasJson());
-      const dataUrl = stageRef.current.toDataURL({ pixelRatio: 2 });
+      const stage = stageRef.current;
+      const transformers = stage.find('Transformer');
+      transformers.forEach((t) => t.visible(false));
+      stage.batchDraw();
+      const dataUrl = stage.toDataURL({ pixelRatio: 2 });
+      transformers.forEach((t) => t.visible(true));
+      stage.batchDraw();
       const blob = dataURLtoBlob(dataUrl);
       const previewPath = await uploadCanvasPreview(blob);
       markClean();
