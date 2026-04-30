@@ -59,3 +59,11 @@ export async function getPublicCanvasPreview(username: string): Promise<string |
   const data = await res.json();
   return data.preview_path as string;
 }
+
+export async function getPublicCanvasData(username: string): Promise<CanvasState | null> {
+  const res = await fetch(`${API_BASE}/canvas/${username}/data`);
+  if (res.status === 404) return null;
+  if (!res.ok) return null;
+  const data = await res.json();
+  return (data.canvas_json as CanvasState) ?? null;
+}

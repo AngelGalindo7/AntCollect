@@ -14,6 +14,7 @@ export interface CanvasNode {
   bgRemoved?: boolean;
   originalUrl?: string;
   removedBgUrl?: string;
+  holo?: boolean;
 }
 
 export interface BackgroundConfig {
