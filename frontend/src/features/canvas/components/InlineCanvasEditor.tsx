@@ -175,6 +175,7 @@ interface RightPanelProps {
   onToggleRemoveBg: () => void;
   onMoveNodeUp: (id: string) => void;
   onMoveNodeDown: (id: string) => void;
+  onToggleHolo: (id: string) => void;
   onDeleteNode: (id: string) => void;
   isDirty: boolean;
   isSaving: boolean;
@@ -187,7 +188,7 @@ function RightPanel({
   background, onChangeBackground,
   selectedId, nodes, keepRatio, onSetKeepRatio,
   isRemovingBg, removeBgError, onToggleRemoveBg,
-  onMoveNodeUp, onMoveNodeDown, onDeleteNode,
+  onMoveNodeUp, onMoveNodeDown, onToggleHolo, onDeleteNode,
   isDirty, isSaving, saveError, onSave, onDiscard,
 }: RightPanelProps) {
   const selectedNode = nodes.find((n) => n.id === selectedId);
@@ -272,6 +273,17 @@ function RightPanel({
             {isRemovingBg ? 'Removing BG…' : selectedNode.bgRemoved ? 'BG Removed ✓' : 'Remove BG'}
           </button>
           {removeBgError && <p className="text-red-500 text-xs mb-2">{removeBgError}</p>}
+
+          <button
+            onClick={() => onToggleHolo(selectedId)}
+            className={`w-full py-1.5 rounded-lg text-xs font-medium transition-colors mb-1.5 ${
+              selectedNode.holo
+                ? 'bg-uci-gold text-espresso'
+                : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
+            }`}
+          >
+            {selectedNode.holo ? '✦ Holo On' : '✦ Holo Off'}
+          </button>
 
           <button
             onClick={() => onDeleteNode(selectedId)}
@@ -496,6 +508,7 @@ function InlineCanvasEditorInner({ posts, initialState, onClose, onSaveSuccess }
         onToggleRemoveBg={handleToggleRemoveBg}
         onMoveNodeUp={moveNodeUp}
         onMoveNodeDown={moveNodeDown}
+        onToggleHolo={(id) => updateNode(id, { holo: !nodes.find((n) => n.id === id)?.holo })}
         onDeleteNode={(id) => { removeNode(id); setSelectedId(null); }}
         isDirty={isDirty}
         isSaving={isSaving}
