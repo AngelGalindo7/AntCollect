@@ -67,7 +67,11 @@ export function CanvasViewer({ canvasData, previewPath, isOwner, onEditClick }: 
                   transform: `rotate(${node.rotation}deg)`,
                 }}
               >
-                {node.holo ? <HoloStickerEffect>{img}</HoloStickerEffect> : img}
+                {node.holo ? (
+                  <HoloStickerEffect maskUrl={node.bgRemoved ? node.image_url : undefined}>
+                    {img}
+                  </HoloStickerEffect>
+                ) : img}
               </div>
             );
           })}

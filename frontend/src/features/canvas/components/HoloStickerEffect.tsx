@@ -8,9 +8,10 @@ const adjust = (value: number, fromMin: number, fromMax: number, toMin: number, 
 
 interface Props {
   children: React.ReactNode;
+  maskUrl?: string;
 }
 
-export function HoloStickerEffect({ children }: Props) {
+export function HoloStickerEffect({ children, maskUrl }: Props) {
   const elRef = useRef<HTMLDivElement>(null);
   const rafId = useRef<number | null>(null);
 
@@ -58,8 +59,24 @@ export function HoloStickerEffect({ children }: Props) {
     >
       <div className="holo-rotator">
         {children}
-        <div className="holo-shine" />
-        <div className="holo-glare" />
+        <div
+          className="holo-shine"
+          style={maskUrl ? {
+            maskImage: `url(${maskUrl})`,
+            WebkitMaskImage: `url(${maskUrl})`,
+            maskSize: '100% 100%',
+            WebkitMaskSize: '100% 100%',
+          } : undefined}
+        />
+        <div
+          className="holo-glare"
+          style={maskUrl ? {
+            maskImage: `url(${maskUrl})`,
+            WebkitMaskImage: `url(${maskUrl})`,
+            maskSize: '100% 100%',
+            WebkitMaskSize: '100% 100%',
+          } : undefined}
+        />
       </div>
     </div>
   );
