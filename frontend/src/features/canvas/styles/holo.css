@@ -1,0 +1,67 @@
+.holo-sticker {
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  --rotate-x: 0deg;
+  --rotate-y: 0deg;
+  --card-opacity: 0;
+  --bg-x: 50%;
+  --bg-y: 50%;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.holo-rotator {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform: perspective(600px) rotateX(var(--rotate-x)) rotateY(var(--rotate-y));
+  transition: transform 0.15s ease-out;
+}
+
+.holo-shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image:
+    repeating-linear-gradient(
+      110deg,
+      #f0e 0%,
+      #0ef 15%,
+      #0ff 30%,
+      #0fe 45%,
+      #f0e 60%
+    ),
+    repeating-linear-gradient(
+      110deg,
+      #f0e 0%,
+      #0ef 20%,
+      #0ff 40%,
+      #0fe 60%,
+      #f0e 80%
+    );
+  background-position: var(--bg-x) var(--bg-y);
+  background-size: 300% 300%;
+  mix-blend-mode: color-dodge;
+  filter: brightness(0.55) contrast(1.2) saturate(1.3);
+  opacity: calc(var(--card-opacity) * 0.65);
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.holo-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: radial-gradient(
+    farthest-corner circle at var(--pointer-x) var(--pointer-y),
+    rgba(255, 255, 255, 0.8) 10%,
+    rgba(255, 255, 255, 0.65) 20%,
+    rgba(0, 0, 0, 0.5) 90%
+  );
+  mix-blend-mode: overlay;
+  opacity: var(--card-opacity);
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
