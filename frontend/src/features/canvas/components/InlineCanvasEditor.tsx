@@ -316,7 +316,7 @@ function RightPanel({
 interface Props {
   posts: Post[];
   onClose: () => void;
-  onSaveSuccess: (previewPath: string) => void;
+  onSaveSuccess: (previewPath: string, canvasState: CanvasState) => void;
 }
 
 export function InlineCanvasEditor({ posts, onClose, onSaveSuccess }: Props) {
@@ -379,7 +379,10 @@ function InlineCanvasEditorInner({ posts, initialState, onClose, onSaveSuccess }
     const el = canvasAreaRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      setScale(entry.contentRect.width / CANVAS_WIDTH);
+      const byWidth = entry.contentRect.width / CANVAS_WIDTH;
+      // Reserve ~150px for the profile header + tab bar above the editor
+      const byHeight = (window.innerHeight - 150) / CANVAS_HEIGHT;
+      setScale(Math.min(byWidth, byHeight));
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -430,7 +433,8 @@ function InlineCanvasEditorInner({ posts, initialState, onClose, onSaveSuccess }
     setSaveError(null);
     setIsSaving(true);
     try {
-      await saveCanvas(getCanvasJson());
+      const json = getCanvasJson();
+      await saveCanvas(json);
       const stage = stageRef.current;
       const transformers = stage.find('Transformer');
       transformers.forEach((t) => t.visible(false));
@@ -441,7 +445,7 @@ function InlineCanvasEditorInner({ posts, initialState, onClose, onSaveSuccess }
       const blob = dataURLtoBlob(dataUrl);
       const previewPath = await uploadCanvasPreview(blob);
       markClean();
-      onSaveSuccess(previewPath);
+      onSaveSuccess(previewPath, json);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Save failed. Try again.');
     } finally {

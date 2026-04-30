@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
-import { CanvasPreview } from "@/features/canvas/components/CanvasPreview";
+import { CanvasViewer } from "@/features/canvas/components/CanvasViewer";
 import { InlineCanvasEditor } from "@/features/canvas/components/InlineCanvasEditor";
-import { getPublicCanvasPreview } from "@/features/canvas/api/canvasApi";
+import { getPublicCanvasPreview, getPublicCanvasData } from "@/features/canvas/api/canvasApi";
+import type { CanvasState } from "@/features/canvas/types/canvas";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useParams, useNavigate } from "react-router-dom";
@@ -41,6 +42,7 @@ const UserProfile: React.FC = () => {
 
   // Canvas showcase state
   const [canvasPreviewPath, setCanvasPreviewPath] = useState<string | null>(null);
+  const [canvasData, setCanvasData] = useState<CanvasState | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
   // Avatar upload state
@@ -96,9 +98,13 @@ const UserProfile: React.FC = () => {
           setFolders(folderData);
         }
 
-        // Fetch canvas preview (public endpoint — no auth needed)
-        const previewPath = await getPublicCanvasPreview(String(username)).catch(() => null);
+        // Fetch canvas data and preview in parallel (both public — no auth needed)
+        const [previewPath, canvasJson] = await Promise.all([
+          getPublicCanvasPreview(String(username)).catch(() => null),
+          getPublicCanvasData(String(username)).catch(() => null),
+        ]);
         setCanvasPreviewPath(previewPath);
+        setCanvasData(canvasJson);
       } catch (err) {
         console.error(err);
       } finally {
@@ -397,13 +403,15 @@ const UserProfile: React.FC = () => {
           <InlineCanvasEditor
             posts={profile.posts}
             onClose={() => setIsEditing(false)}
-            onSaveSuccess={(path) => {
+            onSaveSuccess={(path, state) => {
               setCanvasPreviewPath(path);
+              setCanvasData(state);
               setIsEditing(false);
             }}
           />
         ) : (
-          <CanvasPreview
+          <CanvasViewer
+            canvasData={canvasData}
             previewPath={canvasPreviewPath}
             isOwner={profile.is_owner}
             onEditClick={() => setIsEditing(true)}
