@@ -34,9 +34,10 @@ export function CanvasViewer({ canvasData, previewPath, isOwner, onEditClick }: 
   if (canvasData) {
     const bgStyle = getBackground(canvasData);
     return (
-      // Outer shell fills 100vh and uses the same background — letterboxing is seamless
-      <div className="relative w-full flex flex-col justify-center overflow-hidden" style={{ height: '100vh', ...bgStyle }}>
-        {/* Inner div locks the 16:9 coordinate space so node percentages are never distorted */}
+      <div
+        className="relative w-full flex flex-col justify-center overflow-hidden"
+        style={{ height: '100vh', ...bgStyle }}
+      >
         <div className="relative w-full" style={{ aspectRatio: '16/9', ...bgStyle }}>
           {canvasData.nodes.map((node) => {
             const left = (node.x / CANVAS_WIDTH) * 100;
