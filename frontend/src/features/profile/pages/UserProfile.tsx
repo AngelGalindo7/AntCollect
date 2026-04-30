@@ -403,13 +403,11 @@ const UserProfile: React.FC = () => {
             }}
           />
         ) : (
-          <div className="py-6">
-            <CanvasPreview
-              previewPath={canvasPreviewPath}
-              isOwner={profile.is_owner}
-              onEditClick={() => setIsEditing(true)}
-            />
-          </div>
+          <CanvasPreview
+            previewPath={canvasPreviewPath}
+            isOwner={profile.is_owner}
+            onEditClick={() => setIsEditing(true)}
+          />
         )
       ) : (
         <div className="max-w-6xl mx-auto px-4 mt-6">

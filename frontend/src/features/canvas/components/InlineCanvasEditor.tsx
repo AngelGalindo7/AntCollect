@@ -332,7 +332,7 @@ export function InlineCanvasEditor({ posts, onClose, onSaveSuccess }: Props) {
 
   if (!ready) {
     return (
-      <div className="flex w-full border border-neutral-200 rounded-xl overflow-hidden" style={{ minHeight: 400 }}>
+      <div className="flex w-full overflow-hidden" style={{ minHeight: 400 }}>
         <div className="w-64 shrink-0 bg-white border-r border-neutral-200" />
         <div className="flex-1 bg-neutral-100 flex items-center justify-center">
           <p className="text-neutral-400 text-sm">Loading canvas…</p>
@@ -455,7 +455,7 @@ function InlineCanvasEditorInner({ posts, initialState, onClose, onSaveSuccess }
   };
 
   return (
-    <div className="flex w-full border border-neutral-200 rounded-xl overflow-hidden">
+    <div className="flex w-full overflow-hidden">
       <LeftPanel
         posts={posts}
         onNodeAdd={(url, source) => addNode(url, source)}

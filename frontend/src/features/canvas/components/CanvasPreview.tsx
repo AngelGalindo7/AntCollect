@@ -8,10 +8,9 @@ export function CanvasPreview({ previewPath, isOwner, onEditClick }: Props) {
   if (!previewPath && !isOwner) return null;
 
   return (
-    <div className="relative w-full px-4 py-4">
-      <div className="max-w-233.75 mx-auto">
-        {previewPath ? (
-        <div className="relative w-full overflow-hidden rounded-xl" style={{ aspectRatio: '16/9' }}>
+    <div className="relative w-full">
+      {previewPath ? (
+        <div className="relative w-full overflow-hidden" style={{ aspectRatio: '16/9' }}>
           <img
             src={previewPath}
             alt="Sticker showcase"
@@ -39,7 +38,6 @@ export function CanvasPreview({ previewPath, isOwner, onEditClick }: Props) {
           <span className="text-xs">Arrange your stickers into a canvas</span>
         </button>
         )}
-      </div>
     </div>
   );
 }
