@@ -155,6 +155,19 @@ def remove_image_background(
     return RemoveBgResponse(processed_url=processed_url)
 
 
+@router.get("/{username}/data", response_model=CanvasResponse)
+def get_public_canvas_data(username: str, db: Session = Depends(get_db)):
+    db_user = db.execute(select(User).where(User.username == username)).scalar_one_or_none()
+    if db_user is None:
+        raise HTTPException(404, "User not found")
+
+    row = db.execute(
+        select(UserCanvas).where(UserCanvas.user_id == db_user.id)
+    ).scalar_one_or_none()
+
+    return CanvasResponse(canvas_json=row.canvas_json if row else None)
+
+
 @router.get("/{username}/preview", response_model=CanvasPreviewResponse)
 def get_public_canvas_preview(username: str, db: Session = Depends(get_db)):
     db_user = db.execute(select(User).where(User.username == username)).scalar_one_or_none()
