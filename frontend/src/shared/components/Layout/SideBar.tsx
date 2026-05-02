@@ -142,10 +142,11 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
   const initials = me ? me.username.slice(0, 2).toUpperCase() : '?';
 
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `w-full px-2 py-3 flex items-center justify-center transition-all duration-200 ${isActive ? 'text-campus-gold scale-110' : 'text-white/70 hover:text-white'
+    `w-9 h-9 mx-auto flex items-center justify-center rounded-lg transition-all duration-200 ${
+      isActive ? 'bg-white/12 text-white' : 'text-white/70 hover:text-white'
     }`;
 
-  const iconButtonClass = 'w-full px-2 py-3 mt-4 flex items-center justify-center text-white/70 hover:text-white transition-all duration-200';
+  const iconButtonClass = 'w-9 h-9 mx-auto mt-1 flex items-center justify-center rounded-lg text-white/70 hover:text-white transition-all duration-200';
 
   const messagesActive = isChatRoute || messagesOpen;
 
@@ -155,7 +156,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
   return (
     <>
       <aside className="relative w-14 bg-campus-blue flex flex-col h-full z-20 shadow-2xl">
-        <nav className="flex-1 p-2 flex flex-col gap-2">
+        <nav className="flex-1 px-2 py-3 flex flex-col gap-1 items-center">
 
           <NavLink to="/" className={getNavLinkClass}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,7 +172,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
 
           <button
             onClick={isChatRoute ? undefined : () => { setMessagesOpen((prev) => !prev); setTradeRequestsOpen(false); }}
-            className={`${iconButtonClass} ${messagesActive ? 'text-campus-gold scale-110' : ''}`}
+            className={`${iconButtonClass} ${messagesActive ? 'bg-white/12 text-white' : ''}`}
             title="Messages"
           >
             <div className="relative">
@@ -189,7 +190,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
           {/* Trade requests icon */}
           <button
             onClick={handleOpenTradePanel}
-            className={`${iconButtonClass} ${tradeRequestsOpen ? 'text-campus-gold scale-110' : ''}`}
+            className={`${iconButtonClass} ${tradeRequestsOpen ? 'bg-white/12 text-white' : ''}`}
             title="Trade Requests"
           >
             <div className="relative">
