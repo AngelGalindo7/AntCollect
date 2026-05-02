@@ -56,7 +56,7 @@ def _cookie_response(content: dict, access_token: str, refresh_token:str):
 
 # TODO Add token to httpcookie/local memory in the frontend
 @router.post("/refresh-token")
-@limiter.limit("10/minute", key_func=get_real_ip)
+@limiter.limit("30/minute", key_func=get_real_ip)
 def refresh_token(
     request: Request,
     db: Session = Depends(get_db),
