@@ -1,26 +1,51 @@
-@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Inter+Tight:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "../features/canvas/styles/holo.css";
 
 @theme {
-  --font-quicksand: 'Quicksand', sans-serif;
-  --color-petr-blue: #1B365D;
-  --color-uci-blue: #1B365D;
-  --color-uci-gold: #F2A900;
-  --color-action-gold: #F2A900;
-  --color-campus-blue: #1B365D;
-  --color-campus-gold: #F2A900;
-  --color-warm-cream: #EFE9DF;
+  /* ── Fonts ──────────────────────────────────────────── */
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-ui:      'Inter Tight', system-ui, sans-serif;
+
+  /* ── Brand colors (source of truth) ─────────────────── */
+  --color-uci-blue:  #0064A4;
+  --color-uci-navy:  #0F2D5C;
+  --color-uci-gold:  #FFD200;
+  --color-uci-cream: #FFF8E5;
+
+  /* ── Brand aliases (keep old names working across the app) ── */
+  --color-petr-blue:   #0064A4;
+  --color-campus-blue: #0064A4;
+  --color-campus-gold: #FFD200;
+  --color-action-gold: #FFD200;
+  --color-warm-cream:  #FFF8E5;
+
+  /* ── Neutrals (unchanged — don't remap these) ─────── */
   --color-soft-white: #FAF8F4;
-  --color-brick-red: #C85A3A;
-  --color-espresso: #332D2A;
-  --color-warm-gray: #DDD4C5;
-
+  --color-brick-red:  #C85A3A;
+  --color-espresso:   #332D2A;
+  --color-warm-gray:  #DDD4C5;
   --color-input-border: #DDD4C5;
-  --color-soft-gray: #DDD4C5;
-  --color-dark-text: #332D2A;
+  --color-soft-gray:  #DDD4C5;
+  --color-dark-text:  #332D2A;
 
-  --radius-sticker: 0.75rem;
+  /* ── Radius ─────────────────────────────────────────── */
+  --radius-sticker: 0.875rem;   /* 14px */
+
+  /* ── Shadows ────────────────────────────────────────── */
   --shadow-soft: 0 4px 20px -2px rgba(101, 67, 33, 0.10);
-  --shadow-card: 0 3px 16px -2px rgba(120, 76, 30, 0.16), 0 1px 4px 0px rgba(101, 67, 33, 0.07);
+  --shadow-card:
+    0 1px 2px rgba(0, 100, 164, 0.05),
+    0 4px 10px rgba(0, 100, 164, 0.06);
+  --shadow-card-hover:
+    0 14px 30px rgba(0, 100, 164, 0.18),
+    0 2px 4px rgba(0, 100, 164, 0.06);
+  --shadow-button-blue: 0 4px 10px rgba(0, 100, 164, 0.25);
+  --shadow-button-gold: 0 4px 14px rgba(255, 210, 0, 0.4);
+}
+
+body {
+  background: var(--color-uci-cream);
+  color: var(--color-uci-navy);
+  font-family: var(--font-ui);
 }
