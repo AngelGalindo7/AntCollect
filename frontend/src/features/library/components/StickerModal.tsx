@@ -25,10 +25,10 @@ const StickerModal: React.FC<Props> = ({ stickerId, onClose }) => {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ fontFamily: "'Quicksand', sans-serif" }}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70" onClick={onClose} />
 
-      <div className="relative w-full max-w-4xl rounded-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]" style={{ background: '#FDFCF0' }}>
+      <div className="relative w-full max-w-4xl rounded-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]" style={{ background: 'var(--color-uci-cream)' }}>
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full transition-colors"
