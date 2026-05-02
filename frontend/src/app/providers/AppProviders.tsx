@@ -41,13 +41,25 @@ export function AppProviders({ children }: { children: ReactNode }) {
   // When auth state becomes true (login or page load with existing session),
   // proactively refresh the token before the WebSocket connects. This ensures
   // the access_token cookie is valid for the WS upgrade handshake.
+  //
+  // Skip the round-trip if the token was refreshed within the last 20 minutes
+  // (well inside the 30-minute access-token TTL). sessionStorage survives
+  // page.reload() but is cleared per tab, so each new tab still refreshes once.
   useEffect(() => {
     if (!isAuthenticated) {
       setIsWsReady(false);
+      sessionStorage.removeItem('wsReady');
+      return;
+    }
+    const SKEW_MS = 20 * 60 * 1000;
+    const last = parseInt(sessionStorage.getItem('wsReady') ?? '0', 10);
+    if (Date.now() - last < SKEW_MS) {
+      setIsWsReady(true);
       return;
     }
     refreshAccessToken().then(ok => {
       if (ok) {
+        sessionStorage.setItem('wsReady', String(Date.now()));
         setIsWsReady(true);
       } else {
         localStorage.removeItem('userId');
