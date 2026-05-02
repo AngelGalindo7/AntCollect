@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime, timezone, timedelta
 
@@ -8,8 +9,9 @@ from ..utils.rate_limit import limiter, get_real_ip
 
 from ..database import get_db
 from backend.models import RefreshToken, User
-from ..utils.auth import create_access_token, create_refresh_token,decode_refresh_token
-from backend.schemas import UserSearch
+from ..utils.auth import create_access_token, create_refresh_token, decode_refresh_token
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(
@@ -22,16 +24,13 @@ REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60  # 30 days
 
 
 
-def _cookie_response(content: dict, access_token: str, refresh_token:str):
-    """Build and return JSONResponse with httpOnly cookies for access/refresh tokens."""
+def _apply_auth_cookies(response, access_token: str, refresh_token: str) -> None:
+    """Set httpOnly auth cookies on any response object (JSONResponse or RedirectResponse)."""
     secure = os.getenv("COOKIE_SECURE", "false").lower() == "true"
     # COOKIE_DOMAIN=.petrcollect.com in production so cookies are shared between
     # petrcollect.com (Vercel frontend) and api.petrcollect.com (this service).
     # Leave unset in development — browser default scopes to the current origin.
     domain = os.getenv("COOKIE_DOMAIN") or None
-
-    response = JSONResponse(content=content)
-
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -52,6 +51,12 @@ def _cookie_response(content: dict, access_token: str, refresh_token:str):
         path="/",
         domain=domain,
     )
+
+
+def _cookie_response(content: dict, access_token: str, refresh_token: str):
+    """Build and return a JSONResponse with httpOnly auth cookies."""
+    response = JSONResponse(content=content)
+    _apply_auth_cookies(response, access_token, refresh_token)
     return response
 
 # TODO Add token to httpcookie/local memory in the frontend
@@ -97,6 +102,16 @@ def refresh_token(
             grace_period = timedelta(seconds=grace_period_seconds)
             now = datetime.now(timezone.utc)
             if not db_token.revoked_at or now > (db_token.revoked_at + grace_period):
+                # Revoked token used outside grace period — possible theft. Kill all sessions.
+                db.query(RefreshToken).filter(
+                    RefreshToken.user_id == db_token.user_id,
+                    RefreshToken.revoked == False,
+                ).update({"revoked": True, "revoked_at": now})
+                db.commit()
+                logger.warning(
+                    "refresh token reuse detected — all sessions revoked",
+                    extra={"event": "auth.token_reuse_detected", "user_id": db_token.user_id},
+                )
                 raise HTTPException(status_code=401, detail="Token has been revoked")
         
         new_access_token = create_access_token({
@@ -120,15 +135,6 @@ def refresh_token(
         db.add(new_refresh)
         db.commit()
 
-        content = {
-        "user": {
-            "id": user.id,
-            "email": user.email,
-            "username": user.username
-        }
-    }
-        response = JSONResponse(content=content)
-
         return _cookie_response(
             content={"ok": True},
             access_token=new_access_token,
@@ -140,7 +146,7 @@ def refresh_token(
         if isinstance(e, HTTPException):
             raise e
         # Otherwise, log the error in the console but return a 500 so you don't mistakenly log users out on DB failures
-        print(f"Internal Server Error during token refresh: {e}")
+        logger.error("unexpected error during token refresh", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail="Internal Server Error during token validation",
