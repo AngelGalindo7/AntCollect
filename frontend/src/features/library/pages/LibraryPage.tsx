@@ -28,8 +28,8 @@ const LibraryPage: React.FC = () => {
       {/* Header row: eyebrow + display headline on left, search + action on right */}
       <div className="flex items-end justify-between mb-6">
         <PageHeader
-          eyebrow="◆ ZOT! ZOT! ZOT! · UCI ANTEATERS"
-          title="Anteater"
+          eyebrow="◆ ZOT! ZOT! ZOT! · PETR STICKERS"
+          title="Petr"
           titleHighlight="Stickers."
         />
 
