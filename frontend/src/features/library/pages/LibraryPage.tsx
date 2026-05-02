@@ -28,7 +28,7 @@ const LibraryPage: React.FC = () => {
       {/* Header row: eyebrow + display headline on left, search + action on right */}
       <div className="flex items-end justify-between mb-6">
         <PageHeader
-          eyebrow="◆ ZOT! ZOT! ZOT! · PETR STICKERS"
+          eyebrow="◆ ZOT! ZOT! ZOT!"
           title="Petr"
           titleHighlight="Stickers."
         />
@@ -111,8 +111,7 @@ const LibraryPage: React.FC = () => {
                 <img
                   src={sticker.thumbnail}
                   alt={sticker.title}
-                  className="w-full h-full object-contain p-[10%] transition-transform duration-[280ms] group-hover:scale-[1.05] group-hover:-rotate-[2deg]"
-                  style={{ transitionTimingFunction: 'cubic-bezier(.2,.9,.3,1.2)' }}
+                  className="w-full h-full object-contain p-[10%]"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-warm-cream text-warm-gray">
