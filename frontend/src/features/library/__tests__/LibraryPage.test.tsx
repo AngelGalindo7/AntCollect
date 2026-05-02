@@ -20,8 +20,8 @@ function renderLibraryPage() {
 describe('LibraryPage', () => {
   it('renders title and add button', () => {
     renderLibraryPage()
-    expect(screen.getByText('Sticker Library')).toBeTruthy()
-    expect(screen.getByRole('button', { name: /add sticker/i })).toBeTruthy()
+    expect(screen.getByText('Anteater')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /new sticker/i })).toBeTruthy()
   })
 
   it('displays stickers from the API', async () => {
@@ -34,7 +34,7 @@ describe('LibraryPage', () => {
 
   it('opens add sticker modal when clicking the button', async () => {
     renderLibraryPage()
-    const addButton = screen.getByRole('button', { name: /add sticker/i })
+    const addButton = screen.getByRole('button', { name: /new sticker/i })
     fireEvent.click(addButton)
     
     expect(screen.getByText('Add New Sticker')).toBeTruthy()
