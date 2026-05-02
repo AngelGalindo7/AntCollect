@@ -19,7 +19,8 @@ from ..utils.auth import (
     create_refresh_token,
     decode_google_pending_token,
 )
-from .auth import _cookie_response
+from ..utils.rate_limit import limiter, get_real_ip
+from .auth import _cookie_response, _apply_auth_cookies
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,8 @@ def _cookie_cfg() -> tuple[bool, str | None]:
 
 
 @router.get("/google")
-def google_login():
+@limiter.limit("5/minute", key_func=get_real_ip)
+def google_login(request: Request):
     """Initiate Google OAuth — redirect user to Google's consent screen."""
     state = secrets.token_urlsafe(32)
     params = {
@@ -226,12 +228,8 @@ def _login_and_redirect(user: User, db: Session) -> RedirectResponse:
         "role": user.role,
     })
 
-    secure, domain = _cookie_cfg()
+    _, domain = _cookie_cfg()
     response = RedirectResponse(url=f"{FRONTEND_URL}/auth/complete")
     response.delete_cookie(_STATE_COOKIE, path="/", domain=domain)
-    # Mirror the same cookie settings as _cookie_response in auth.py
-    response.set_cookie("access_token", access_token, httponly=True, secure=secure,
-                        samesite="lax", max_age=30 * 60, path="/", domain=domain)
-    response.set_cookie("refresh_token", refresh_token_data["token"], httponly=True, secure=secure,
-                        samesite="lax", max_age=30 * 24 * 60 * 60, path="/", domain=domain)
+    _apply_auth_cookies(response, access_token, refresh_token_data["token"])
     return response
