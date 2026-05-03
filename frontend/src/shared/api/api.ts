@@ -1,3 +1,5 @@
+import { clearSession } from '@/shared/auth/session';
+
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 export const API_BASE = import.meta.env.VITE_BACKEND_URL ?? "http://localhost:8000";
@@ -42,9 +44,7 @@ export async function fetchWithAuth(
 
         response = await fetch(url, config);
     } else {
-        localStorage.removeItem("username");
-        localStorage.removeItem("userId");
-        localStorage.removeItem("email");
+        clearSession();
         window.location.href = "/Login";
         throw new Error("Session expired. Please log in again.");
     }
