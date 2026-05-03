@@ -3,6 +3,8 @@ import PostCardOverlay from './PostCardOverlay';
 import ReportModal from './ReportModal';
 import type { Post } from '@/shared/types/Types';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
+import { getSession } from '@/shared/auth/session';
+import { canModeratePosts } from '@/shared/auth/permissions';
 
 interface PostCardProps {
   post: Post;
@@ -18,8 +20,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
   const [likeCount, setLikeCount] = useState(post.total_likes || 0);
   const [reportModalOpen, setReportModalOpen] = useState(false);
 
-  const currentUserId = localStorage.getItem('userId');
-  const isOwner = post.user?.user_id !== undefined && String(post.user.user_id) === currentUserId;
+  const session = getSession();
+  const isOwner = post.user?.user_id !== undefined && String(post.user.user_id) === session?.userId;
+  const canModerate = !isOwner && canModeratePosts(session);
 
   const handleClick = () => {
     onClick?.(post, imageIndex);
@@ -30,10 +33,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
     setReportModalOpen(true);
   };
 
-  const handlePostDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this post?')) return;
-
+  const deletePost = async () => {
     try {
       const response = await fetchWithAuth(`${API_BASE}/posts/${post.post_id}`, {
         method: 'DELETE',
@@ -48,6 +48,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
       console.error('Error deleting post:', error);
       alert('An error occurred while deleting the post');
     }
+  };
+
+  const handlePostDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    await deletePost();
+  };
+
+  const handleAdminDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm("You are deleting another user's post as a moderator. This action is irreversible. Continue?")) return;
+    await deletePost();
   };
 
   const handleLikeClick = async (e: React.MouseEvent) => {
@@ -113,7 +125,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
         likeCount={likeCount}
         onLikeClick={handleLikeClick}
         isOwner={isOwner}
+        canModerate={canModerate}
         onDeleteClick={handlePostDelete}
+        onAdminDeleteClick={handleAdminDelete}
         onReportClick={handleReportClick}
       />
 
