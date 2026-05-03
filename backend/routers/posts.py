@@ -10,6 +10,8 @@ from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageReque
 from ..utils.files import delete_file, process_and_save_image
 from ..utils.auth import authenthicate_access_token
 from ..utils.rate_limit import limiter, get_user_or_ip_key
+from ..utils.permissions import can_delete_post, is_acting_as_moderator
+from ..utils.audit import log_admin_action
 
 logger = logging.getLogger(__name__)
 
@@ -290,8 +292,17 @@ def delete_post(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    if post.user_id != current_user.user_id:
+    if not can_delete_post(current_user, post):
         raise HTTPException(status_code=403, detail="Not authorized to delete this post")
+
+    if is_acting_as_moderator(current_user, post):
+        log_admin_action(
+            current_user,
+            "post_deleted",
+            target_type="post",
+            target_id=post.id,
+            owner_id=post.user_id,
+        )
 
     # 1. Collect all media assets associated with this post
     # We do this before deleting the post because deleting the post will cascade-delete the PostImage records
