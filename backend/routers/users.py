@@ -222,7 +222,8 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
         "user": {
             "id": db_user.id,
             "email": db_user.email,
-            "username": db_user.username
+            "username": db_user.username,
+            "role": db_user.role,
         }
     }
 
