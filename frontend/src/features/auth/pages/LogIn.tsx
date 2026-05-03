@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { API_BASE } from '@/shared/api/api';
+import { getSession, setSession, type Role } from '@/shared/auth/session';
 
 const GoogleIcon = () => (
     <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
@@ -20,7 +21,7 @@ const LogIn: React.FC = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (localStorage.getItem('userId')) {
+        if (getSession()) {
             navigate('/', { replace: true });
         }
     }, [navigate]);
@@ -44,9 +45,12 @@ const LogIn: React.FC = () => {
             }
 
             if (data.user) {
-                localStorage.setItem("userId", data.user.id.toString());
-                localStorage.setItem("email", data.user.email);
-                localStorage.setItem("username", data.user.username);
+                setSession({
+                    userId: data.user.id.toString(),
+                    username: data.user.username,
+                    email: data.user.email,
+                    role: (data.user.role as Role) ?? 'user',
+                });
                 window.dispatchEvent(new Event('auth:login'));
             }
 
