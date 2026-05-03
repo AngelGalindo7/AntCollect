@@ -49,14 +49,22 @@ def check_file_size(file: UploadFile):
 
 
 def validate_image(file: UploadFile):
+    if file.content_type not in ALLOWED_MIMES:
+        raise HTTPException(400, "Unsupported image type")
     try:
         file.file.seek(0)
         img = Image.open(file.file)
+        # `format` is set on open() before verify() invalidates the image
+        fmt = (img.format or "").lower()
         img.verify()
         file.file.seek(0)
-        return True
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(400, "Invalid or corrupted image file")
+    if fmt not in ALLOWED_FILE_TYPE:
+        raise HTTPException(400, "Unsupported image format")
+    return True
 
 
 def process_and_save_image(file: UploadFile, user_id: int, folder_prefix: str = "posts") -> Dict:
