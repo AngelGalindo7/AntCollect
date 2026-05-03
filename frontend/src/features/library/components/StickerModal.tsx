@@ -45,7 +45,7 @@ const StickerModal: React.FC<Props> = ({ stickerId, onClose }) => {
             <div className="w-full h-full min-h-64 bg-warm-gray/30 animate-pulse" />
           ) : sticker?.images && sticker.images.length > 0 ? (
             <img
-              src={sticker.images[0].paths.medium}
+              src={sticker.images[0].paths.original}
               alt={sticker.title}
               className="w-full h-full object-contain"
             />
