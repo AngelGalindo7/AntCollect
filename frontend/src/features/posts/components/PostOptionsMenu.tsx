@@ -1,13 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Flag, MoreVertical, Trash2, X } from 'lucide-react';
+import { Flag, MoreVertical, Shield, Trash2, X } from 'lucide-react';
 
 interface PostOptionsMenuProps {
   isOwner?: boolean;
+  canModerate?: boolean;
   onDeleteClick?: (e: React.MouseEvent) => void;
+  onAdminDeleteClick?: (e: React.MouseEvent) => void;
   onReportClick?: (e: React.MouseEvent) => void;
 }
 
-const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({ isOwner, onDeleteClick, onReportClick }) => {
+const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
+  isOwner,
+  canModerate,
+  onDeleteClick,
+  onAdminDeleteClick,
+  onReportClick,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -32,6 +40,12 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({ isOwner, onDeleteClic
     e.stopPropagation();
     setIsOpen(false);
     onDeleteClick?.(e);
+  };
+
+  const handleAdminDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsOpen(false);
+    onAdminDeleteClick?.(e);
   };
 
   const handleReport = (e: React.MouseEvent) => {
@@ -62,7 +76,17 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({ isOwner, onDeleteClic
             </button>
           )}
 
-          {!isOwner && (
+          {!isOwner && canModerate && (
+            <button
+              onClick={handleAdminDelete}
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors text-left"
+            >
+              <Shield className="w-4 h-4" />
+              <span>Delete (admin)</span>
+            </button>
+          )}
+
+          {!isOwner && !canModerate && (
             <button
               onClick={handleReport}
               className="w-full flex items-center gap-2 px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 transition-colors text-left"
