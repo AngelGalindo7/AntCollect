@@ -1,8 +1,10 @@
+import io
 import uuid
 import logging
 import urllib.request
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+from PIL import Image
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -13,6 +15,7 @@ from backend.models.canvas import UserCanvas
 from backend.schemas import CanvasSaveRequest, CanvasResponse, CanvasPreviewResponse, CanvasAssetUploadResponse, RemoveBgRequest, RemoveBgResponse, UserSearch
 from backend.utils.auth import authenthicate_access_token
 from backend.utils.files import check_file_size, validate_image
+from backend.utils.image_processing import strip_metadata
 from backend.utils.s3 import upload_image_bytes
 from backend.utils.rate_limit import limiter, get_user_or_ip_key
 
@@ -123,8 +126,25 @@ def upload_canvas_asset(
     validate_image(file)
 
     contents = file.file.read()
-    key = f"canvas_assets/{user.user_id}/{uuid.uuid4()}.jpg"
-    asset_url = upload_image_bytes(key, contents, file.content_type or "image/jpeg")
+    image = Image.open(io.BytesIO(contents))
+
+    # Preserve alpha for stickers/cutouts; flatten the rest to RGB
+    has_alpha = image.mode in ("RGBA", "LA") or (
+        image.mode == "P" and "transparency" in image.info
+    )
+    image = image.convert("RGBA" if has_alpha else "RGB")
+    image = strip_metadata(image)
+
+    buf = io.BytesIO()
+    if has_alpha:
+        image.save(buf, "PNG", optimize=True)
+        ext, content_type = "png", "image/png"
+    else:
+        image.save(buf, "JPEG", quality=90, optimize=True)
+        ext, content_type = "jpg", "image/jpeg"
+
+    key = f"canvas_assets/{user.user_id}/{uuid.uuid4()}.{ext}"
+    asset_url = upload_image_bytes(key, buf.getvalue(), content_type)
 
     return CanvasAssetUploadResponse(asset_url=asset_url)
 
