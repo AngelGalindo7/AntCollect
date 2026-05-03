@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
+import { getSession, clearSession } from '@/shared/auth/session';
 
 function passwordStrength(pw: string): 'weak' | 'medium' | 'strong' {
   if (pw.length < 8) return 'weak';
@@ -22,7 +23,7 @@ const strengthConfig = {
 
 export default function AccountTab() {
   const navigate = useNavigate();
-  const email = localStorage.getItem('email') ?? '—';
+  const email = getSession()?.email || '—';
 
   const [open, setOpen] = useState(false);
   const [currentPw, setCurrentPw] = useState('');
@@ -69,9 +70,7 @@ export default function AccountTab() {
     } catch {
       // continue regardless
     }
-    localStorage.removeItem('username');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('email');
+    clearSession();
     navigate('/Login');
   };
 
