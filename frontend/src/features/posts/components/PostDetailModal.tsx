@@ -6,6 +6,8 @@ import PostImageFrame from './PostImageFrame';
 import TradeEntryButton from './TradeEntryButton';
 import TradeOfferPanel from '@/features/trading/components/TradeOfferPanel';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
+import { getSession } from '@/shared/auth/session';
+import { canModeratePosts } from '@/shared/auth/permissions';
 
 interface PostDetailModalProps {
   post: Post;
@@ -32,11 +34,12 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
   const [tradeOpen, setTradeOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const currentUserId = localStorage.getItem('userId');
-  const isOwn = postOwnerId !== undefined && String(postOwnerId) === currentUserId;
+  const session = getSession();
+  const isOwn = postOwnerId !== undefined && String(postOwnerId) === session?.userId;
   const canTrade = !isOwn && postOwnerId !== undefined && folderType !== undefined;
   // Only allow deletion if the callback is provided (intended for Profile page)
   const canDelete = isOwn && !!onDeleteSuccess;
+  const canAdminDelete = !isOwn && canModeratePosts(session) && !!onDeleteSuccess;
 
   const images = post.images ?? [];
   const [activeIdx, setActiveIdx] = useState(0);
@@ -60,11 +63,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose, images.length]);
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-      return;
-    }
-
+  const performDelete = async () => {
     setIsDeleting(true);
     try {
       const res = await fetchWithAuth(`${API_BASE}/posts/${post.post_id}`, {
@@ -82,6 +81,20 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+      return;
+    }
+    await performDelete();
+  };
+
+  const handleAdminDelete = async () => {
+    if (!window.confirm("You are deleting another user's post as a moderator. This action is irreversible. Continue?")) {
+      return;
+    }
+    await performDelete();
   };
 
   const imageSrc = currentImg?.paths?.original ?? post.image_paths[activeIdx] ?? null;
@@ -168,6 +181,20 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
                 {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            )}
+
+            {canAdminDelete && (
+              <button
+                onClick={handleAdminDelete}
+                disabled={isDeleting}
+                className="absolute top-4 left-4 bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-full text-xs font-medium uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2 shadow-soft"
+                title="Delete as moderator"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z" />
+                </svg>
+                {isDeleting ? 'Deleting...' : 'Delete (admin)'}
               </button>
             )}
 
