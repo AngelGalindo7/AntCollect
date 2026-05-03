@@ -16,9 +16,10 @@ import FolderPage from '@/features/create/pages/FolderPage';
 import LibraryPage from '@/features/library/pages/LibraryPage';
 import SetupProfile from '@/features/auth/pages/SetupProfile';
 import AuthComplete from '@/features/auth/pages/AuthComplete';
+import { getSession } from '@/shared/auth/session';
 
 function RequireAuth() {
-  return localStorage.getItem('userId') ? <Outlet /> : <Navigate to="/Login" replace />;
+  return getSession() ? <Outlet /> : <Navigate to="/Login" replace />;
 }
 
 // Catches any render error inside the chat route and shows a recovery UI
