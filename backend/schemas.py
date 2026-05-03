@@ -17,6 +17,7 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: EmailStr
+    role: str = "user"
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -141,6 +142,7 @@ class UserMeResponse(BaseModel):
     id: int
     username: str
     email: str
+    role: str = "user"
     bio: Optional[str] = None
     avatar_path: Optional[str] = None
     background_path: Optional[str] = None
