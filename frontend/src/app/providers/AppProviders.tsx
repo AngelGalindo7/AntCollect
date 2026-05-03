@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WebSocketProvider } from '@/features/messaging';
 import { refreshAccessToken } from '@/shared/api/api';
+import { getSession, clearSession } from '@/shared/auth/session';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,7 +17,7 @@ const queryClient = new QueryClient({
 export function AppProviders({ children }: { children: ReactNode }) {
 
   const [isAuthenticated, setIsAuthenticated] = useState(
-    () => !!localStorage.getItem('userId')
+    () => getSession() !== null
   );
 
   // Separate flag: token has been confirmed valid this session.
@@ -26,7 +27,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const [isWsReady, setIsWsReady] = useState(false);
 
   useEffect(() => {
-    const handleStorage = () => setIsAuthenticated(!!localStorage.getItem('userId'));
+    const handleStorage = () => setIsAuthenticated(getSession() !== null);
     // 'storage' fires when another tab changes localStorage.
     // 'auth:login' is dispatched by LogIn.tsx after same-tab login because
     // the browser does NOT fire 'storage' for same-window localStorage writes.
@@ -62,9 +63,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         sessionStorage.setItem('wsReady', String(Date.now()));
         setIsWsReady(true);
       } else {
-        localStorage.removeItem('userId');
-        localStorage.removeItem('username');
-        localStorage.removeItem('email');
+        clearSession();
         setIsAuthenticated(false);
         window.location.href = '/Login';
       }
