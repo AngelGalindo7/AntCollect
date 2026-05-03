@@ -7,7 +7,9 @@ interface PostCardOverlayProps {
   likeCount: number;
   onLikeClick: (e: React.MouseEvent) => void;
   isOwner?: boolean;
+  canModerate?: boolean;
   onDeleteClick?: (e: React.MouseEvent) => void;
+  onAdminDeleteClick?: (e: React.MouseEvent) => void;
   onReportClick?: (e: React.MouseEvent) => void;
 }
 
@@ -23,7 +25,9 @@ const PostCardOverlay: React.FC<PostCardOverlayProps> = ({
   likeCount,
   onLikeClick,
   isOwner,
+  canModerate,
   onDeleteClick,
+  onAdminDeleteClick,
   onReportClick,
 }) => {
   const badge = postType ? typeConfig[postType] : undefined;
@@ -37,7 +41,9 @@ const PostCardOverlay: React.FC<PostCardOverlayProps> = ({
       <div className="absolute top-2 right-2 z-20 pointer-events-auto">
         <PostOptionsMenu
           isOwner={isOwner}
+          canModerate={canModerate}
           onDeleteClick={onDeleteClick}
+          onAdminDeleteClick={onAdminDeleteClick}
           onReportClick={onReportClick}
         />
       </div>
