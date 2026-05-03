@@ -183,7 +183,9 @@ def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Invalid email or password")
 
     if not db_user.password_hash:
-        raise HTTPException(status_code=400, detail="This account uses Google sign-in. Please use the Google button to log in.")
+        # Generic message — distinct error here would let attackers enumerate
+        # which emails are registered and which use Google sign-in.
+        raise HTTPException(status_code=400, detail="Invalid email or password")
 
     if not verify_password(user.password, db_user.password_hash):
         raise HTTPException(status_code=400, detail="Invalid email or password")
