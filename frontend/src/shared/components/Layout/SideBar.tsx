@@ -146,7 +146,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
       isActive ? 'bg-white/12 text-white' : 'text-white/70 hover:text-white'
     }`;
 
-  const iconButtonClass = 'w-9 h-9 mx-auto mt-1 flex items-center justify-center rounded-lg text-white/70 hover:text-white transition-all duration-200';
+  const iconButtonClass = 'w-9 h-9 mx-auto flex items-center justify-center rounded-lg text-white/70 hover:text-white transition-all duration-200';
 
   const messagesActive = isChatRoute || messagesOpen;
 
@@ -156,7 +156,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
   return (
     <>
       <aside className="relative w-14 bg-campus-blue flex flex-col h-full z-20 shadow-2xl">
-        <nav className="flex-1 px-2 py-3 flex flex-col gap-1 items-center">
+        <nav className="flex-1 px-2 py-3 flex flex-col gap-3 items-center">
 
           <NavLink to="/" className={getNavLinkClass}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
