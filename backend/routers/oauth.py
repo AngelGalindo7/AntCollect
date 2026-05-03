@@ -177,7 +177,7 @@ def google_complete(
     if db.query(User).filter(User.username == username).first():
         raise HTTPException(status_code=409, detail="Username already taken")
     if db.query(User).filter(User.email == email).first():
-        raise HTTPException(status_code=409, detail="Email already registered, please log in")
+        raise HTTPException(status_code=409, detail="Could not complete signup")
 
     user = User(username=username, email=email, google_id=google_id, password_hash=None)
     db.add(user)
