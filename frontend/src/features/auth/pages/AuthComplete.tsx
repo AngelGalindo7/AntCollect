@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE } from '@/shared/api/api';
+import { setSession, type Role } from '@/shared/auth/session';
 
 const AuthComplete: React.FC = () => {
     const navigate = useNavigate();
@@ -12,9 +13,12 @@ const AuthComplete: React.FC = () => {
                 return r.json();
             })
             .then(user => {
-                localStorage.setItem('userId', String(user.id));
-                localStorage.setItem('username', user.username);
-                localStorage.setItem('email', user.email);
+                setSession({
+                    userId: String(user.id),
+                    username: user.username,
+                    email: user.email,
+                    role: (user.role as Role) ?? 'user',
+                });
                 window.dispatchEvent(new Event('auth:login'));
                 navigate(`/${user.username}`, { replace: true });
             })
