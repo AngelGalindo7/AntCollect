@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/test/handlers'
+import { setSession } from '@/shared/auth/session'
 import AccountTab from '../components/AccountTab'
 
 function renderAccountTab() {
@@ -26,7 +27,12 @@ function getPasswordInput(labelPattern: RegExp): HTMLInputElement {
 
 describe('AccountTab', () => {
   beforeEach(() => {
-    localStorage.setItem('email', 'test@example.com')
+    setSession({
+      userId: '1',
+      username: 'testuser',
+      email: 'test@example.com',
+      role: 'user',
+    })
   })
 
   it('renders email from localStorage as read-only text (not an input)', () => {
