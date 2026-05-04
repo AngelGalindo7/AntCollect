@@ -6,6 +6,7 @@ from fastapi import UploadFile, HTTPException
 from PIL import Image
 from typing import Dict
 
+from ..errors import AppError, ErrorCode
 from .s3 import upload_image_bytes, delete_s3_object, s3_key_from_url
 from .image_processing import handle_transparent_images, strip_metadata
 
@@ -46,13 +47,23 @@ def check_file_size(file: UploadFile):
     size = file.file.tell()
     file.file.seek(0)
     if size > MAX_FILE_SIZE:
-        raise HTTPException(413, "Payload too large")
+        raise AppError(
+            ErrorCode.POST_IMAGE_TOO_LARGE,
+            f"Image is larger than {MAX_FILE_SIZE // (1024 * 1024)} MB",
+            status=413,
+            field="post_images",
+        )
     return size
 
 
 def validate_image(file: UploadFile):
     if file.content_type not in ALLOWED_MIMES:
-        raise HTTPException(400, "Unsupported image type")
+        raise AppError(
+            ErrorCode.POST_IMAGE_TYPE_REJECTED,
+            f"Unsupported MIME type {file.content_type!r}. Use JPEG, PNG, WebP, or GIF.",
+            status=400,
+            field="post_images",
+        )
     try:
         file.file.seek(0)
         img = Image.open(file.file)
@@ -60,12 +71,24 @@ def validate_image(file: UploadFile):
         fmt = (img.format or "").lower()
         img.verify()
         file.file.seek(0)
+    except AppError:
+        raise
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(400, "Invalid or corrupted image file")
+        raise AppError(
+            ErrorCode.POST_IMAGE_CORRUPTED,
+            "Image file is invalid or corrupted",
+            status=400,
+            field="post_images",
+        )
     if fmt not in ALLOWED_FILE_TYPE:
-        raise HTTPException(400, "Unsupported image format")
+        raise AppError(
+            ErrorCode.POST_IMAGE_FORMAT_UNSUPPORTED,
+            f"Unsupported image format {fmt!r}. Use JPEG, PNG, WebP, or GIF.",
+            status=400,
+            field="post_images",
+        )
     return True
 
 
@@ -141,5 +164,14 @@ def process_and_save_image(file: UploadFile, user_id: int, folder_prefix: str = 
             except Exception:
                 pass
         if isinstance(e, (IOError, OSError)):
-            raise HTTPException(400, "Corrupted or invalid image file")
-        raise HTTPException(500, f"Image processing failed: {str(e)}")
+            raise AppError(
+                ErrorCode.POST_IMAGE_CORRUPTED,
+                "Image file is invalid or corrupted",
+                status=400,
+                field="post_images",
+            )
+        raise AppError(
+            ErrorCode.POST_PROCESSING_FAILED,
+            "Image processing failed",
+            status=500,
+        )
