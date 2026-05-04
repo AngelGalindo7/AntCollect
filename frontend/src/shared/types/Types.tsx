@@ -34,7 +34,7 @@
 
 export type Post = {
   post_id: number;
-  caption: string;
+  caption: string | null;
   image_paths: (string | null)[];
   total_likes: number;
   public: boolean;
