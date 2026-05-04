@@ -26,7 +26,7 @@ router = APIRouter(
 @limiter.limit("10/hour", key_func=get_user_or_ip_key)
 def upload_post(
     request: Request,
-    caption: str=Form(...),
+    caption: str | None = Form(None),
     post_type: str=Form(...),
     is_published: bool = Form(True),
     post_images: list[UploadFile] = File(...),
@@ -41,10 +41,10 @@ def upload_post(
     try:
         post = Post(
         user_id=user_id,
-        caption=caption,
+        caption=caption.strip() if caption and caption.strip() else None,
         type=post_type,
         is_published=is_published
-    )   
+    )
         db.add(post)
         db.flush()
         for i, image in enumerate(post_images):
