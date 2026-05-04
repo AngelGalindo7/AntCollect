@@ -89,7 +89,7 @@ const PostPickerModal: React.FC<PostPickerModalProps> = ({ onSelect, onClose, ex
                     }`}
                   >
                     {thumb ? (
-                      <img src={thumb} alt={post.caption} className="w-full h-full object-cover" />
+                      <img src={thumb} alt={post.caption ?? `Post ${post.post_id}`} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-gray-200" />
                     )}
