@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { fetchWithAuth, API_BASE } from '@/shared/api/api';
+import { apiFetch, API_BASE } from '@/shared/api/api';
+import { handleApiError } from '@/shared/feedback/useApiErrorHandler';
+import type { FieldErrorMap } from '@/shared/feedback/useApiErrorHandler';
+import { toast } from '@/shared/feedback/toastStore';
 
 const POST_TYPES = [
   {
@@ -37,6 +40,7 @@ function CreatePost({ onSuccess }: CreatePostProps) {
   const [previews, setPreviews] = useState<string[]>([]);
   const [postType, setPostType] = useState<PostTypeValue>('collection');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrorMap>({});
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -53,6 +57,7 @@ function CreatePost({ onSuccess }: CreatePostProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setFieldErrors({});
     const formData = new FormData();
     formData.append('caption', caption);
     formData.append('is_published', 'true');
@@ -60,18 +65,18 @@ function CreatePost({ onSuccess }: CreatePostProps) {
     files.forEach((file) => formData.append('post_images', file));
 
     try {
-      await fetchWithAuth(`${API_BASE}/posts/upload-post`, {
+      await apiFetch(`${API_BASE}/posts/upload-post`, {
         method: 'POST',
         body: formData,
-        credentials: 'include',
       });
+      toast.success('Post shared');
       setCaption('');
       setFiles([]);
       setPreviews([]);
       setPostType('collection');
       onSuccess?.();
     } catch (err) {
-      console.error('Upload error:', err);
+      handleApiError(err, { setFieldErrors });
     } finally {
       setIsSubmitting(false);
     }
@@ -128,7 +133,7 @@ function CreatePost({ onSuccess }: CreatePostProps) {
               </div>
             ))}
             <label className="w-20 h-20 flex items-center justify-center border-2 border-dashed border-warm-gray rounded-xl cursor-pointer hover:border-uci-gold hover:bg-uci-gold/10 transition-all text-espresso/40">
-              <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
+              <input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleFileChange} />
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
@@ -147,11 +152,16 @@ function CreatePost({ onSuccess }: CreatePostProps) {
               id="cp-file-upload"
               type="file"
               multiple
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/gif"
               onChange={handleFileChange}
               className="hidden"
             />
           </label>
+        )}
+        {fieldErrors.post_images && (
+          <p role="alert" className="text-xs text-brick-red mt-1.5 font-medium">
+            {fieldErrors.post_images}
+          </p>
         )}
       </div>
 
