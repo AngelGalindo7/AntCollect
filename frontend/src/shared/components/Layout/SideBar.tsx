@@ -375,9 +375,9 @@ function TradeRequestCard({ request, onAccept, onDecline }: TradeRequestCardProp
       {/* Post */}
       <div className="flex items-center gap-2">
         {thumbnailUrl && (
-          <img src={thumbnailUrl} alt={request.post_caption} className="w-10 h-10 rounded object-cover shrink-0" />
+          <img src={thumbnailUrl} alt={request.post_caption ?? `Post ${request.target_post_id}`} className="w-10 h-10 rounded object-cover shrink-0" />
         )}
-        <span className="text-gray-700 line-clamp-2">{request.post_caption}</span>
+        <span className="text-gray-700 line-clamp-2">{request.post_caption || 'Untitled'}</span>
       </div>
 
       {/* Offered folder */}
@@ -477,11 +477,11 @@ function SentTradeRequestCard({ request }: SentTradeRequestCardProps) {
 
       <div className="flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-100">
         {thumbnailUrl && (
-          <img src={thumbnailUrl} alt={request.post_caption} className="w-8 h-8 rounded object-cover shrink-0" />
+          <img src={thumbnailUrl} alt={request.post_caption ?? `Post ${request.target_post_id}`} className="w-8 h-8 rounded object-cover shrink-0" />
         ) || (
             <div className="w-8 h-8 rounded bg-gray-200 shrink-0" />
           )}
-        <span className="text-xs text-gray-600 line-clamp-1 italic">"{request.post_caption}"</span>
+        <span className="text-xs text-gray-600 line-clamp-1 italic">"{request.post_caption || 'Untitled'}"</span>
       </div>
     </div>
   );
