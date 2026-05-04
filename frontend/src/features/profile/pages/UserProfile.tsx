@@ -10,6 +10,7 @@ import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useParams, useNavigate } from "react-router-dom";
 
 type TabValue = "showcase" | "collection" | "looking_for" | "trading";
+type ViewMode = "posts" | "folders";
 
 const TABS: { label: string; value: TabValue }[] = [
   { label: "Showcase",     value: "showcase" },
@@ -37,6 +38,7 @@ const UserProfile: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState<TabValue>("showcase");
+  const [viewMode, setViewMode] = useState<ViewMode>("posts");
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
@@ -120,6 +122,11 @@ const UserProfile: React.FC = () => {
     setActiveTab("showcase");
     setIsEditing(false);
   }, [username]);
+
+  // Reset sub-filter to posts whenever the active tab changes
+  useEffect(() => {
+    setViewMode("posts");
+  }, [activeTab]);
 
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -233,10 +240,9 @@ const UserProfile: React.FC = () => {
   const tabFolderType: FolderType = activeTab !== "showcase" ? (activeTab as FolderType) : "collection";
   const filteredPosts = profile.posts.filter((p) => p.type === activeTab);
   const filteredFolders = folders.filter((f) => f.folder_type === activeTab);
-  const gridItems: GridItem[] = [
-    ...filteredFolders.map((f): GridItem => ({ kind: "folder", data: f })),
-    ...filteredPosts.map((p): GridItem => ({ kind: "post", data: p })),
-  ];
+  const gridItems: GridItem[] = viewMode === "folders"
+    ? filteredFolders.map((f): GridItem => ({ kind: "folder", data: f }))
+    : filteredPosts.map((p): GridItem => ({ kind: "post", data: p }));
 
   return (
     <div className="w-full">
@@ -419,6 +425,22 @@ const UserProfile: React.FC = () => {
         )
       ) : (
         <div className="max-w-6xl mx-auto px-4 mt-6">
+          <div className="mb-4 inline-flex rounded-full bg-warm-cream p-1">
+            {(["posts", "folders"] as ViewMode[]).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setViewMode(mode)}
+                className={`px-4 py-1.5 text-sm font-medium rounded-full transition-colors capitalize ${
+                  viewMode === mode
+                    ? "bg-white text-espresso shadow-sm"
+                    : "text-espresso/60 hover:text-espresso"
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
           <PostGridLayout
             items={gridItems}
             onPostClick={handlePostClick}
