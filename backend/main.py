@@ -4,7 +4,8 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
@@ -12,6 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from .errors import AppError, ErrorCode
 from .routers import auth, users, posts, folders, trade_requests, library, reports, canvas, oauth
 from .utils.logging_config import configure_logging, request_id_var
 from .utils.rate_limit import get_real_ip, limiter
@@ -117,6 +119,75 @@ app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
 
 
+def _envelope(code: str, message: str, field: str | None = None) -> dict:
+    """
+    Canonical error response shape. `detail` is a back-compat shim for
+    callers still reading the legacy field; remove once all frontend sites
+    consume `error.message` (Layer 4 migration).
+    """
+    return {
+        "error": {
+            "code": code,
+            "message": message,
+            "field": field,
+            "request_id": request_id_var.get(""),
+        },
+        "detail": message,
+    }
+
+
+# Maps bare HTTPException status codes to the closest stable error code.
+# New code should raise AppError directly to skip this guess.
+_HTTP_STATUS_TO_CODE: dict[int, ErrorCode] = {
+    400: ErrorCode.VALIDATION,
+    401: ErrorCode.UNAUTHORIZED,
+    403: ErrorCode.FORBIDDEN,
+    404: ErrorCode.NOT_FOUND,
+    409: ErrorCode.CONFLICT,
+    413: ErrorCode.POST_IMAGE_TOO_LARGE,
+    429: ErrorCode.RATE_LIMITED,
+}
+
+
+async def _app_error_handler(request: Request, exc: AppError) -> JSONResponse:
+    logger.info(
+        "app error",
+        extra={
+            "path": request.url.path,
+            "code": exc.code.value,
+            "status": exc.status,
+            "field": exc.field,
+        },
+    )
+    return JSONResponse(
+        status_code=exc.status,
+        content=_envelope(exc.code.value, exc.message, exc.field),
+    )
+
+
+async def _http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    code = _HTTP_STATUS_TO_CODE.get(exc.status_code, ErrorCode.INTERNAL)
+    message = exc.detail if isinstance(exc.detail, str) else "Request failed"
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=_envelope(code.value, message),
+    )
+
+
+async def _validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    errs = exc.errors()
+    first = errs[0] if errs else None
+    # loc is like ("body", "post_images") — drop the source segment for the field name.
+    field = ".".join(str(p) for p in first["loc"][1:]) if first and first.get("loc") else None
+    message = first["msg"] if first else "Invalid request"
+    return JSONResponse(
+        status_code=422,
+        content=_envelope(ErrorCode.VALIDATION.value, message, field),
+    )
+
+
 async def _rate_limit_handler(request: Request, exc) -> JSONResponse:
     logger.warning(
         "rate limit exceeded",
@@ -125,10 +196,10 @@ async def _rate_limit_handler(request: Request, exc) -> JSONResponse:
             "client_ip": get_real_ip(request),
         },
     )
-    return JSONResponse({"detail": "Too many requests"}, status_code=429)
-
-
-app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+    return JSONResponse(
+        status_code=429,
+        content=_envelope(ErrorCode.RATE_LIMITED.value, "Too many requests"),
+    )
 
 
 async def _generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -136,17 +207,22 @@ async def _generic_exception_handler(request: Request, exc: Exception) -> JSONRe
     Catch-all for any exception not handled by a more specific handler.
     Returning a JSONResponse here keeps the response inside FastAPI's ExceptionMiddleware,
     which sits below CORSMiddleware — so CORS headers are always present even on 500s.
-    Without this, Starlette's outermost ServerErrorMiddleware generates a bare 500
-    that bypasses CORSMiddleware entirely, causing the browser to report a CORS error.
     """
     logger.error(
         "unhandled exception",
         exc_info=exc,
         extra={"path": str(request.url), "method": request.method},
     )
-    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+    return JSONResponse(
+        status_code=500,
+        content=_envelope(ErrorCode.INTERNAL.value, "Internal server error"),
+    )
 
 
+app.add_exception_handler(AppError, _app_error_handler)
+app.add_exception_handler(HTTPException, _http_exception_handler)
+app.add_exception_handler(RequestValidationError, _validation_exception_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 app.add_exception_handler(Exception, _generic_exception_handler)
 
 _allowed = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
