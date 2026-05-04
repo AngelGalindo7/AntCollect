@@ -121,9 +121,9 @@ export function CanvasPicker({ posts, onNodeAdd }: Props) {
                   key={i}
                   onClick={() => onNodeAdd(img.url, 'post')}
                   className="aspect-square rounded overflow-hidden border border-neutral-700 hover:border-neutral-400 transition-colors focus:outline-none"
-                  title={img.caption}
+                  title={img.caption ?? undefined}
                 >
-                  <img src={img.url} alt={img.caption} className="w-full h-full object-cover" />
+                  <img src={img.url} alt={img.caption ?? 'Post image'} className="w-full h-full object-cover" />
                 </button>
               ))}
             </div>
