@@ -17,7 +17,9 @@ IMAGE_SIZES = {
 }
 
 ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-ALLOWED_FILE_TYPE = ['jpeg', 'png', 'webp', 'gif']
+# `mpo` is the multi-picture JPEG variant produced by iOS/Android cameras —
+# PIL decodes it transparently as JPEG, so it's safe to allow.
+ALLOWED_FILE_TYPE = ['jpeg', 'png', 'webp', 'gif', 'mpo']
 
 
 def get_file_size(file_path: str) -> int:
