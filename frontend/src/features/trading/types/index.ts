@@ -10,7 +10,7 @@ export interface TradeRequest {
   recipient_username: string;
   recipient_avatar: string | null;
   target_post_id: number;
-  post_caption: string;
+  post_caption: string | null;
   post_thumbnail: string | null;
   request_type: TradeRequestType;
   offered_folder_id: number | null;
@@ -23,7 +23,7 @@ export interface TradeRequest {
 /** JSON body stored inside a message with contentType "post_reference" */
 export interface PostReferenceContent {
   postId: number;
-  caption: string;
+  caption: string | null;
   thumbnailPath: string | null;
   ownerUsername: string;
 }
@@ -32,7 +32,7 @@ export interface PostReferenceContent {
 export interface TradeContextContent {
   type: TradeRequestType;
   targetPostId: number;
-  postCaption: string;
+  postCaption: string | null;
   postThumbnail: string | null;
   offeredFolderId: number | null;
   offeredFolderName: string | null;
