@@ -30,11 +30,11 @@ function PostReferenceCard({ raw, isOwn }: { raw: string; isOwn: boolean }) {
   return (
     <div className={`rounded-xl border overflow-hidden max-w-xs ${isOwn ? 'border-blue-300 bg-blue-400/10' : 'border-gray-200 bg-white'}`}>
       {thumbUrl && (
-        <img src={thumbUrl} alt={data.caption} className="w-full h-32 object-cover" />
+        <img src={thumbUrl} alt={data.caption ?? `Post ${data.postId}`} className="w-full h-32 object-cover" />
       )}
       <div className="px-3 py-2 space-y-0.5">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Post</p>
-        <p className="text-sm font-medium text-gray-800 line-clamp-2">{data.caption}</p>
+        <p className="text-sm font-medium text-gray-800 line-clamp-2">{data.caption || 'Untitled'}</p>
         <p className="text-xs text-gray-500">@{data.ownerUsername}</p>
       </div>
     </div>
@@ -58,12 +58,12 @@ function TradeContextCard({ raw, isOwn }: { raw: string; isOwn: boolean }) {
   return (
     <div className={`rounded-xl border overflow-hidden max-w-xs ${isOwn ? 'border-blue-300 bg-blue-400/10' : 'border-gray-200 bg-white'}`}>
       {thumbUrl && (
-        <img src={thumbUrl} alt={data.postCaption} className="w-full h-32 object-cover" />
+        <img src={thumbUrl} alt={data.postCaption ?? `Post ${data.targetPostId}`} className="w-full h-32 object-cover" />
       )}
       <div className="px-3 py-2 space-y-1">
         <p className="text-[10px] font-semibold uppercase tracking-wide text-orange-500">Trade</p>
         <p className="text-xs text-gray-500">{label}</p>
-        <p className="text-sm font-medium text-gray-800 line-clamp-2">{data.postCaption}</p>
+        <p className="text-sm font-medium text-gray-800 line-clamp-2">{data.postCaption || 'Untitled'}</p>
         {data.offeredFolderId && data.offeredFolderName && (
           <p className="text-xs text-gray-500">
             Offering:{' '}
