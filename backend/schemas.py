@@ -84,7 +84,7 @@ class PostBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     post_id: int
-    caption: str
+    caption: Optional[str] = None
     public: bool
     is_published: bool
     type: PostType
@@ -261,7 +261,7 @@ class TradeRequestResponse(BaseModel):
     recipient_username: str
     recipient_avatar: Optional[str] = None
     target_post_id: int
-    post_caption: str
+    post_caption: Optional[str] = None
     post_thumbnail: Optional[str] = None
     request_type: TradeRequestType
     offered_folder_id: Optional[int] = None
