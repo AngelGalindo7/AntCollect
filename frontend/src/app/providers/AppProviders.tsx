@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WebSocketProvider } from '@/features/messaging';
 import { refreshAccessToken } from '@/shared/api/api';
 import { getSession, clearSession } from '@/shared/auth/session';
+import { Toaster } from '@/shared/feedback/Toaster';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -74,6 +75,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <WebSocketProvider isAuthenticated={isWsReady}>
         {children}
+        <Toaster />
       </WebSocketProvider>
     </QueryClientProvider>
   );
