@@ -24,6 +24,62 @@ router = APIRouter(
 )
 
 
+def _get_preview_images_for_folders(db: Session, folder_ids: List[int]) -> dict[int, List[str]]:
+    """Top 4 thumbnails per folder, ranked by FolderPost.order_index then by PostImage.order_index."""
+    if not folder_ids:
+        return {}
+
+    fp_ranked = (
+        select(
+            FolderPost.folder_id,
+            FolderPost.post_id,
+            FolderPost.order_index.label("fp_order"),
+            func.row_number()
+            .over(partition_by=FolderPost.folder_id, order_by=FolderPost.order_index)
+            .label("rn"),
+        )
+        .where(FolderPost.folder_id.in_(folder_ids))
+        .subquery()
+    )
+
+    pi_ranked = (
+        select(
+            PostImage.post_id,
+            MediaAsset.json_metadata.label("meta"),
+            func.row_number()
+            .over(partition_by=PostImage.post_id, order_by=PostImage.order_index)
+            .label("img_rn"),
+        )
+        .join(MediaAsset, MediaAsset.id == PostImage.asset_id)
+        .subquery()
+    )
+
+    rows = db.execute(
+        select(
+            fp_ranked.c.folder_id,
+            fp_ranked.c.fp_order,
+            pi_ranked.c.meta,
+        )
+        .join(pi_ranked, pi_ranked.c.post_id == fp_ranked.c.post_id)
+        .where(fp_ranked.c.rn <= 4, pi_ranked.c.img_rn == 1)
+        .order_by(fp_ranked.c.folder_id, fp_ranked.c.fp_order)
+    ).all()
+
+    out: dict[int, List[str]] = {fid: [] for fid in folder_ids}
+    for folder_id, _fp_order, meta in rows:
+        if isinstance(meta, dict):
+            thumb = meta.get("paths", {}).get("thumbnail")
+            if thumb:
+                out[folder_id].append(thumb)
+    return out
+
+
+def _folder_response_with_preview(db: Session, row) -> FolderResponse:
+    resp = FolderResponse.model_validate(row)
+    resp.preview_images = _get_preview_images_for_folders(db, [row.id]).get(row.id, [])
+    return resp
+
+
 @router.post("", response_model=FolderResponse)
 def create_folder(
     payload: FolderCreate,
@@ -62,7 +118,7 @@ def create_folder(
             post_count_subquery.label("post_count"),
         ).where(Folder.id == folder.id)
     ).one()
-    return FolderResponse.model_validate(row)
+    return _folder_response_with_preview(db, row)
 
 
 # Static route MUST come before /{folder_id} to avoid shadowing.
@@ -102,7 +158,13 @@ def list_user_folders(
         query = query.where(Folder.is_public == True)
 
     rows = db.execute(query).all()
-    return [FolderResponse.model_validate(row) for row in rows]
+    previews = _get_preview_images_for_folders(db, [row.id for row in rows])
+    out: List[FolderResponse] = []
+    for row in rows:
+        resp = FolderResponse.model_validate(row)
+        resp.preview_images = previews.get(row.id, [])
+        out.append(resp)
+    return out
 
 
 @router.get("/{folder_id}", response_model=FolderWithPostsResponse)
@@ -235,7 +297,7 @@ def update_folder(
             post_count_subquery.label("post_count"),
         ).where(Folder.id == folder.id)
     ).one()
-    return FolderResponse.model_validate(row)
+    return _folder_response_with_preview(db, row)
 
 
 @router.post("/{folder_id}/avatar", response_model=FolderResponse)
@@ -281,7 +343,7 @@ def upload_folder_avatar(
             post_count_subquery.label("post_count"),
         ).where(Folder.id == folder.id)
     ).one()
-    return FolderResponse.model_validate(row)
+    return _folder_response_with_preview(db, row)
 
 
 @router.delete("/{folder_id}", status_code=204)
