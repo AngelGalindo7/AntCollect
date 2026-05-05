@@ -24,6 +24,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
   const isOwner = post.user?.user_id !== undefined && String(post.user.user_id) === session?.userId;
   const canModerate = !isOwner && canModeratePosts(session);
 
+  const imageMeta = post.images?.[imageIndex];
+  const imageWidth = imageMeta?.original_width;
+  const imageHeight = imageMeta?.original_height;
+  const imageAspectRatio =
+    imageWidth && imageHeight && imageWidth > 0 && imageHeight > 0
+      ? `${imageWidth} / ${imageHeight}`
+      : undefined;
+
   const handleClick = () => {
     onClick?.(post, imageIndex);
   };
@@ -109,7 +117,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
         <img
           src={imagePath}
           alt={post.caption || `Post ${post.post_id}`}
+          width={imageWidth}
+          height={imageHeight}
           className="w-full h-auto block"
+          style={imageAspectRatio ? { aspectRatio: imageAspectRatio } : undefined}
         />
       ) : (
         <div className="w-full min-h-30 bg-warm-cream flex items-center justify-center">
