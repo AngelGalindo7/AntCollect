@@ -9,6 +9,9 @@ const FOLDER_TYPES: { value: FolderType; label: string }[] = [
   { value: 'trading', label: 'Trading Away' },
 ];
 
+const MAX_UPLOAD_FILES = 20;
+const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif';
+
 import { API_BASE } from '@/shared/api/api';
 
 const CreateFolder: React.FC = () => {
@@ -26,6 +29,18 @@ const CreateFolder: React.FC = () => {
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [uploadPreviews, setUploadPreviews] = useState<string[]>([]);
+  const [uploadWarning, setUploadWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      uploadPreviews.forEach((url) => URL.revokeObjectURL(url));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -72,6 +87,36 @@ const CreateFolder: React.FC = () => {
     setAvatarPreview(URL.createObjectURL(file));
   };
 
+  const handleUploadFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const incoming = Array.from(e.target.files);
+    const valid = incoming.filter((f) => f.type.startsWith('image/'));
+    const room = MAX_UPLOAD_FILES - uploadFiles.length;
+    const accepted = valid.slice(0, Math.max(room, 0));
+
+    if (accepted.length < incoming.length) {
+      setUploadWarning(
+        valid.length < incoming.length
+          ? 'Some files were skipped — only image files are allowed.'
+          : `Only the first ${MAX_UPLOAD_FILES} files can be uploaded at once.`,
+      );
+    } else {
+      setUploadWarning(null);
+    }
+
+    const newPreviews = accepted.map((f) => URL.createObjectURL(f));
+    setUploadFiles((prev) => [...prev, ...accepted]);
+    setUploadPreviews((prev) => [...prev, ...newPreviews]);
+    if (uploadInputRef.current) uploadInputRef.current.value = '';
+  };
+
+  const removeUploadAt = (idx: number) => {
+    URL.revokeObjectURL(uploadPreviews[idx]);
+    setUploadFiles((prev) => prev.filter((_, i) => i !== idx));
+    setUploadPreviews((prev) => prev.filter((_, i) => i !== idx));
+    setUploadWarning(null);
+  };
+
   const togglePost = (postId: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -113,7 +158,20 @@ const CreateFolder: React.FC = () => {
         });
       }
 
-      // Step 3: add selected posts sequentially (backend adds order_index per call)
+      // Step 3: bulk-upload new sticker images (one Post per file, atomic)
+      if (uploadFiles.length > 0) {
+        const fd = new FormData();
+        uploadFiles.forEach((f) => fd.append('files', f));
+        fd.append('is_published', 'true');
+        const uploadRes = await fetchWithAuth(`${API_BASE}/folders/${folder.id}/upload`, {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        });
+        if (!uploadRes.ok) throw new Error('Failed to upload stickers');
+      }
+
+      // Step 4: add selected existing posts sequentially (backend adds order_index per call)
       for (const postId of selectedIds) {
         await fetchWithAuth(`${API_BASE}/folders/${folder.id}/posts`, {
           method: 'POST',
@@ -217,9 +275,53 @@ const CreateFolder: React.FC = () => {
         </div>
       </div>
 
+      {/* Upload new stickers */}
+      <div className="mb-8">
+        <p className="text-xs font-bold text-espresso/50 uppercase tracking-widest mb-3">
+          Upload new stickers — {uploadFiles.length} of {MAX_UPLOAD_FILES}
+        </p>
+        <p className="text-xs text-espresso/40 mb-3">
+          Each image becomes its own post in this folder.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {uploadPreviews.map((src, i) => (
+            <div
+              key={i}
+              className="relative w-20 h-20 rounded-lg overflow-hidden border border-warm-gray group/upload"
+            >
+              <img src={src} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeUploadAt(i)}
+                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white text-xs flex items-center justify-center opacity-0 group-hover/upload:opacity-100 transition-opacity"
+                aria-label="Remove file"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+          {uploadFiles.length < MAX_UPLOAD_FILES && (
+            <label className="w-20 h-20 flex items-center justify-center border-2 border-dashed border-warm-gray rounded-lg cursor-pointer hover:border-uci-gold hover:bg-uci-gold/10 transition-all">
+              <input
+                ref={uploadInputRef}
+                type="file"
+                multiple
+                accept={ACCEPT}
+                className="hidden"
+                onChange={handleUploadFilesChange}
+              />
+              <svg className="w-6 h-6 text-warm-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </label>
+          )}
+        </div>
+        {uploadWarning && <p className="text-xs text-amber-700 mt-2">{uploadWarning}</p>}
+      </div>
+
       {/* Post selection grid */}
       <p className="text-xs font-bold text-espresso/50 uppercase tracking-widest mb-4">
-        Select posts — {selectedIds.size} selected
+        Or pick from existing posts — {selectedIds.size} selected
       </p>
 
       {loadingPosts ? (
