@@ -32,6 +32,7 @@ const FOLDER_ITEM: GridItem = {
     is_public: true,
     folder_type: 'collection',
     post_count: 3,
+    preview_images: [],
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   },
