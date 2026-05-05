@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 import type { FolderType } from '@/shared/types/Types';
 
-const MAX_FILES = 20;
+const MAX_IMAGES_PER_POST = 5;
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/gif';
 const FOLDER_TYPE_LABELS: Record<FolderType, string> = {
   collection: 'Collection',
@@ -17,39 +17,32 @@ interface Props {
   onUploaded: (postIds: number[]) => void;
 }
 
-type ItemStatus = 'queued' | 'uploading' | 'done' | 'error';
+type BatchStatus = 'idle' | 'uploading' | 'done' | 'error';
 
 interface FileItem {
   id: string;
   file: File;
   previewUrl: string;
-  status: ItemStatus;
-  postId?: number;
-  error?: string;
-  abort?: AbortController;
 }
 
 const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUploaded }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<FileItem[]>([]);
   const [warning, setWarning] = useState<string | null>(null);
+  const [status, setStatus] = useState<BatchStatus>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [uploadedPostId, setUploadedPostId] = useState<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const itemsRef = useRef<FileItem[]>(items);
   itemsRef.current = items;
-  const workingRef = useRef(false);
 
   useEffect(() => {
     return () => {
-      itemsRef.current.forEach((it) => {
-        URL.revokeObjectURL(it.previewUrl);
-        it.abort?.abort();
-      });
+      itemsRef.current.forEach((it) => URL.revokeObjectURL(it.previewUrl));
+      abortRef.current?.abort();
     };
   }, []);
-
-  const updateItem = (id: string, patch: Partial<FileItem>) => {
-    setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
-  };
 
   const removeItemFromState = (id: string) => {
     setItems((prev) => {
@@ -59,12 +52,54 @@ const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUp
     });
   };
 
-  const uploadOne = async (item: FileItem) => {
+  const addFiles = (incoming: File[]) => {
+    if (status === 'uploading' || status === 'done') return;
+
+    const valid = incoming.filter((f) => f.type.startsWith('image/'));
+    const room = MAX_IMAGES_PER_POST - items.length;
+    const accepted = valid.slice(0, Math.max(room, 0));
+    const truncated = incoming.length - accepted.length;
+
+    if (truncated > 0) {
+      setWarning(
+        valid.length < incoming.length
+          ? 'Some files were skipped — only image files are allowed.'
+          : `A post can hold at most ${MAX_IMAGES_PER_POST} images.`,
+      );
+    } else {
+      setWarning(null);
+    }
+
+    const newItems: FileItem[] = accepted.map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+    setItems((prev) => [...prev, ...newItems]);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    addFiles(Array.from(e.target.files));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeItem = (id: string) => {
+    if (status === 'uploading' || status === 'done') return;
+    removeItemFromState(id);
+    setWarning(null);
+  };
+
+  const submitUpload = async () => {
+    if (items.length === 0 || status === 'uploading') return;
+
     const controller = new AbortController();
-    updateItem(item.id, { status: 'uploading', abort: controller });
+    abortRef.current = controller;
+    setStatus('uploading');
+    setError(null);
 
     const fd = new FormData();
-    fd.append('files', item.file);
+    items.forEach((it) => fd.append('files', it.file));
     fd.append('is_published', 'true');
 
     try {
@@ -85,126 +120,69 @@ const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUp
             if (body?.detail) detail = body.detail;
           } catch {}
         }
-        updateItem(item.id, { status: 'error', error: detail, abort: undefined });
+        setStatus('error');
+        setError(detail);
         return;
       }
 
       const body = await res.json();
-      const postId = body.post_ids?.[0];
-      updateItem(item.id, { status: 'done', postId, abort: undefined });
+      const postId: number | undefined = body.post_id;
+      if (typeof postId !== 'number') {
+        setStatus('error');
+        setError('Upload succeeded but server response was malformed.');
+        return;
+      }
+      setUploadedPostId(postId);
+      setStatus('done');
     } catch (err: any) {
-      if (err?.name === 'AbortError') return;
+      if (err?.name === 'AbortError') {
+        setStatus('idle');
+        return;
+      }
       console.error(err);
-      updateItem(item.id, {
-        status: 'error',
-        error: 'Network error',
-        abort: undefined,
-      });
+      setStatus('error');
+      setError('Network error');
+    } finally {
+      abortRef.current = null;
     }
   };
 
-  useEffect(() => {
-    const drain = async () => {
-      if (workingRef.current) return;
-      workingRef.current = true;
-      try {
-        while (true) {
-          const next = itemsRef.current.find((it) => it.status === 'queued');
-          if (!next) break;
-          await uploadOne(next);
-        }
-      } finally {
-        workingRef.current = false;
-      }
-    };
-    if (items.some((it) => it.status === 'queued')) {
-      drain();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items]);
-
-  const addFiles = (incoming: File[]) => {
-    const valid = incoming.filter((f) => f.type.startsWith('image/'));
-    const room = MAX_FILES - items.length;
-    const accepted = valid.slice(0, Math.max(room, 0));
-    const truncated = incoming.length - accepted.length;
-
-    if (truncated > 0) {
-      setWarning(
-        valid.length < incoming.length
-          ? 'Some files were skipped — only image files are allowed.'
-          : `Only the first ${MAX_FILES} files can be added.`,
-      );
-    } else {
-      setWarning(null);
-    }
-
-    const newItems: FileItem[] = accepted.map((file) => ({
-      id: crypto.randomUUID(),
-      file,
-      previewUrl: URL.createObjectURL(file),
-      status: 'queued',
-    }));
-    setItems((prev) => [...prev, ...newItems]);
+  const retry = () => {
+    setError(null);
+    setStatus('idle');
   };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    addFiles(Array.from(e.target.files));
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const removeItem = async (id: string) => {
-    const target = itemsRef.current.find((it) => it.id === id);
-    if (!target) return;
-
-    if (target.status === 'uploading') target.abort?.abort();
-
-    if (target.status === 'done' && target.postId !== undefined) {
-      removeItemFromState(id);
-      try {
-        await fetchWithAuth(
-          `${API_BASE}/folders/${folderId}/posts/${target.postId}`,
-          { method: 'DELETE', credentials: 'include' },
-        );
-      } catch (err) {
-        console.error('Failed to detach uploaded sticker', err);
-      }
-    } else {
-      removeItemFromState(id);
-    }
-    setWarning(null);
-  };
-
-  const retryItem = (id: string) => {
-    updateItem(id, { status: 'queued', error: undefined });
-  };
-
-  const counts = items.reduce(
-    (acc, it) => {
-      acc[it.status] += 1;
-      return acc;
-    },
-    { queued: 0, uploading: 0, done: 0, error: 0 } as Record<ItemStatus, number>,
-  );
-  const inFlight = counts.queued + counts.uploading;
-  const canClose = inFlight === 0;
 
   const handleClose = () => {
-    if (!canClose) return;
-    const doneIds = items
-      .filter((it) => it.status === 'done' && it.postId !== undefined)
-      .map((it) => it.postId!) as number[];
-    if (doneIds.length > 0) onUploaded(doneIds);
+    if (status === 'uploading') return;
+    if (uploadedPostId !== null) onUploaded([uploadedPostId]);
     onClose();
   };
 
-  const ctaLabel =
-    inFlight > 0
-      ? `Uploading ${counts.uploading + counts.queued}…`
-      : counts.done > 0
-        ? `Done — added ${counts.done} sticker${counts.done === 1 ? '' : 's'}`
-        : 'Close';
+  const canClose = status !== 'uploading';
+  const canEditQueue = status === 'idle' || status === 'error';
+  const canSubmit = canEditQueue && items.length > 0;
+
+  let ctaLabel: string;
+  let ctaAction: () => void;
+  let ctaDisabled = false;
+  if (status === 'uploading') {
+    ctaLabel = 'Uploading…';
+    ctaAction = () => {};
+    ctaDisabled = true;
+  } else if (status === 'done') {
+    ctaLabel = `Done — added 1 post (${items.length} ${items.length === 1 ? 'image' : 'images'})`;
+    ctaAction = handleClose;
+  } else if (status === 'error') {
+    ctaLabel = 'Retry upload';
+    ctaAction = () => {
+      retry();
+      submitUpload();
+    };
+  } else {
+    ctaLabel = items.length === 0 ? 'Add images first' : `Create post (${items.length} ${items.length === 1 ? 'image' : 'images'})`;
+    ctaAction = submitUpload;
+    ctaDisabled = !canSubmit;
+  }
 
   return (
     <div
@@ -221,7 +199,7 @@ const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUp
           <div>
             <h2 className="text-lg font-bold text-espresso">Add Stickers</h2>
             <p className="text-xs text-espresso/50 mt-0.5">
-              Each image becomes a {FOLDER_TYPE_LABELS[folderType]} post in this folder.
+              These images will become <strong>one</strong> {FOLDER_TYPE_LABELS[folderType]} post in this folder. Up to {MAX_IMAGES_PER_POST} images per post.
             </p>
           </div>
           <button
@@ -245,7 +223,7 @@ const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUp
               >
                 <img src={it.previewUrl} alt="" className="w-full h-full object-cover" />
 
-                {(it.status === 'queued' || it.status === 'uploading') && (
+                {status === 'uploading' && (
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                     <svg className="w-6 h-6 text-white animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -254,7 +232,7 @@ const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUp
                   </div>
                 )}
 
-                {it.status === 'done' && (
+                {status === 'done' && (
                   <div className="absolute bottom-1 left-1 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
                     <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -262,29 +240,20 @@ const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUp
                   </div>
                 )}
 
-                {it.status === 'error' && (
+                {canEditQueue && (
                   <button
                     type="button"
-                    onClick={() => retryItem(it.id)}
-                    title={it.error ?? 'Upload failed — click to retry'}
-                    className="absolute inset-0 bg-brick-red/70 flex items-center justify-center text-[10px] text-white font-bold"
+                    onClick={() => removeItem(it.id)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white text-xs flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+                    aria-label="Remove file"
                   >
-                    Retry
+                    ×
                   </button>
                 )}
-
-                <button
-                  type="button"
-                  onClick={() => removeItem(it.id)}
-                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white text-xs flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity"
-                  aria-label="Remove file"
-                >
-                  ×
-                </button>
               </div>
             ))}
 
-            {items.length < MAX_FILES && (
+            {items.length < MAX_IMAGES_PER_POST && canEditQueue && (
               <label className="w-20 h-20 flex items-center justify-center border-2 border-dashed border-warm-gray rounded-lg cursor-pointer hover:border-uci-gold hover:bg-uci-gold/10 transition-all">
                 <input
                   ref={fileInputRef}
@@ -303,19 +272,18 @@ const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUp
 
           <div className="flex items-center justify-between text-xs">
             <span className="text-espresso/40">
-              {items.length} of {MAX_FILES} selected
-              {counts.done > 0 && ` · ${counts.done} uploaded`}
-              {counts.error > 0 && ` · ${counts.error} failed`}
+              {items.length} of {MAX_IMAGES_PER_POST} selected
             </span>
           </div>
 
           {warning && <p className="text-xs text-amber-700">{warning}</p>}
+          {error && <p className="text-xs text-brick-red">{error}</p>}
 
           <div className="pt-2">
             <button
               type="button"
-              onClick={handleClose}
-              disabled={!canClose}
+              onClick={ctaAction}
+              disabled={ctaDisabled}
               className="w-full py-3 bg-uci-gold text-espresso rounded-xl font-bold hover:bg-amber-400 disabled:bg-warm-gray/50 disabled:text-espresso/40 disabled:cursor-not-allowed transition-colors"
             >
               {ctaLabel}
