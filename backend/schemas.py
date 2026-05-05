@@ -109,6 +109,7 @@ class TopPostsResponse(BaseModel):
     total_returned: int
     k_value: int
     posts : List[PostWithEngagement]
+    next_cursor: Optional[str] = None
 
 class UserProfileResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
