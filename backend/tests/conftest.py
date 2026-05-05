@@ -59,7 +59,8 @@ def mock_image_processing():
     with patch("backend.routers.library.process_and_save_image", return_value=fake_result), \
          patch("backend.routers.posts.process_and_save_image", return_value=fake_result), \
          patch("backend.routers.users.process_and_save_image", return_value=fake_result), \
-         patch("backend.routers.folders.process_and_save_image", return_value=fake_result):
+         patch("backend.routers.folders.process_and_save_image", return_value=fake_result), \
+         patch("backend.utils.posts_creation.process_and_save_image", return_value=fake_result):
         yield
 
 from backend.database import get_db  # noqa: E402

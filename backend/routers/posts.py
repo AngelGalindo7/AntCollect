@@ -5,9 +5,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select, desc
 from backend.database import get_db
 from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType, MediaAsset
-from backend.models.media_assets import AssetStatus
 from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
 from ..utils.files import delete_file, process_and_save_image
+from ..utils.posts_creation import create_post_with_images
 from ..utils.auth import authenthicate_access_token
 from ..utils.rate_limit import limiter, get_user_or_ip_key
 from ..utils.permissions import can_delete_post, is_acting_as_moderator
@@ -35,48 +35,18 @@ def upload_post(
     ):
      
     user_id = current_user.user_id
-    image_records = []
-    all_created_files = []
+    all_created_files: list[str] = []
 
     try:
-        post = Post(
-        user_id=user_id,
-        caption=caption.strip() if caption and caption.strip() else None,
-        type=post_type,
-        is_published=is_published
-    )
-        db.add(post)
-        db.flush()
-        for i, image in enumerate(post_images):
-            image_data = process_and_save_image(image, user_id)
-            all_created_files.extend(image_data["paths"].values())
-            
-            asset = MediaAsset(
-                uploader_id=user_id,
-                file_url=image_data["paths"]["original"],
-                s3_key=f"posts/{user_id}/original/{image_data['filename']}",
-                json_metadata={
-                    "paths": {
-                        "thumbnail": image_data["paths"]["thumbnail"],
-                        "medium":    image_data["paths"]["medium"],
-                        "original":  image_data["paths"]["original"]
-                    },
-                    "original_width":  image_data["dimensions"]["original"]["width"],
-                    "original_height": image_data["dimensions"]["original"]["height"]
-                },
-                status=AssetStatus.ATTACHED
-            )
-            db.add(asset)
-            db.flush()
-
-            post_image = PostImage(
-                post_id=post.id,
-                order_index=i + 1,
-                asset_id=asset.id
-            )
-            image_records.append(post_image)
-        
-        db.add_all(image_records)
+        post = create_post_with_images(
+            db,
+            user_id=user_id,
+            caption=caption,
+            post_type=post_type,
+            is_published=is_published,
+            files=post_images,
+            created_paths_sink=all_created_files,
+        )
         db.commit()
         db.refresh(post)
         return {
