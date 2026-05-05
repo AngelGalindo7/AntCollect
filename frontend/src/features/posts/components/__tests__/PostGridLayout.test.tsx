@@ -57,17 +57,14 @@ describe('PostGridLayout', () => {
     expect(screen.getByText('No posts yet')).toBeTruthy()
   })
 
-  it('container uses CSS multi-column classes, not grid', () => {
-    const { container } = renderGrid([POST_ITEM])
-    const masonry = container.querySelector('div.columns-2')
-    expect(masonry).toBeTruthy()
-    expect(masonry?.classList.contains('grid')).toBe(false)
+  it('container uses absolutely-positioned masonry wrapper', () => {
+    renderGrid([POST_ITEM])
+    expect(screen.getByTestId('post-grid-masonry')).toBeTruthy()
   })
 
-  it('each item wrapper has break-inside-avoid class', () => {
-    const { container } = renderGrid([POST_ITEM, FOLDER_ITEM])
-    const wrappers = container.querySelectorAll('div.break-inside-avoid')
-    expect(wrappers.length).toBe(2)
+  it('each item is rendered as a positioned masonry cell', () => {
+    renderGrid([POST_ITEM, FOLDER_ITEM])
+    expect(screen.getAllByTestId('post-grid-item').length).toBe(2)
   })
 
   it('renders an img for a post item', () => {
@@ -80,9 +77,9 @@ describe('PostGridLayout', () => {
     expect(screen.getByTestId('folder-card')).toBeTruthy()
   })
 
-  it('renders the correct number of item wrappers', () => {
+  it('renders the correct number of items', () => {
     const secondPost: GridItem = { kind: 'post', data: { ...POST_ITEM.data, post_id: 2 } }
-    const { container } = renderGrid([POST_ITEM, FOLDER_ITEM, secondPost])
-    expect(container.querySelectorAll('div.break-inside-avoid').length).toBe(3)
+    renderGrid([POST_ITEM, FOLDER_ITEM, secondPost])
+    expect(screen.getAllByTestId('post-grid-item').length).toBe(3)
   })
 })
