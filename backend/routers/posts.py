@@ -1,8 +1,10 @@
+import base64
+import binascii
 import logging
 from fastapi import UploadFile, File, Depends, Form, HTTPException, APIRouter, Request
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func, select, desc
+from sqlalchemy import func, select, desc, tuple_, literal
 from backend.database import get_db
 from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType, MediaAsset
 from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
@@ -129,36 +131,74 @@ def like_image(
             "liked":True
             }
 
+def _encode_feed_cursor(engagement: int, post_id: int) -> str:
+    raw = f"{engagement}:{post_id}".encode()
+    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
+
+
+def _decode_feed_cursor(cursor: str) -> tuple[int, int]:
+    padding = "=" * (-len(cursor) % 4)
+    raw = base64.urlsafe_b64decode((cursor + padding).encode()).decode()
+    eng_str, id_str = raw.split(":", 1)
+    return int(eng_str), int(id_str)
+
+
 @router.get("/top", response_model=TopPostsResponse)
-def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: UserSearch = Depends(authenthicate_access_token)):
-    k = min(max(k, 1), 100)
+def get_top_posts(
+    limit: int = 20,
+    cursor: str | None = None,
+    db: Session = Depends(get_db),
+    current_user: UserSearch = Depends(authenthicate_access_token),
+):
+    limit = min(max(limit, 1), 50)
+
+    cursor_eng: int | None = None
+    cursor_post_id: int | None = None
+    if cursor:
+        try:
+            cursor_eng, cursor_post_id = _decode_feed_cursor(cursor)
+        except (ValueError, binascii.Error, UnicodeDecodeError):
+            raise HTTPException(status_code=422, detail="Invalid cursor")
 
     author = aliased(User)
 
     existing_like_subquery = (
-    select(func.count(PostLike.id))
-    .where(
-        PostLike.post_id == Post.id,
-        PostLike.user_id == current_user.user_id  # current user from auth token
-    )
-    .scalar_subquery()
+        select(func.count(PostLike.id))
+        .where(
+            PostLike.post_id == Post.id,
+            PostLike.user_id == current_user.user_id,
+        )
+        .scalar_subquery()
     )
 
     likes_subquery = (
-        select(func.coalesce(func.count(PostLike.id),0))
+        select(func.coalesce(func.count(PostLike.id), 0))
         .where(PostLike.post_id == Post.id)
         .scalar_subquery()
     )
-    top_posts_subquery = (
-        select(Post.id.label("id"),
-               func.count(EngagementLog.id).label("engagement_count")
-               )
-               .outerjoin(EngagementLog, Post.id == EngagementLog.post_id)
-               .where(Post.public == True, Post.is_published == True)
-               .group_by(Post.id)
-               .order_by(func.coalesce(func.count(EngagementLog.id),0).desc())
-               .limit(k)
-               .subquery()
+
+    engagement_count = func.coalesce(func.count(EngagementLog.id), 0)
+
+    ranking_subquery = (
+        select(
+            Post.id.label("id"),
+            engagement_count.label("engagement_count"),
+        )
+        .outerjoin(EngagementLog, Post.id == EngagementLog.post_id)
+        .where(Post.public == True, Post.is_published == True)
+        .group_by(Post.id)
+    )
+
+    if cursor_eng is not None:
+        ranking_subquery = ranking_subquery.having(
+            tuple_(engagement_count, Post.id) < tuple_(literal(cursor_eng), literal(cursor_post_id))
+        )
+
+    ranking_subquery = (
+        ranking_subquery
+        .order_by(engagement_count.desc(), Post.id.desc())
+        .limit(limit + 1)
+        .subquery()
     )
 
     final_query = (
@@ -169,37 +209,38 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: User
             Post.is_published,
             Post.type,
             Post.updated_at,
-            top_posts_subquery.c.engagement_count.label("total_engagement"),
+            ranking_subquery.c.engagement_count.label("total_engagement"),
             func.array_agg(
                 MediaAsset.json_metadata,
-                order_by=PostImage.order_index
-                ).label("images"),
+                order_by=PostImage.order_index,
+            ).label("images"),
             likes_subquery.label("total_likes"),
             existing_like_subquery.label("is_liked"),
             author.id.label("user_user_id"),
             author.username.label("user_username"),
             author.avatar_path.label("user_avatar_path"),
-    )
-    .join(top_posts_subquery, Post.id == top_posts_subquery.c.id)
-    .outerjoin(author, Post.user_id == author.id)
-    .outerjoin(PostImage, Post.id == PostImage.post_id)
-    .outerjoin(MediaAsset, PostImage.asset_id == MediaAsset.id)
-    .group_by(Post.id, top_posts_subquery.c.engagement_count, author.id, author.username, author.avatar_path)
-    .order_by(top_posts_subquery.c.engagement_count.desc())
+        )
+        .join(ranking_subquery, Post.id == ranking_subquery.c.id)
+        .outerjoin(author, Post.user_id == author.id)
+        .outerjoin(PostImage, Post.id == PostImage.post_id)
+        .outerjoin(MediaAsset, PostImage.asset_id == MediaAsset.id)
+        .group_by(Post.id, ranking_subquery.c.engagement_count, author.id, author.username, author.avatar_path)
+        .order_by(ranking_subquery.c.engagement_count.desc(), Post.id.desc())
     )
 
-    results = db.execute(final_query).mappings().all()
+    rows = db.execute(final_query).mappings().all()
+
+    has_more = len(rows) > limit
+    page_rows = rows[:limit]
 
     posts = []
-    for row in results:
-        # Construct the user object explicitly as a dict for the response model
+    for row in page_rows:
         post_author = {
             "user_id": row["user_user_id"],
             "username": row["user_username"],
-            "avatar_path": row["user_avatar_path"]
+            "avatar_path": row["user_avatar_path"],
         } if row["user_user_id"] else None
 
-        # Build the post dict to match PostWithEngagement
         post_data = {
             "post_id": row["post_id"],
             "caption": row["caption"],
@@ -211,15 +252,20 @@ def get_top_posts(k: int = 10, db: Session = Depends(get_db), current_user: User
             "images": row["images"],
             "total_likes": row["total_likes"],
             "is_liked": row["is_liked"] > 0 if row["is_liked"] is not None else False,
-            "user": post_author
+            "user": post_author,
         }
-
         posts.append(PostWithEngagement.model_validate(post_data))
+
+    next_cursor: str | None = None
+    if has_more and page_rows:
+        last = page_rows[-1]
+        next_cursor = _encode_feed_cursor(int(last["total_engagement"]), int(last["post_id"]))
 
     return TopPostsResponse(
         total_returned=len(posts),
-        k_value=k,
+        k_value=limit,
         posts=posts,
+        next_cursor=next_cursor,
     )
 
 
