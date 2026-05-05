@@ -25,6 +25,7 @@ const CreateFolder: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingProgress, setSavingProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -134,7 +135,11 @@ const CreateFolder: React.FC = () => {
     }
 
     setSaving(true);
+    setSavingProgress(null);
     setError(null);
+
+    let folder: { id: number } | null = null;
+    const uploadedPostIds: number[] = [];
 
     try {
       // Step 1: create the folder
@@ -144,37 +149,47 @@ const CreateFolder: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify({ name: trimmed, description: null, is_public: true, folder_type: folderType }),
       });
-      if (!createRes.ok) throw new Error('Failed to create folder');
-      const folder = await createRes.json();
+      if (!createRes.ok) throw new Error('Failed to create folder.');
+      folder = await createRes.json();
 
       // Step 2: upload avatar if one was selected
       if (avatarFile) {
         const formData = new FormData();
         formData.append('file', avatarFile);
-        await fetchWithAuth(`${API_BASE}/folders/${folder.id}/avatar`, {
+        await fetchWithAuth(`${API_BASE}/folders/${folder!.id}/avatar`, {
           method: 'POST',
           credentials: 'include',
           body: formData,
         });
       }
 
-      // Step 3: upload sticker images one at a time so each request body stays small
-      // (avoids nginx body-size limits and gives even progress).
-      for (const file of uploadFiles) {
+      // Step 3: upload sticker images one at a time, tracking each created post_id
+      // so we can roll back if any subsequent step fails.
+      for (let i = 0; i < uploadFiles.length; i++) {
+        setSavingProgress(`Uploading sticker ${i + 1} of ${uploadFiles.length}…`);
         const fd = new FormData();
-        fd.append('files', file);
+        fd.append('files', uploadFiles[i]);
         fd.append('is_published', 'true');
-        const uploadRes = await fetchWithAuth(`${API_BASE}/folders/${folder.id}/upload`, {
+        const uploadRes = await fetchWithAuth(`${API_BASE}/folders/${folder!.id}/upload`, {
           method: 'POST',
           credentials: 'include',
           body: fd,
         });
-        if (!uploadRes.ok) throw new Error('Failed to upload stickers');
+        if (!uploadRes.ok) {
+          if (uploadRes.status === 429) {
+            throw new Error('Upload limit reached. Please wait a bit and try again.');
+          }
+          throw new Error(`Sticker ${i + 1} of ${uploadFiles.length} failed to upload.`);
+        }
+        const body = await uploadRes.json();
+        const id = body?.post_ids?.[0];
+        if (typeof id === 'number') uploadedPostIds.push(id);
       }
 
-      // Step 4: add selected existing posts sequentially (backend adds order_index per call)
+      // Step 4: attach selected existing posts (does NOT create posts, just links)
+      setSavingProgress(null);
       for (const postId of selectedIds) {
-        await fetchWithAuth(`${API_BASE}/folders/${folder.id}/posts`, {
+        await fetchWithAuth(`${API_BASE}/folders/${folder!.id}/posts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -186,9 +201,37 @@ const CreateFolder: React.FC = () => {
       navigate(username ? `/${username}` : '/');
     } catch (err) {
       console.error(err);
-      setError('Something went wrong. Please try again.');
+
+      // Roll back: delete every post we created in this save attempt, then the folder.
+      // DELETE /posts/{id} cascades PostImage/FolderPost rows and cleans up S3 files.
+      // DELETE /folders/{id} removes the empty folder. Best-effort — failures are logged
+      // but never block surfacing the original error to the user.
+      setSavingProgress(uploadedPostIds.length ? 'Rolling back…' : null);
+      for (const postId of uploadedPostIds) {
+        try {
+          await fetchWithAuth(`${API_BASE}/posts/${postId}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+        } catch (cleanupErr) {
+          console.error('Rollback failed for post', postId, cleanupErr);
+        }
+      }
+      if (folder) {
+        try {
+          await fetchWithAuth(`${API_BASE}/folders/${folder.id}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+        } catch (cleanupErr) {
+          console.error('Rollback failed for folder', folder.id, cleanupErr);
+        }
+      }
+
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setSaving(false);
+      setSavingProgress(null);
     }
   };
 
@@ -391,7 +434,7 @@ const CreateFolder: React.FC = () => {
           disabled={saving}
           className="px-6 py-2 text-sm font-bold bg-uci-gold text-espresso rounded-xl hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {saving ? 'Saving…' : 'Save Folder'}
+          {saving ? (savingProgress ?? 'Saving…') : 'Save Folder'}
         </button>
       </div>
     </div>
