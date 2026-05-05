@@ -2,7 +2,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.orm import Session
 
-from backend.models import Folder, FolderPost, Post
+from backend.models import Folder, FolderPost, Post, PostImage
 
 
 async def _create_folder(client: AsyncClient, *, name: str = "Test Folder", folder_type: str = "collection") -> int:
@@ -35,12 +35,14 @@ async def test_folder_upload_creates_posts_and_attaches(auth_client: AsyncClient
     assert res.status_code == 201, res.text
     body = res.json()
     assert body["folder_id"] == folder_id
-    assert body["count"] == 3
-    assert len(body["post_ids"]) == 3
+    assert body["image_count"] == 3
+    post_id = body["post_id"]
 
-    posts = db.query(Post).filter(Post.id.in_(body["post_ids"])).all()
-    assert len(posts) == 3
-    assert all(p.type == "trading" for p in posts)
+    post = db.query(Post).filter(Post.id == post_id).one()
+    assert post.type == "trading"
+
+    image_count = db.query(PostImage).filter(PostImage.post_id == post_id).count()
+    assert image_count == 3
 
     fp_rows = (
         db.query(FolderPost)
@@ -48,8 +50,8 @@ async def test_folder_upload_creates_posts_and_attaches(auth_client: AsyncClient
         .order_by(FolderPost.order_index)
         .all()
     )
-    assert [fp.post_id for fp in fp_rows] == body["post_ids"]
-    assert [fp.order_index for fp in fp_rows] == [1, 2, 3]
+    assert [fp.post_id for fp in fp_rows] == [post_id]
+    assert [fp.order_index for fp in fp_rows] == [1]
 
 
 @pytest.mark.asyncio
@@ -67,7 +69,7 @@ async def test_folder_upload_appends_after_existing_posts(auth_client: AsyncClie
     res = await auth_client.post(f"/folders/{folder_id}/upload", files=files)
     assert res.status_code == 201
 
-    new_id = res.json()["post_ids"][0]
+    new_id = res.json()["post_id"]
     new_fp = (
         db.query(FolderPost)
         .filter(FolderPost.folder_id == folder_id, FolderPost.post_id == new_id)
