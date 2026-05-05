@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, APIRouter, UploadFile, File, Request
+from fastapi import Depends, HTTPException, APIRouter, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
@@ -14,9 +14,12 @@ from ..schemas import (
 )
 from ..utils.auth import authenthicate_access_token
 from ..utils.files import process_and_save_image, delete_file
+from ..utils.posts_creation import create_post_with_images
 from ..utils.rate_limit import limiter, get_user_or_ip_key
 from ..schemas import UserSearch
 from typing import List
+
+MAX_FILES_PER_FOLDER_UPLOAD = 20
 
 router = APIRouter(
     prefix="/folders",
@@ -423,3 +426,84 @@ def remove_post_from_folder(
 
     db.delete(entry)
     db.commit()
+
+
+@router.post("/{folder_id}/upload", status_code=201)
+@limiter.limit("5/hour", key_func=get_user_or_ip_key)
+def upload_stickers_to_folder(
+    request: Request,
+    folder_id: int,
+    files: list[UploadFile] = File(...),
+    is_published: bool = Form(True),
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token),
+):
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+    if len(files) > MAX_FILES_PER_FOLDER_UPLOAD:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many files (max {MAX_FILES_PER_FOLDER_UPLOAD})",
+        )
+
+    folder = db.query(Folder).filter(Folder.id == folder_id).first()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    if folder.user_id != user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    max_order = db.execute(
+        select(func.coalesce(func.max(FolderPost.order_index), 0)).where(
+            FolderPost.folder_id == folder_id
+        )
+    ).scalar() or 0
+
+    all_created_files: list[str] = []
+    created_post_ids: list[int] = []
+
+    try:
+        for i, file in enumerate(files):
+            post = create_post_with_images(
+                db,
+                user_id=user.user_id,
+                caption=None,
+                post_type=folder.folder_type,
+                is_published=is_published,
+                files=[file],
+                created_paths_sink=all_created_files,
+            )
+            db.add(
+                FolderPost(
+                    folder_id=folder_id,
+                    post_id=post.id,
+                    order_index=max_order + 1 + i,
+                )
+            )
+            created_post_ids.append(post.id)
+
+        db.commit()
+        return {
+            "folder_id": folder_id,
+            "post_ids": created_post_ids,
+            "count": len(created_post_ids),
+        }
+
+    except HTTPException:
+        db.rollback()
+        for path in all_created_files:
+            try:
+                delete_file(path)
+            except Exception:
+                pass
+        raise
+    except Exception as e:
+        db.rollback()
+        for path in all_created_files:
+            try:
+                delete_file(path)
+            except Exception:
+                pass
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred during upload: {e}",
+        )
