@@ -8,7 +8,7 @@ import urllib.request
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
-from PIL import Image
+from PIL import Image, ImageOps
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -173,6 +173,7 @@ def upload_canvas_asset(
 
     contents = file.file.read()
     image = Image.open(io.BytesIO(contents))
+    image = ImageOps.exif_transpose(image)
 
     # Preserve alpha for stickers/cutouts; flatten the rest to RGB
     has_alpha = image.mode in ("RGBA", "LA") or (
