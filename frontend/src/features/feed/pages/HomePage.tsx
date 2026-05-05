@@ -1,83 +1,112 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useInfiniteQuery, useQueryClient, type InfiniteData } from "@tanstack/react-query";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import type { Post, TopPostsResponse, PostWithEngagement, GridItem, FolderType } from "@/shared/types/Types";
-import { fetchWithAuth } from "@/shared/api/api";
-import { API_BASE } from '@/shared/api/api';
+import { fetchWithAuth, API_BASE } from "@/shared/api/api";
+
+const PAGE_SIZE = 20;
+const HOME_FEED_KEY = ["homeFeed"] as const;
+
+async function fetchHomeFeedPage({ pageParam }: { pageParam: string | null }): Promise<TopPostsResponse> {
+    const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+    if (pageParam) params.set("cursor", pageParam);
+
+    const res = await fetchWithAuth(`${API_BASE}/posts/top?${params.toString()}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) throw new Error(`Failed to load feed: ${res.status}`);
+    return res.json();
+}
 
 const HomePage: React.FC = () => {
-    const [loading, setLoading] = useState(false);
-    const [posts, setPosts] = useState<PostWithEngagement[]>([]);
-    const [error, setError] = useState<string | null>(null);
+    const queryClient = useQueryClient();
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+    const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+    const {
+        data,
+        error,
+        isLoading,
+        isFetchingNextPage,
+        hasNextPage,
+        fetchNextPage,
+    } = useInfiniteQuery<TopPostsResponse, Error>({
+        queryKey: HOME_FEED_KEY,
+        queryFn: fetchHomeFeedPage,
+        initialPageParam: null as string | null,
+        getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+    });
+
+    const posts: PostWithEngagement[] = useMemo(
+        () =>
+            (data?.pages ?? []).flatMap((page) =>
+                page.posts.map((post) => ({
+                    ...post,
+                    image_paths: (post.images ?? [])
+                        .filter((img) => img && img.paths?.medium)
+                        .map((img) => img.paths.original),
+                }))
+            ),
+        [data?.pages]
+    );
 
     useEffect(() => {
-        const fetchPosts = async () => {
-            setLoading(true);
-            try {
-                const res = await fetchWithAuth(`${API_BASE}/posts/top`, {
-                    method: "GET",
-                    headers: { "Content-Type": "application/json" },
-                });
-                
+        const node = sentinelRef.current;
+        if (!node || !hasNextPage) return;
 
-                if (!res.ok) {
-                throw new Error(`Failed to load feed: ${res.status}`);
-        }
-                const data: TopPostsResponse = await res.json();
-                //console.log(data)
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+                    fetchNextPage();
+                }
+            },
+            { rootMargin: "400px 0px" }
+        );
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-                const transformedData = {
-				        ...data,
-				        posts: data.posts.map((post) => ({
-					      ...post,
-					      image_paths: (post.images ?? [])
-                .filter(img => img && img.paths?.medium)
-                .map((img) => img.paths.original),
-                  })),
-                  };
-                        
-                setPosts(transformedData.posts);
+    const updatePostInCache = useCallback(
+        (postId: number, updater: (post: PostWithEngagement) => PostWithEngagement) => {
+            queryClient.setQueryData<InfiniteData<TopPostsResponse>>(HOME_FEED_KEY, (old) => {
+                if (!old) return old;
+                return {
+                    ...old,
+                    pages: old.pages.map((page) => ({
+                        ...page,
+                        posts: page.posts.map((p) => (p.post_id === postId ? updater(p) : p)),
+                    })),
+                };
+            });
+        },
+        [queryClient]
+    );
 
-              } catch (err) {
-                console.error("Error fetching home posts:", err);
-                setError("Could not load the feed.");
-              } finally {
-                setLoading(false);
-              }
-        };
-
-        fetchPosts();
-    }, []);
-
-    const handlePostClick = (post: Post) => {
-        setSelectedPost(post);
-    };
-    
+    const handlePostClick = (post: Post) => setSelectedPost(post);
 
     const handleLikeToggle = (postId: number, isLiked: boolean) => {
-        // Update the posts array with the new like count
-        setPosts((prevPosts) => 
-            prevPosts.map((post) => {
-                if (post.post_id === postId) {
-                    // If liked, increment count; if unliked, decrement count
-                    return {
-                        ...post,
-                        total_likes: isLiked 
-                            ? post.total_likes + 1 
-                            : post.total_likes - 1
-                    };
-                }
-                return post;
-            })
-        );
-    }
+        updatePostInCache(postId, (post) => ({
+            ...post,
+            total_likes: isLiked ? post.total_likes + 1 : post.total_likes - 1,
+        }));
+    };
 
     const handlePostDelete = (postId: number) => {
-        setPosts((prevPosts) => prevPosts.filter((post) => post.post_id !== postId));
+        queryClient.setQueryData<InfiniteData<TopPostsResponse>>(HOME_FEED_KEY, (old) => {
+            if (!old) return old;
+            return {
+                ...old,
+                pages: old.pages.map((page) => ({
+                    ...page,
+                    posts: page.posts.filter((p) => p.post_id !== postId),
+                })),
+            };
+        });
     };
-    
-    if (loading) {
+
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-lg text-gray-600">Loading feed...</div>
@@ -88,21 +117,28 @@ const HomePage: React.FC = () => {
     if (error) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <div className="text-red-500">{error}</div>
+                <div className="text-red-500">Could not load the feed.</div>
             </div>
         );
     }
 
     return (
         <div className="w-full">
-            {/* Posts Grid Layout */}
-            <div className="bg-transparent">                {posts.length > 0 ? (
-                    <PostGridLayout
-                        items={posts.map((p): GridItem => ({ kind: 'post', data: p }))}
-                        onPostClick={handlePostClick}
-                        onLikeToggle={handleLikeToggle}
-                        onPostDelete={handlePostDelete}
-                    />
+            <div className="bg-transparent">
+                {posts.length > 0 ? (
+                    <>
+                        <PostGridLayout
+                            items={posts.map((p): GridItem => ({ kind: 'post', data: p }))}
+                            onPostClick={handlePostClick}
+                            onLikeToggle={handleLikeToggle}
+                            onPostDelete={handlePostDelete}
+                        />
+                        <div ref={sentinelRef} className="h-12 flex items-center justify-center">
+                            {isFetchingNextPage && (
+                                <span className="text-warm-gray text-sm">Loading more…</span>
+                            )}
+                        </div>
+                    </>
                 ) : (
                     <div className="flex flex-col items-center justify-center py-20 bg-soft-white rounded-sticker border-2 border-warm-gray border-dashed">
                         <div className="w-16 h-16 rounded-full bg-warm-cream flex items-center justify-center text-warm-gray mb-4">
