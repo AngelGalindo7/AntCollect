@@ -4,9 +4,9 @@ import logging
 from fastapi import UploadFile, File, Depends, Form, HTTPException, APIRouter, Request
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func, select, desc, tuple_, literal
+from sqlalchemy import func, select, desc, tuple_, literal, or_
 from backend.database import get_db
-from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType, MediaAsset
+from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType, MediaAsset, Folder, FolderPost
 from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
 from ..utils.files import delete_file, process_and_save_image
 from ..utils.posts_creation import create_post_with_images
@@ -190,13 +190,27 @@ def get_top_posts(
 
     engagement_count = func.coalesce(func.count(EngagementLog.id), 0)
 
+    in_private_folder = (
+        select(literal(1))
+        .select_from(FolderPost)
+        .join(Folder, Folder.id == FolderPost.folder_id)
+        .where(
+            FolderPost.post_id == Post.id,
+            Folder.is_public == False,
+        )
+        .exists()
+    )
+
     ranking_subquery = (
         select(
             Post.id.label("id"),
             engagement_count.label("engagement_count"),
         )
         .outerjoin(EngagementLog, Post.id == EngagementLog.post_id)
-        .where(Post.public == True, Post.is_published == True)
+        .where(
+            Post.is_published == True,
+            or_(Post.public == True, ~in_private_folder),
+        )
         .group_by(Post.id)
     )
 
