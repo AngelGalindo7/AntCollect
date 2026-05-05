@@ -19,7 +19,7 @@ from ..utils.rate_limit import limiter, get_user_or_ip_key
 from ..schemas import UserSearch
 from typing import List
 
-MAX_FILES_PER_FOLDER_UPLOAD = 20
+MAX_IMAGES_PER_POST = 5
 
 router = APIRouter(
     prefix="/folders",
@@ -440,10 +440,10 @@ def upload_stickers_to_folder(
 ):
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
-    if len(files) > MAX_FILES_PER_FOLDER_UPLOAD:
+    if len(files) > MAX_IMAGES_PER_POST:
         raise HTTPException(
             status_code=400,
-            detail=f"Too many files (max {MAX_FILES_PER_FOLDER_UPLOAD})",
+            detail=f"Too many images (max {MAX_IMAGES_PER_POST} per post)",
         )
 
     folder = (
@@ -464,33 +464,30 @@ def upload_stickers_to_folder(
     ).scalar() or 0
 
     all_created_files: list[str] = []
-    created_post_ids: list[int] = []
 
     try:
-        for i, file in enumerate(files):
-            post = create_post_with_images(
-                db,
-                user_id=user.user_id,
-                caption=None,
-                post_type=folder.folder_type,
-                is_published=is_published,
-                files=[file],
-                created_paths_sink=all_created_files,
+        post = create_post_with_images(
+            db,
+            user_id=user.user_id,
+            caption=None,
+            post_type=folder.folder_type,
+            is_published=is_published,
+            files=files,
+            created_paths_sink=all_created_files,
+        )
+        db.add(
+            FolderPost(
+                folder_id=folder_id,
+                post_id=post.id,
+                order_index=max_order + 1,
             )
-            db.add(
-                FolderPost(
-                    folder_id=folder_id,
-                    post_id=post.id,
-                    order_index=max_order + 1 + i,
-                )
-            )
-            created_post_ids.append(post.id)
+        )
 
         db.commit()
         return {
             "folder_id": folder_id,
-            "post_ids": created_post_ids,
-            "count": len(created_post_ids),
+            "post_id": post.id,
+            "image_count": len(files),
         }
 
     except HTTPException:
