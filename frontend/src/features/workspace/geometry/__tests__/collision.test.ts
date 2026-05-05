@@ -168,15 +168,14 @@ describe('resolveCollision', () => {
     expect(out).toEqual(target);
   });
 
-  it('full overlap with another rect resolves close to orig (lo near 0)', () => {
-    const orig: Rect = { x: 0, y: 0, w: 300, h: 250 };
-    const obstacle: Rect = { x: 500, y: 500, w: 300, h: 250 };
-    const target: Rect = { x: 500, y: 500, w: 300, h: 250 };
+  it('when orig is flush with an obstacle, rect cannot move toward it', () => {
+    const obstacle: Rect = { x: 100, y: 0, w: 200, h: 200 };
+    const orig: Rect = { x: 0, y: 0, w: 100, h: 100 };
+    const target: Rect = { x: 150, y: 0, w: 100, h: 100 };
     const out = resolveCollision(orig, target, [obstacle], bounds, 'move');
     expect(out.x).toBeCloseTo(orig.x, 1);
     expect(out.y).toBeCloseTo(orig.y, 1);
-    expect(out.w).toBe(orig.w);
-    expect(out.h).toBe(orig.h);
+    expect(rectsOverlap(out, obstacle)).toBe(false);
   });
 
   it('diagonal slide stops adjacent to the obstacle', () => {
