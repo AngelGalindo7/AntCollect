@@ -7,6 +7,250 @@ Scopes: `frontend` · `backend` · `messaging` · `infra` · `docs`
 
 ---
 
+## 05/05/2026 — fix(frontend e2e): folder-card test still timed out after sub-filter fix
+
+- Cause: prior fix (commit `c7a0558`) added the missing "folders" sub-filter click but kept the seed folder hooks in `test.beforeAll(async ({ request }) => …)`. The worker-scoped `request` fixture does not reliably reuse the project `storageState` cookies in this Playwright 1.49 setup — `beforeAll` does not throw because folder creation succeeds for an effectively unauthenticated session (or for the wrong user identity), so the folder never appears under `TEST_USERNAME`'s `/folders/user/{username}` listing. Other tests pass because they don't depend on folders existing; this test consistently times out at 30 s waiting for `[data-testid="folder-card"]`.
+- Fix: removed `beforeAll`/`afterAll` and seed inside the test using `page.request.post(...)`. `page.request` shares cookies with the page's browser context, so the folder is guaranteed to be owned by the same session that then navigates to the profile. Reload between seed and tab interaction so the new folder appears in the cached fetch.
+- Added `await expect(folderCard).toBeVisible()` before `.click()` — the timeout now points at "card never rendered" instead of "click never landed", which is much faster to diagnose if it ever regresses.
+- Downstream risk: no cleanup of the seed folder. CI uses a fresh DB per run so accumulation is not a concern; local dev runs may need an occasional manual cleanup.
+
+---
+
+## 05/05/2026 — fix(backend tests): folder upload tests asserted pre-refactor response shape
+
+- Cause: commit `30827f7` reshaped `POST /folders/{folder_id}/upload` from N single-image posts to one multi-image post, swapping the response keys from `post_ids` / `count` to `post_id` / `image_count`. The two existing tests (`test_folder_upload_creates_posts_and_attaches`, `test_folder_upload_appends_after_existing_posts`) still indexed the old keys and broke with `KeyError` on every CI run.
+- Fix: tests now read `body["post_id"]` (scalar) and `body["image_count"]`, verify a single Post + 3 PostImage rows for the 3-file upload, and assert exactly one FolderPost row at the expected order_index. Append-after-existing test reads the scalar `post_id` from the response.
+- Imported `PostImage` alongside `Post`/`Folder`/`FolderPost` from `backend.models` so the test can count attached images directly.
+- Downstream risk: none. The `too_many_files` test still passes because 21 > new `MAX_IMAGES_PER_POST = 5`, and the new error string still contains "max"; non-owner / 404 / unauth tests are independent of response shape.
+
+---
+
+## 04/05/2026 — fix(frontend feed): HomePage TypeScript build broke Vercel deploy
+
+- Cause: `useInfiniteQuery<TopPostsResponse, Error>` in `HomePage.tsx` only set `TQueryFnData` and `TError`, leaving `TPageParam` defaulted to `unknown`. TanStack Query v5 then required the `queryFn` context to accept `pageParam: unknown`, but `fetchHomeFeedPage` declared `pageParam: string | null` — TS2769 "no overload matches", followed by cascading TS2339/TS7006 errors as `data.pages` collapsed to the broken inferred shape. Vercel `tsc -b` failed before `vite build`.
+- Fix: pass all five generics to `useInfiniteQuery` — `<TopPostsResponse, Error, InfiniteData<TopPostsResponse, string | null>, typeof HOME_FEED_KEY, string | null>`. `initialPageParam: null` and `getNextPageParam: () => … ?? null` now infer cleanly without the `as string | null` cast.
+- Returning `null` (instead of `undefined`) from `getNextPageParam` is semantically equivalent in v5 — both signal `hasNextPage: false` — and keeps the page-param type uniform.
+- Downstream risk: none. Runtime behavior unchanged; this was a type-only fix to a hook whose pagination semantics were already correct. Verified locally with `tsc -b --noEmit`.
+
+---
+
+## 04/05/2026 — fix(frontend posts): home grid masonry collapsed during image load
+
+- Cause: `PostCard` rendered `<img className="w-full h-auto">` with no width, height, or `aspectRatio`. Until the image bytes arrived the browser had no intrinsic ratio and reserved 0 height, so `PostGridLayout`'s `columns-N` masonry packed every card at the same near-zero height on first paint. After bytes loaded the cards reflowed into their real shapes, but the initial grid looked flat and "all the same size" — visually indistinguishable from a fixed-height grid, especially on slow connections.
+- Fix: `PostCard` now reads `original_width` / `original_height` from `post.images[imageIndex]` (already on the payload, set by `process_and_save_image`) and applies them as both HTML `width`/`height` attributes and a `style.aspectRatio = "w / h"`. The card slot reserves the correct shape immediately, so masonry packs correctly on first render and the image fills the reserved box without layout shift.
+- Falls back to today's behavior (`w-full h-auto`, no aspect ratio) when dimensions are missing or zero, so legacy posts without metadata still render.
+- Downstream risk: none. PostCard is consumed by HomePage, UserProfile, FolderPage, and SearchResultsPage; all four pass posts that flow from endpoints which include the `images[]` metadata, so the new path is exercised everywhere the old one was. Tests in `__tests__/PostCard.test.tsx` continue to pass mocked data without dimensions, hitting the fallback branch.
+
+---
+
+## 04/05/2026 — fix(backend): phone uploads saved with rotated orientation
+
+- Cause: `process_and_save_image` (utils/files.py) and `upload_canvas_asset` (routers/canvas.py) opened user uploads with `Image.open` but never applied `ImageOps.exif_transpose`. PIL keeps pixel data in raw sensor orientation; phones store the visual rotation in the EXIF Orientation tag (1–8). `strip_metadata` then rebuilds the image via `Image.frombytes` and drops all EXIF, so the saved JPEG/PNG no longer has the tag — viewers display the raw sensor orientation while the in-browser preview (which honored the tag) showed it upright.
+- Fix: call `ImageOps.exif_transpose(image)` immediately after `Image.open` in both pipelines, before transparency handling and metadata stripping. Pixels are physically rotated to match the orientation tag, so dropping EXIF afterwards is safe. No-op for inputs without an Orientation tag.
+- Affected paths: posts, folder stickers, library uploads, user avatars (all share `process_and_save_image`), and canvas asset uploads.
+
+---
+
+## 05/05/2026 — fix(frontend feed): PostDetailModal delete button missing on HomePage
+
+- Cause: `HomePage.tsx` instantiated `PostDetailModal` without providing an `onDeleteSuccess` callback. The modal's internal logic (`const canDelete = isOwn && !!onDeleteSuccess`) suppressed the delete button for the post owner, forcing them to navigate to their profile to delete content seen in the feed.
+- Fix: passed an `onDeleteSuccess` handler to the modal that calls `handlePostDelete(postId)` (refreshing the infinite query cache) and closes the modal.
+- Downstream risk: none. Reuses the same cache-eviction logic already used by the inline `onPostDelete` prop of `PostGridLayout`.
+
+---
+
+## 05/05/2026 — fix(frontend search): quick search dropdown was user-only
+
+- Cause: `Search.tsx` and the backend `POST /users/search_user` (search_type="quick") only returned and displayed user results. Users had to hit Enter or click "Search for posts instead" to see any post results, making the quick search feel incomplete.
+- Fix: updated the backend to return up to 4 posts for quick searches and the frontend `Search` component to display them in a dedicated section of the dropdown. Integrated `PostDetailModal` directly into the dropdown so post results are instantly viewable.
+- Transformed post image metadata to `image_paths` in the search dropdown to match the pattern used on the Home and Profile pages.
+- Downstream risk: none. The "Search all results" link still leads to the full `SearchResultsPage` for deeper investigation.
+
+---
+
+## 05/05/2026 — fix(frontend folders): added delete folder capability on FolderPage
+
+- Cause: Users could create folders but had no UI way to delete them, leading to stale or unwanted collections persisting on their profile.
+- Fix: implemented `handleDeleteFolder` calling `DELETE /folders/{id}` and added a "Delete folder" button to the folder header (visible only to the owner).
+- Downstream risk: none. S3 assets (stickers) are NOT deleted when a folder is deleted, preserving the user's library as intended.
+- Downstream risk: none — `exif_transpose` returns the same image when no orientation tag is present, and on a tagged input the resulting pixels match what every standards-compliant viewer was already showing in the preview.
+
+---
+
+## 04/05/2026 — fix(frontend create): partial folder save left orphan posts on failure
+
+- Cause: `CreateFolder.handleSave` uploaded stickers in a per-file loop. If any iteration failed (e.g. 429 mid-batch), every previously-uploaded sticker was already a committed Post + FolderPost. The user clicked Save once and got partial state — posts created without consent because they cancelled the operation by surfacing an error.
+- Fix: track each created `post_id` in `uploadedPostIds` during the loop. On any failure, run a best-effort rollback: `DELETE /posts/{id}` for each uploaded post (cascades PostImage/FolderPost + S3 cleanup), then `DELETE /folders/{folder.id}` for the now-empty folder. Save is now atomic from the user's POV.
+- Bonus: surface per-step progress in the Save button ("Uploading sticker 5 of 16…", "Rolling back…") and pass through 429 detail as "Upload limit reached. Please wait a bit and try again."
+- Downstream risk: rollback DELETEs are best-effort with try/catch; if the network is genuinely down, partial state may persist and the user sees the original error. AddStickersModal on FolderPage is unaffected — it commits per-file by design and offers per-thumbnail retry.
+
+---
+
+## 04/05/2026 — fix(backend folders): 429 on per-file folder sticker upload
+
+- Cause: `POST /folders/{id}/upload` was rate-limited at `5/hour` per user, originally sized for the batched design (5 batches × 20 files = 100 stickers/hour). After switching the frontend to per-file requests, each sticker counts as one call — so 16 stickers in one session blew the limit and the rest came back 429.
+- Fix: raised the slowapi limit on the endpoint to `100/hour` per user/IP. Restores the original throughput of ~100 stickers/hour while still bounding cost.
+- Downstream risk: still well inside the per-route image-processing cost envelope (single-image PIL pipeline). Nginx `api_zone` (60r/m, burst=30) is the next ceiling and is not affected.
+
+---
+
+## 04/05/2026 — fix(frontend e2e): folder-card test never found cards after sub-filter rollout
+
+- Cause: commit 690130a added a posts/folders sub-filter to non-showcase profile tabs, defaulting the view to "posts". The pre-existing folder-card e2e test (profile.spec.ts:76) only clicked the "Collection" tab and then waited for `[data-testid="folder-card"]` — which is hidden until the user clicks the "folders" sub-filter. Test timed out at 30s on every retry.
+- Fix: e2e now clicks the "folders" sub-filter button before locating the folder card.
+- Downstream risk: none — test still asserts the same navigation behavior, just through the new UI flow. The test seed folder + cleanup hooks are unchanged.
+
+---
+
+## 03/05/2026 — fix(backend posts): accept MPO JPEG variants from phone cameras
+
+- Cause: `validate_image` allowed only `['jpeg', 'png', 'webp', 'gif']` from PIL's `img.format`. iPhone and modern Android cameras save `.jpg` files in MPO (Multi-Picture Object) format — a JPEG container with embedded auxiliary frames. PIL reports `img.format == 'MPO'`, so genuine `.jpg` photos were rejected as "Unsupported image format".
+- Fix: added `'mpo'` to `ALLOWED_FILE_TYPE`. `process_and_save_image` re-encodes to `JPEG` regardless of source format, so MPO inputs become standard JPEGs in S3.
+- Downstream risk: none — MPO is a JPEG-family container PIL decodes transparently. The stored output is identical to a plain-JPEG upload after re-encode.
+
+---
+
+## 03/05/2026 — fix(frontend posts): silent upload failures now surface to the user
+
+- Cause: `CreatePost` only `console.error`'d failed uploads and `fetchWithAuth` returned the raw Response unchecked. A 4xx (HEIC, oversize, MPO rejection) closed silently — user thought the click did nothing.
+- Fix: introduced 4-layer error pipeline. Backend sends canonical `{ error: { code, message, field, request_id } }` envelope; new `apiFetch` throws `ApiError`; `useApiErrorHandler` routes field-bound errors inline and others to a global toast.
+- Migration: `CreatePost` is the proof-of-concept caller. Other 27 fetchWithAuth callers can migrate using the same shape; back-compat preserved via `detail` shim and opt-in `throwOnError` flag.
+- Downstream risk: the legacy `detail` field is still echoed for transitional callers. Once all sites migrate to `error.message`, drop the shim and flip `throwOnError` default to true in `fetchWithAuth`.
+
+---
+
+## 02/05/2026 — fix(frontend library): use original variant in sticker detail modal
+
+- Cause: `StickerModal` rendered `paths.medium` (capped at 800x800 JPEG q85). The modal's image panel is ~537px wide and up to ~970px tall, so the medium variant was upscaled vertically and looked soft — especially on stickers, where hard edges and flat color fields make JPEG artifacts and resampling blur very visible.
+- Fix: swapped the modal `<img src>` to `paths.original`, which is the full-resolution variant (JPEG q90, source dimensions preserved) already produced by `process_and_save_image`.
+- Downstream risk: detail-view payloads are now larger (originals can be multi-MB vs. ~100KB medium). No CDN config change needed — original is already uploaded to S3/CloudFront on every sticker. Transparency is still lost because `process_and_save_image` flattens to JPEG; preserving PNG/WebP source format is a separate change in `backend/utils/files.py`.
+
+---
+
+## 02/05/2026 — fix(backend routers canvas): strip EXIF metadata on canvas asset upload
+
+- Cause: `POST /canvas/me/assets` wrote raw uploaded bytes directly to S3 via `upload_image_bytes`, bypassing the `strip_metadata` step that posts/library/avatars all run through `process_and_save_image`. Phone-photo uploads kept GPS coordinates, capture timestamp, camera serial, and embedded thumbnails — then served publicly via CloudFront.
+- Fix: re-encode through PIL with `strip_metadata` before upload. Preserves alpha (saves as PNG) when the source has transparency so cutout stickers from rembg still render correctly; flattens opaque inputs to JPEG.
+- File extension and Content-Type are now driven by the actual saved format, fixing a prior mismatch where PNG inputs were saved as `.jpg`.
+- Downstream risk: existing `canvas_assets/*` objects on S3 still contain raw EXIF — only newly uploaded assets are stripped. A bucket-level reprocess job would be needed to retroactively scrub history.
+
+---
+
+## 02/05/2026 — fix(backend routers canvas): block SSRF in remove-bg by validating image_url
+
+- Cause: `POST /canvas/me/remove-bg` fed user-supplied `image_url` straight into `urllib.request.urlopen` with no scheme or host validation. An authenticated user could fetch `http://169.254.169.254/latest/meta-data/...` (EC2 IMDS), `http://127.0.0.1:8080/internal/*`, or any internal RDS/admin endpoint — classic SSRF.
+- Fix: new `_validate_external_image_url` helper rejects non-http(s) schemes and any host whose DNS resolves to a private/loopback/link-local/multicast/reserved/unspecified IP. Runs before the fetch.
+- LocalStack escape hatch: `REMOVE_BG_ALLOWED_HOSTS` env var (CSV) bypasses the IP check for explicitly trusted hostnames so dev with `localhost:4566` still works.
+- Downstream risk: DNS rebinding can still race the resolution between check and fetch — host pinning would need a custom transport. Practical impact is limited because the fetched bytes go through rembg and never come back to the caller verbatim, but timing/error fingerprints could still leak. Worth revisiting if remove-bg becomes a higher-value target.
+
+---
+
+## 02/05/2026 — fix(backend utils): enforce ALLOWED_MIMES and PIL format on image uploads
+
+- Cause: `validate_image` declared `ALLOWED_MIMES` and `ALLOWED_FILE_TYPE` constants but never checked them — `Image.verify()` alone accepts any PIL-readable format (BMP, TIFF, ICO, etc.) and tolerates Content-Type/format mismatches.
+- Fix: now rejects requests where `file.content_type` is not in `ALLOWED_MIMES` (jpeg/png/webp/gif), and rejects images whose PIL-detected `format` is not in `ALLOWED_FILE_TYPE`.
+- Reads `img.format` after `Image.open` (header parse) but before `verify()` — `verify()` invalidates the image so format must be captured first.
+- Downstream risk: stricter than before — any pre-existing client that sent the wrong Content-Type for a real JPEG now gets 400. Frontend uploads use the browser's native MIME so should be fine; messaging-service avatar fetches are not affected (they don't go through this path).
+
+---
+
+## 02/05/2026 — fix(backend routers users): generic error on Google-only account login
+
+- Cause: `/users/login` returned `"This account uses Google sign-in. Please use the Google button to log in."` when an email matched a passwordless (Google) account. Distinct error vs. the generic "Invalid email or password" let an attacker enumerate which emails were registered and which used Google.
+- Fix: collapsed the Google branch into the same generic 400 ("Invalid email or password"). Real Google users still hit the Google button on the login page; they don't read the form's error.
+- Downstream risk: a Google user who forgets they signed up via Google and tries password login gets a generic failure with no hint. Acceptable — privacy of account existence outweighs the small UX nudge.
+
+---
+
+## 02/05/2026 — fix(backend routers oauth): generic error on duplicate email in google-complete
+
+- Cause: `/auth/google/complete` returned `"Email already registered, please log in"` if the email from the Google pending-token already existed in `users`. Even though this branch is mostly a defensive race-condition check (the callback's silent-link path normally handles existing emails), the explicit message disclosed registration state.
+- Fix: replaced with generic `"Could not complete signup"`.
+- Downstream risk: rare race-condition users will see a less helpful error. They can retry the Google flow and the silent-link path will succeed.
+
+---
+
+## 01/05/2026 — fix(backend routers + frontend providers): E2E settings test fails — refresh-token rate limit hit during test run
+
+- **Cause:** `AppProviders` calls `refreshAccessToken()` on every React app mount (initial page load and `page.reload()`). The `/auth/refresh-token` endpoint had a `10/minute` per-IP rate limit. With 10 authenticated E2E tests each mounting the app once, plus a `page.reload()` in the 11th test, the 11th call hit the rate limit (429), causing `AppProviders` to clear `localStorage` and redirect to `/Login`.
+- **Fix (backend):** Raised the refresh-token rate limit from `10/minute` to `30/minute` in `backend/routers/auth.py`. 10/min is too restrictive for a modern SPA where users can have multiple tabs or hard-refresh frequently.
+- **Fix (frontend):** `AppProviders` now stores the last-refresh timestamp in `sessionStorage`. If less than 20 minutes have elapsed, the pre-WS-connect refresh call is skipped and `isWsReady` is set directly. `sessionStorage` persists through `page.reload()` (same tab) but resets per new tab/context, so each fresh session still refreshes once.
+- **Downstream risk:** Pages reloaded within 20 minutes of the last refresh skip the token rotation; the access token is still valid so API calls succeed. The `fetchWithAuth` 401-retry path handles genuine expiry if it occurs. WS reconnects pick up the latest cookie on each attempt.
+
+---
+
+## 28/04/2026 — fix(frontend canvas): transformer handles baked into saved canvas preview
+
+- When the user had a node selected (transformer/resize handles visible) and clicked Save, `stage.toDataURL()` captured the Konva stage with the `Transformer` anchors and border still rendered — those UI controls were then uploaded as the preview PNG and shown on the profile.
+- Root cause: `handleSave` called `stage.toDataURL()` without deselecting the node first; `setSelectedId(null)` is async and a React re-render would not complete before the synchronous `toDataURL` call.
+- Fix: before `toDataURL`, use `stage.find('Transformer')` to gather all transformer nodes, call `visible(false)` and `batchDraw()`, capture the screenshot, then restore with `visible(true)` and `batchDraw()`.
+- Downstream risk: none — the fix is local to the save path; edit-mode interactivity is unchanged.
+
+---
+
+## 28/04/2026 — fix(backend routers): wrong rembg model name caused silent fallback to 170 MB u2net
+
+- `new_session("u2net_lite")` was passed but `u2net_lite` is not a valid rembg model name; rembg silently fell back to the full `u2net` model (~168 MB vs the intended ~4.7 MB), inflating inference time and RAM use.
+- Fix: corrected model name to `u2netp`, which is the actual lightweight variant in rembg.
+- Dockerfile pre-download and main.py lifespan pre-warm updated to match.
+- Downstream risk: existing containers had the wrong model cached; requires image rebuild to pull `u2netp`.
+
+---
+
+## 28/04/2026 — fix(infra): 504 gateway timeout on first remove-bg call after container start
+
+- On every cold start the `u2netp` model was downloaded from GitHub over the internet and loaded into the ONNX session on the first request, taking 10–15 s total — exceeding the gateway timeout and returning a 504 with no CORS headers (browser reported this as a CORS error).
+- Fix 1 (Dockerfile): added `RUN python -c "from rembg import new_session; new_session('u2netp')"` during image build — model weights (~4.7 MB) are baked into the image layer, eliminating the download at runtime.
+- Fix 2 (main.py lifespan): pre-warms `_get_rembg_session()` at uvicorn startup so the model is loaded into memory before any request is served; inference-only cost (~2–4 s) is well within gateway limits.
+- Downstream risk: Docker image is ~4.7 MB larger; container idle RAM increases by ~150–200 MB (model stays resident in `_rembg_session`).
+
+---
+
+## 28/04/2026 — fix(backend routers): rembg SystemExit killed uvicorn process on remove-bg call
+
+- `rembg` was installed without its `[cpu]` extra, so `onnxruntime` was absent; `rembg/bg.py` calls `sys.exit(1)` at module level when the import fails, which exits the entire uvicorn worker.
+- `SystemExit` is a `BaseException`, not `Exception`, so the existing `except Exception` in `remove_image_background` did not catch it — the crash propagated unchecked.
+- Fix: changed `requirements.txt` from `rembg` to `rembg[cpu]` (installs `onnxruntime`); changed `except Exception` to `except BaseException` in both the endpoint and `_get_rembg_session` as a belt-and-suspenders guard.
+- Downstream risk: any environment that built the image before this fix has a broken remove-bg endpoint and an unstable backend — requires a Docker image rebuild.
+- E2E side-effect: the server crash mid-test-run caused all subsequent settings tests to redirect to `/Login` (backend down → auth fails); those failures resolve automatically once rembg stops crashing.
+
+---
+
+## 28/04/2026 — fix(frontend e2e): Playwright strict mode violation on Showcase tab selector
+
+- `page.getByRole('button', { name: 'Showcase' })` matched two elements: the "Showcase" tab button and the "Create your showcase Arrange…" CTA button (substring match).
+- Fix: added `exact: true` to restrict the selector to the literal tab label.
+- Downstream risk: none; purely a test selector tightening.
+
+---
+
+## 28/04/2026 — perf(backend routers): rembg session re-created per request causing 8-15s remove-bg latency
+
+- `rembg.remove()` was called without a `session` argument, so it created a new ONNX runtime session on every request — this reloads the U2Net model from disk each time, which dominates the total latency.
+- Fix: introduced a module-level `_rembg_session` singleton initialized on first use via `new_session("u2net_lite")`; all requests reuse the same loaded session.
+- Switched model from default `u2net` (~170 MB, 8-15s/image on CPU) to `u2net_lite` (~4.7 MB, ~2-4s/image) — adequate quality for canvas banner use.
+- Downstream risk: first request after a server restart still pays session init cost (~1-2s extra). No functional change.
+
+---
+
+## 26/04/2026 — fix(frontend profile): canvas showcase strip caused CORS crash on profile load
+
+- `CanvasPreview` strip used Konva to draw images from CloudFront onto an HTML5 canvas, which requires the browser to fetch the image with `crossOrigin="anonymous"`.
+- CloudFront was not returning `Access-Control-Allow-Origin` headers, so every profile page load threw a CORS error and the canvas failed to render.
+- Fix: removed `CanvasPreview`, `CanvasEditor`, all canvas state and the `getPublicCanvasPreview` fetch from `UserProfile.tsx`; canvas files kept but not wired to the profile.
+- Downstream: profile page no longer hits the canvas API endpoint on load; canvas data is still saved server-side and can be re-integrated later once CORS is resolved.
+
+---
+
+## 25/04/2026 — fix(backend utils): image EXIF and ICC metadata not explicitly stripped before S3 upload
+
+- **Cause:** `process_and_save_image` opened the uploaded file with `Image.open()`, which loads all embedded metadata (EXIF GPS, camera model, ICC profile, XMP) into `image.info`. None of `image.save()` calls passed `exif=b""` or cleared `info`, so Pillow silently forwarded ICC profile data to every JPEG variant; JPEG EXIF was accidentally excluded but only by omission, not by guarantee — any future Pillow version or ICC-preserving code path could reintroduce leakage.
+- **Fix:** Extracted all image-transformation logic into a new `backend/utils/image_processing.py` module with two pure functions: `handle_transparent_images` (moved from `files.py`) and `strip_metadata`. `strip_metadata` calls `Image.frombytes(image.mode, image.size, image.tobytes())` — a C-level pixel-buffer copy that creates a completely fresh `Image` object with `info = {}` and no private metadata attributes, making the guarantee structural rather than behavioural.
+- **Pipeline order:** `strip_metadata` runs after `handle_transparent_images` (colour-mode normalisation) but before any variant is generated, so original, medium, and thumbnail all derive from the same clean source image.
+- **Downstream risk:** None. Pixel data and dimensions are fully preserved; only embedded metadata is removed. All three S3 upload paths are unchanged.
+
+---
+
 ## 21/04/2026 — fix(backend routers): NameError and type mismatch after adding user roles
 
 
@@ -741,3 +985,37 @@ Scopes: `frontend` · `backend` · `messaging` · `infra` · `docs`
 
 ---
 
+
+ - - - 
+ 
+ # #   2 2 / 0 4 / 2 0 2 6      f i x ( b a c k e n d   a u t h ) :   r e f r e s h   t o k e n   g r a c e   p e r i o d   t o o   l o n g   f o r   u n i t   t e s t s   i n   C I 
+ 
+ -   * * C a u s e : * *   I n   C I / T e s t   e n v i r o n m e n t s ,   t h e   r e f r e s h   t o k e n   g r a c e   p e r i o d   w a s   a u t o m a t i c a l l y   e x t e n d e d   t o   3 6 0 0   s e c o n d s   ( t o   s u p p o r t   E 2 E   p e r s i s t e n c e ) .   T h i s   c a u s e d   u n i t   t e s t s   t h a t   a s s e r t   a   4 0 1   a f t e r   1 1   s e c o n d s   t o   f a i l ,   a s   t h e   t o k e n   r e m a i n e d   v a l i d   f o r   t h e   e n t i r e   h o u r . 
+ -   * * T r i g g e r : * *   R u n n i n g   \ 	 e s t _ r e f r e s h _ t o k e n _ g r a c e _ p e r i o d \   i n   a   C I   e n v i r o n m e n t   o r   a n y   e n v i r o n m e n t   w h e r e   \ C I = t r u e \   o r   \ D B _ N A M E = a n t c o l l e c t _ t e s t \   i s   s e t . 
+ -   * * F i x : * *   M o d i f i e d   \  a c k e n d / r o u t e r s / a u t h . p y \   t o   u s e   a   s t r i c t   1 0 - s e c o n d   g r a c e   p e r i o d   w h e n   \ T E S T I N G = t r u e \   ( s e t   i n   \ c o n f t e s t . p y \ ) ,   r e g a r d l e s s   o f   C I   s t a t u s .   T h i s   a l l o w s   u n i t   t e s t s   t o   v e r i f y   e x p i r a t i o n   w h i l e   p r e s e r v i n g   t h e   l o n g e r   w i n d o w   f o r   E 2 E   t e s t s . 
+ -   * * R i s k : * *   N o n e .   \ T E S T I N G = t r u e \   i s   o n l y   s e t   d u r i n g   p y t e s t   e x e c u t i o n .   R e m o v e d   a   d u p l i c a t e   \ J S O N R e s p o n s e \   i m p o r t   w h i l e   e d i t i n g . 
+  
+ 
+---
+
+## 26/04/2026 — fix(frontend e2e): sticker count locator times out — stats not in div.flex-col containers
+
+- **Cause:** `profile.spec.ts` targeted `div.flex-col` children inside `profile-stats` to isolate the Stickers stat box, but the component rendered a flat row of alternating `<span>` elements with no wrapper divs — the `div.flex-col` locator matched zero elements and timed out on all 3 retries.
+- **Fix:** Restructured the stats section in `UserProfile.tsx` to wrap each stat pair (label + value) in its own `div.flex-col` container, matching the DOM shape the test expects.
+- **Risk:** Visual layout changes from a flat pill row to a column-stack per stat. No functional change to inline editing or PATCH logic.
+
+---
+
+## 28/04/2026 — fix(backend routers): null password_hash causes 500 on login and password-change for Google-only accounts
+
+- **Cause:** Making `users.password_hash` nullable (OAuth migration) meant Google-only users have `password_hash = None`. `POST /users/login` and `POST /users/me/password` both passed the value directly to `verify_password()`, which calls `bcrypt.checkpw(plain.encode(), hashed.encode())`. Calling `.encode()` on `None` raises `AttributeError`, bubbling up as an unhandled 500 instead of a clean auth error.
+- **Fix:** Added an explicit `if not db_user.password_hash` guard before both `verify_password` calls. Login returns 400 "This account uses Google sign-in. Please use the Google button to log in." Password-change returns 400 "This account uses Google sign-in and has no password to change." Both are caught before `bcrypt` is ever invoked.
+- **Risk:** Any other endpoint that calls `verify_password` with a potentially-null hash needs the same guard. Current scan shows only these two call sites.
+
+---
+
+## 01/05/2026 — fix(backend auth): dead code in refresh-token endpoint silently discarded response body
+
+- **Cause:** POST /auth/refresh-token built a content dict and a JSONResponse object after the token rotation logic, then immediately discarded both — the return statement below called _cookie_response(content={"ok": True}, ...) which constructed its own response. The dead variables were a copy-paste remnant from an earlier version of the endpoint.
+- **Fix:** Removed the unused content dict and esponse = JSONResponse(content=content) assignments. Return path unchanged — _cookie_response with {"ok": True} was already the live path.
+- **Risk:** None — the removed code was never reachable by any caller.

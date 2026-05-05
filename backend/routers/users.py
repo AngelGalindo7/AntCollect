@@ -272,17 +272,11 @@ def search_user(
     
 
     user_results = _search_users(request.query, 10, db)
-    post_results = None
+    
+    # Return a few posts even for quick search, more for full search
+    post_limit = 10 if request.search_type == "full" else 4
+    post_results = _search_posts(request.query, post_limit, db)
 
-    if request.search_type == "full":
-        post_results = _search_posts(request.query, 10, db)
-
-    #return SearchResponse(
-    #query=q,
-    #users = user_results,
-    #posts = post_results
-    #)
-    #print(user_results[0])
     return SearchResponse(
     query=request.query,
     users=[UserResult(

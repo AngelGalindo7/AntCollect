@@ -37,6 +37,7 @@ const FolderPage: React.FC = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const currentUserId = parseInt(localStorage.getItem('userId') ?? '0', 10);
   const isOwner = !!folder && folder.user_id === currentUserId;
@@ -98,6 +99,24 @@ const FolderPage: React.FC = () => {
       setUploadingAvatar(false);
       // reset so the same file can be re-selected
       if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteFolder = async () => {
+    if (!folder) return;
+    if (!window.confirm(`Delete "${folder.name}"? The folder will be removed but the posts inside will remain in your library. This action cannot be undone.`)) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/folders/${folder.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok && res.status !== 204) throw new Error(`Delete failed: ${res.status}`);
+      navigate(-1);
+    } catch (err) {
+      console.error(err);
+      setDeleting(false);
     }
   };
 
@@ -205,12 +224,21 @@ const FolderPage: React.FC = () => {
 
           <div className="shrink-0 flex items-center gap-3">
             {isOwner && (
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 text-sm font-bold bg-uci-gold text-espresso rounded-xl hover:bg-amber-400 transition-colors"
-              >
-                + Add Stickers
-              </button>
+              <>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="px-4 py-2 text-sm font-bold bg-uci-gold text-espresso rounded-xl hover:bg-amber-400 transition-colors"
+                >
+                  + Add Stickers
+                </button>
+                <button
+                  onClick={handleDeleteFolder}
+                  disabled={deleting}
+                  className="px-4 py-2 text-sm font-bold text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleting ? 'Deleting...' : 'Delete folder'}
+                </button>
+              </>
             )}
             <button
               onClick={() => navigate(-1)}

@@ -162,6 +162,10 @@ const HomePage: React.FC = () => {
                 <PostDetailModal
                     post={selectedPost}
                     onClose={() => setSelectedPost(null)}
+                    onDeleteSuccess={() => {
+                        handlePostDelete(selectedPost.post_id);
+                        setSelectedPost(null);
+                    }}
                     postOwnerId={selectedPost.user?.user_id}
                     folderType={selectedPost.type as FolderType}
                 />

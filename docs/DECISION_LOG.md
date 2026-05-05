@@ -5,6 +5,196 @@
 
 ---
 
+## 2026-05-04 — JS Masonry for PostGridLayout
+
+### Replaced CSS multi-column with shortest-column JS packer
+
+**Decision:** `PostGridLayout` now positions items absolutely via a new `useMasonryLayout` hook (`shared/hooks/useMasonryLayout.ts`) instead of CSS `columns-N` + `break-inside-avoid`. The hook reads container width with `ResizeObserver` + a `useLayoutEffect` synchronous bootstrap, picks a column count from a breakpoints table (2 / 3 / 4 cols at 0 / 768 / 1100 px), and for each item places it in the column whose cumulative height is currently shortest.
+
+**Why CSS multi-column was wrong for an infinite feed:** With `column-fill: auto` (the only behavior available when the container has no fixed height — which is true for an infinite-scroll feed) the engine fills column 1 top-to-bottom, then column 2, then column 3. When scroll continues and new posts append, they continue the bottom of the rightmost column rather than rebalancing. The result on a feed with mostly-uniform aspect ratios is that nearly identical posts cluster into the leftmost columns and "weird" outliers (a wide horizontal post, a tall portrait) end up isolated on the right — exactly the failure mode the user reported. Pinterest avoids this by computing placement in JS using each item's known dimensions.
+
+**Why a custom packer over `react-masonry-css` / `masonic`:** `react-masonry-css` is a thin wrapper around the same CSS columns approach and inherits the same fill-order problem. `masonic` is a real packer but bundles virtualization and absolute-positioning conventions that don't match the existing card components without refactor. Our packer is ~30 lines, has no dependencies, and runs in O(n × cols) — fine for hundreds of items, and infinite scroll bounds total `n` per session.
+
+**Why dimensions live in the data, not on the DOM:** `process_and_save_image` already stores `original_width` / `original_height` in `MediaAsset.json_metadata`, and the API surfaces them on `post.images[]`. Computing item heights from this data lets the layout settle on first paint without a measure → reflow cycle. `FolderCard` is `aspect-square` + a one-line label, so its height is modeled as `columnWidth + 32px`.
+
+**Why `useLayoutEffect` for the initial measurement:** `ResizeObserver` fires asynchronously after the first paint, which would produce a one-frame flash of empty container. Reading `getBoundingClientRect()` synchronously in `useLayoutEffect` populates the width before paint, then the observer takes over for resize events.
+
+**Why a global `ResizeObserver` + `getBoundingClientRect` mock in `test/setup.ts`:** JSDOM ships neither — `ResizeObserver` is undefined, and `getBoundingClientRect()` returns all zeros, which would make the hook produce no positions and any layout-dependent component untestable. The mock is the standard solution and lives in the shared setup file so future layout-dependent components inherit it.
+
+**Trade-offs accepted:**
+- Items reflow on container resize (responsive breakpoint crossings, sidebar toggles). Acceptable — Pinterest does the same.
+- A wide horizontal image still occupies a single column; it just renders short and stubby because the column is narrow. This matches Pinterest's behavior exactly. Spanning a single item across multiple columns would require a different algorithm (interval scheduling rather than greedy column placement) and isn't implemented.
+- The `MASONRY_CONFIG` breakpoints (0 / 768 / 1100) are duplicated from the previous Tailwind class set rather than read from a shared theme constant. Not worth the indirection until a second consumer needs them.
+
+**Follow-ups:**
+- If feed length grows past a few hundred per session, virtualize the absolute children (e.g., render only items whose `y` falls within `scrollTop ± viewportHeight × buffer`).
+- Re-evaluate `extraHeight` for `FolderCard` if the label gains a second line or actions row.
+
+---
+
+## 2026-05-04 — Folder Uploads & Feed Visibility
+
+### One folder upload = one multi-image post (max 5); folder visibility now affects the home feed
+
+**Decision:** Folder uploads no longer split each image into its own `Post`. A single upload action via `POST /folders/{id}/upload` now creates **one** `Post` containing all uploaded images (capped at 5), linked to the folder by a single `FolderPost` row. The standalone `POST /posts/upload-post` endpoint enforces the same 5-image cap. The home feed (`/posts/top`) now consults `Folder.is_public` for the first time: a post is hidden from the feed only when **both** `Post.public IS FALSE` **and** the post is a member of at least one private folder.
+
+**Why one-upload-one-post over per-image posts:** The previous loop in `upload_stickers_to_folder` produced N `Post` rows per upload, which (a) flooded the home feed for any user uploading a haul, and (b) made folder grids hard to scan because correlated images (e.g. a single sticker book pull) were scattered across N tiles. The data model already supported N images per post via the `PostImage` join table — the fix was a wiring change, not a schema change. Multiple posts per folder are still possible: the user simply triggers multiple uploads.
+
+**Why a hard 5-image cap:** Posts with very large image counts degrade the feed and detail-modal experience (carousel performance, visual load, ranking dilution). Five comfortably covers the realistic "stickers I picked up today" haul without giving any single post outsized weight in `/posts/top`. Enforced at both upload paths so the rule cannot be bypassed.
+
+**Why the feed-visibility rule is `post.public IS FALSE AND in_private_folder` (AND, not OR):** This was the user's deliberate choice over the stricter "hide if any parent folder is private" alternative. The reasoning: visibility decisions should require an **explicit** opt-in on both axes — a private folder alone shouldn't silently demote a post the user marked as public, and a non-public post in a public folder is also assumed-intentional. The author of an explicitly-public post wins. The cost is that a post left at `public=false` (the rare case today, since there is no UI to toggle it) shows on the feed if every parent folder is public; the user accepted this trade-off.
+
+**Why the rule lives in the ranking subquery, not the outer query:** The feed query computes `engagement_count` as a `GROUP BY` aggregate inside `ranking_subquery`. The visibility predicate must apply *before* the `LIMIT + 1` slice or we'd page over rows the user can't see. Placing the `EXISTS (folder_posts JOIN folders ON …)` clause in the same `WHERE` as `Post.is_published == True` keeps the cursor pagination correct and avoids a second post-filter pass.
+
+**Why no `Post.feed_eligible` flag:** Considered. Rejected because it duplicates state: the join table + folder visibility already encode everything the feed needs. Adding a denormalised flag means writing migration logic to keep it in sync on folder visibility toggles — strictly more failure modes for no new capability.
+
+**Why no migration of existing data:** Pre-existing posts that were created one-image-per-post under the old model remain valid `Post` rows; they simply look like "1-image posts" going forward. Merging historical individual posts into multi-image posts would require destroying engagement history (likes, comments, engagement logs are keyed on `post_id`), which the user explicitly does not want.
+
+**Trade-offs accepted:**
+- The new feed visibility rule is **looser** than the old one: previously, `Post.public=false` alone hid a post; now it must also be in a private folder. Confirmed with the user; the practical impact is negligible until a UI to toggle `Post.public` exists.
+- The frontend modal `AddStickersModal` now POSTs all images in one multipart request instead of one per file. A single transient network failure aborts the whole upload (vs. the old per-file partial-success). Acceptable because the UX is now strictly "create a post" — partial success would be confusing (a post with some-but-not-all images).
+- The folder upload endpoint return shape changed from `{ post_ids: number[], count: number }` to `{ post_id: number, image_count: number }`. The only caller (the modal) was updated in the same change; no other client consumed the old shape.
+
+**Follow-ups:**
+- Add a UI control for `Folder.is_public` if not already present (the flag is currently set only via direct DB or `PATCH /folders/{id}`).
+- Consider a UI control for `Post.public` so the new feed-visibility rule has practical surface area for users to use.
+- Add backend tests covering the 5-image cap boundary, the single-post-per-upload behavior, and the folder-aware feed exclusion.
+
+---
+
+## 2026-05-04 — Home Feed Pagination
+
+### Cursor-paginated `/posts/top` + `useInfiniteQuery` on `HomePage`
+
+**Decision:** `GET /posts/top` now accepts `limit` (default 20, max 50) and an optional opaque `cursor`, and returns `next_cursor: str | None`. The home page renders the feed with TanStack `useInfiniteQuery` and an `IntersectionObserver` sentinel below the grid that triggers `fetchNextPage` 400px before it enters the viewport.
+
+**Why cursor pagination over offset:** The feed is ranked by engagement, which changes continuously as new likes/comments arrive. Offset-based paging drifts under those mutations — page 2 can repeat page 1 rows or skip rows entirely. Cursors are stable against insertions and avoid the O(N) cost of deep `OFFSET` scans.
+
+**Why a composite `(engagement_count, post_id)` cursor:** Engagement counts are not unique — most posts cluster at low values. A single-column cursor on `engagement_count` either skips or duplicates rows at tie boundaries. Pairing engagement with `post_id DESC` as a deterministic tiebreaker (PostgreSQL row-constructor `(eng, id) < (cursor_eng, cursor_id)`) gives a strict total order. The cursor is base64-encoded to keep the wire format opaque so future cursor-format changes do not break clients.
+
+**Why the cursor filter lives in the ranking subquery's `HAVING`, not the outer query:** `engagement_count` is an aggregate, computed in the inner `GROUP BY`. The `LIMIT` must apply *after* the cursor filter, otherwise we'd cap before paging starts. `HAVING` is the correct stage for filtering on aggregate values within the same `SELECT`.
+
+**Why `limit + 1` over a separate count query:** Fetching one extra row and slicing reveals "has next page" without a `COUNT(*)` round-trip. Standard pattern for cursor APIs.
+
+**Why `useInfiniteQuery` over manual `useState`:** The hook already delivers page-array state, dedup, automatic refetch on focus, and `staleTime` from the global `QueryClient`. Like-toggle and post-delete now mutate the cache via `queryClient.setQueryData<InfiniteData<TopPostsResponse>>(...)` so an update on a post in page 1 stays consistent when page 2 is loaded later.
+
+**Trade-offs accepted:**
+- Re-ranking under load: if engagement shifts dramatically between page 1 and page N, a post may appear on two pages or be skipped. Acceptable for a top-engagement feed; the alternative (stable snapshot per session) would require server-side cursors keyed on a session id and add infrastructure for marginal UX gain.
+- `total_returned` and `k_value` fields are retained in the response for backward compatibility but no longer carry pagination meaning. Clients should rely on `next_cursor` alone.
+- The 400px `rootMargin` on the `IntersectionObserver` is a UX tuning value — too aggressive will fetch pages the user never reaches; too small produces a visible "stall" at the bottom. 400px feels right for the current grid density and is cheap to revisit.
+
+**Follow-ups:**
+- Add an explicit `(public, is_published, id)` partial index supporting the new ordering if the feed query plan regresses under load.
+- Consider extending the same pattern to other listings (folder contents, profile feeds) — they currently fetch unbounded result sets.
+
+---
+
+## 2026-04-26 — Canvas Showcase Builder
+
+### Full-stack sticker canvas on user profiles
+
+**Decision:** Added a per-user canvas showcase feature — a 1200×400 freeform canvas on every profile where users arrange stickers and post images. Architecture:
+- **DB:** `user_canvases` table with `UNIQUE(user_id)` (one canvas per user), `canvas_json` JSONB (full node state), `preview_path` VARCHAR(1024) (CloudFront URL of PNG snapshot).
+- **Backend:** 5 new endpoints under `/canvas` prefix. `PUT /canvas/me` upserts via PostgreSQL `ON CONFLICT DO UPDATE` (10/min). `POST /canvas/me/preview` accepts a raw PNG blob from the client (no PIL — the PNG is already rendered), uploads to `canvas_previews/{user_id}/` (5/hr). `POST /canvas/me/assets` handles direct-upload images for the canvas editor (20/hr). `GET /canvas/{username}/preview` is public — exposes only `preview_path`, never `canvas_json`.
+- **Frontend:** `features/canvas/` module — `CanvasEditor` portal modal (matching PostDetailModal pattern), `CanvasStage` + `CanvasNode` (react-konva), `CanvasPicker` three-tab sidebar (Library / Posts / Upload), `CanvasToolbar` with 10 background presets, `CanvasPreview` profile strip. All five components exist and are complete. `UserProfile.tsx` was wired to fetch canvas preview in its `Promise.all` and render the strip between the header and the tab bar — **this wiring was temporarily removed on 2026-04-27 pending CloudFront CORS configuration**; see the removal/re-enable notes below.
+
+**Why full-screen portal modal over a new route:** Matches the existing `PostDetailModal` pattern already in the codebase. Zero routing changes. Canvas always has a fixed, predictable pixel dimension for Konva — a responsive flex child cannot guarantee this.
+
+**Why react-konva over Fabric.js:** react-konva is declarative and integrates naturally with React state. Fabric.js has an imperative API requiring ref-based synchronisation with React, which is harder to maintain.
+
+**Why canvas JSON is not exposed publicly:** `canvas_json` contains CloudFront image URLs the user may have uploaded privately (direct-upload path). The public endpoint returns only the pre-rendered PNG preview.
+
+**Why the preview PNG is generated client-side:** `stage.toDataURL()` is a Konva/browser API — it cannot run server-side. The client renders the PNG and POSTs the blob; the backend uploads it raw to S3 without any PIL reprocessing.
+
+**CORS requirement (deployment prerequisite):** `useImage(url, 'anonymous')` in `CanvasNode.tsx` sends every image request with `Origin: https://www.petrcollect.com`. CloudFront must return `Access-Control-Allow-Origin: https://www.petrcollect.com` in the response or the browser taints the canvas and `stage.toDataURL()` throws a SecurityError. Do **not** use `*` — it is less precise and unnecessary since there is only one production origin. See fix procedure below.
+
+**Image source picker — three tabs:**
+1. Library stickers (reuses existing `GET /library/` TanStack Query)
+2. Post images (flattened from `profile.posts` already in scope — no extra fetch)
+3. Direct upload (new `POST /canvas/me/assets`, uploaded to `canvas_assets/{user_id}/`)
+
+**Background canvas presets:** 6 solid colors (UCI palette) + 4 gradients. Stored in `canvas_json.background` as `{ type, value, gradientEnd, angle }` — structured data, not a CSS string, to avoid parsing issues with Konva's `fillLinearGradientColorStops` format.
+
+**Trade-offs accepted:**
+- Canvas editing on mobile is not optimized — drag-and-drop Konva interactions on touch screens are functional but not polished. Acceptable for v1; the showcase is a desktop-first feature.
+- `updated_at` on `user_canvases` uses `server_default` only (no `onupdate` trigger). SQLAlchemy `onupdate` on mapped columns requires function references and is unreliable across upserts. The `PUT` upsert always writes the current timestamp explicitly.
+- Stale preview: if a user updates their canvas JSON without also uploading a new preview PNG, the profile strip shows the old image until they re-save with preview.
+
+**New packages:** `react-konva` 19.2.3 (published 2026-02-28), `konva` 10.2.5 (published 2026-04-10), `use-image` 1.1.4 (published 2025-05-25). All verified >10 days old before install.
+
+**Canvas re-enabled on profile (2026-04-28):** CloudFront CORS is now active. The canvas was re-wired into `UserProfile.tsx` as part of a larger profile redesign — see "Showcase tab + inline canvas editor" entry below. The `CanvasEditor` portal modal and `CanvasPreview` strip are superseded by the new inline approach; they remain in `features/canvas/components/` but are no longer used from `UserProfile.tsx`.
+
+**Follow-up:**
+- Consider adding holographic/rainbow CSS hover effects to sticker nodes as a v2 visual differentiator.
+- Journey tracker (sticker travel history + world map) is the next planned feature for retention — canvas is the foundation that makes profiles feel populated.
+
+---
+
+## 2026-04-28 — Showcase Tab + Inline Canvas Editor
+
+**Decision:** Replaced the full-screen portal modal canvas editor with an inline editing experience embedded directly in a new "Showcase" tab on the profile page. New components: `CanvasBottomTray` (horizontal image picker) and `InlineCanvasEditor` (collapsed header + canvas stage + tray). `CanvasEditor` and `CanvasPicker` (portal/sidebar variants) are retained but no longer used from `UserProfile.tsx`.
+
+**Why Showcase as a tab rather than a separate section above the grid:** Avoids vertical space competition between the canvas and the profile header. The canvas is the hero impression on first load (Showcase is the default tab), but users can tab directly to Collection / Looking For / Trading Away without scrolling past the canvas every time.
+
+**Why inline editor over the portal modal:** The portal modal (`CanvasEditor`) worked but felt detached — opening it navigated away from the profile context visually. Editing inline (the page transforms in place) reinforces the "decorating your profile" mental model. The body-scroll lock + escape-key guard from the portal version are preserved in `InlineCanvasEditor`.
+
+**Why a bottom tray instead of a left sidebar:** The sidebar consumed 256px of canvas width on every screen size. The bottom tray (`CanvasBottomTray`) gives the full content width to the canvas stage. Horizontal scroll for image thumbnails is natural and mirrors mobile sticker-picker UX (Instagram, TikTok).
+
+**Canvas scaling in inline mode:** `InlineCanvasEditor` uses a `ResizeObserver` on the canvas container div to compute `scale = Math.min(1, (containerW - 32) / 1200, (containerH - 32) / 400)`. Initial scale is estimated from `window.innerWidth/Height` to avoid a visible flash on first render. Body scroll is locked while editing.
+
+**Profile tab order:** Showcase → Collection → Looking For → Trading Away. Showcase is first and the default (`useState("showcase")`). Navigating to a different username resets to Showcase via a `useEffect` on `username`.
+
+**Canvas preview fetch:** `getPublicCanvasPreview(username)` is called in `fetchAll` alongside the profile and folders fetches. On save, `canvasPreviewPath` state is updated directly (no re-fetch of the entire profile) and the editor closes.
+
+**Trade-offs accepted:**
+- The `CanvasEditor` portal and `CanvasPicker` sidebar components are now dead code. They are not deleted in case a standalone canvas route is added later; a cleanup PR should remove them if that route is not planned.
+- `InlineCanvasEditor` loads canvas state on mount (`getMyCanvas()`) independently of the profile load. This is a second network round-trip when entering edit mode but keeps the component self-contained and the profile load fast.
+
+---
+
+## 2026-04-28 — Canvas Background Removal
+
+**Decision:** Added server-side background removal via `rembg` (`POST /canvas/me/remove-bg`). When a user selects an image node in the canvas editor, a node toolbar appears with a "Remove BG" toggle. Toggling calls the endpoint, which runs ML inference and returns a transparent PNG uploaded to `canvas_assets/{user_id}/`.
+
+**Why server-side (rembg) over browser-side (@imgly/background-removal):** Browser-side WASM removal requires the user to download a ~50MB WASM + model bundle on first use, blocks the UI thread during inference, and produces inconsistent results across browsers. `rembg` on the server runs once per image, is version-locked, and the result is cached — the user never downloads the model.
+
+**Why `u2net_lite` over the default `u2net`:** `u2net` is ~170 MB and takes 8-15s per image on a t3.micro CPU. `u2net_lite` is ~4.7 MB and runs in ~2-4s at acceptable quality for a sticker/banner use case. The quality difference is negligible for the use case (small images on a decorative canvas).
+
+**Session caching:** `rembg` creates an ONNX runtime session when first called. Creating a new session per request reloads the model from disk each time, which is the dominant cost. A module-level `_rembg_session` singleton is initialized on first request and reused for all subsequent calls.
+
+**Toggle UX and client-side caching:** The node type carries three optional fields — `bgRemoved` (toggle state), `originalUrl` (pre-removal URL), `removedBgUrl` (processed URL). The processed URL is cached on the node so toggling off and back on reuses the S3 result without re-calling the endpoint. Rate limit: 10/hour per user.
+
+**Trade-offs accepted:**
+- First request after a server restart pays the ONNX session initialization cost (~1-2s). Subsequent requests pay inference only.
+- Background removal is synchronous — it blocks the FastAPI worker thread for ~2-4s. Acceptable at current scale; a task queue (Celery/ARQ) would be the right fix if concurrency becomes an issue.
+- `bgRemoved`, `originalUrl`, and `removedBgUrl` are stored in `canvas_json` alongside the rest of the node state. Loading an old canvas with these fields on new nodes is backward compatible (all three are optional).
+
+---
+
+## 2026-04-28 — Canvas Free Transform, Z-Order Controls
+
+**Decision:** Added two interaction features to the canvas node toolbar without any schema or API changes.
+
+**Free transform (Proportional / Free toggle):**
+- `CanvasNode.tsx` now accepts a `keepRatio: boolean` prop. In **Proportional** mode (default, preserves existing behavior): 4-corner Transformer, aspect ratio locked. In **Free** mode: all 8 Konva Transformer anchors enabled (corners + edge midpoints), allowing non-uniform scaling. Dragging a single edge midpoint anchor is the "expand in one direction" gesture.
+- `keepRatio` is session-wide state in `InlineCanvasEditor` (not per-node) — switching mode affects the active selection immediately. This is intentional: making it per-node would require adding a field to `CanvasNode` and migrating saved canvases.
+- Why not a custom `boundBoxFunc` for hard directional locking: Konva's `boundBoxFunc` receives the bounding box in stage coordinates. When the node is rotated, clamping a single edge (e.g. "left edge must not move") requires transforming the constraint into the node's local coordinate frame — non-trivial matrix math that would need its own tested utility. The 8-anchor approach covers 95% of the "expand in one direction" use case for zero constraint complexity. A rotation-aware directional lock is deferred.
+
+**Z-order (Bring Forward / Send Backward):**
+- `useCanvasState` exposes `moveNodeUp(id)` / `moveNodeDown(id)` — these swap the node one position in the `nodes[]` array. Konva renders nodes in array order, so last = topmost, matching standard layer semantics.
+- The toolbar buttons are disabled at array boundaries (first node can't go further back, last can't go further forward) to prevent confusion.
+- Why not a full layers panel: Adding named layers requires restructuring `CanvasState.nodes[]` to `CanvasState.layers[]{name, nodes[]}`, a breaking schema change needing a version migration. Bring Forward / Send Backward delivers all practical z-order value with no schema impact.
+
+**Trade-offs accepted:**
+- `keepRatio` mode is not persisted — reloading the editor always starts in Proportional mode. Persisting it would require either a URL param or a user preference record; neither is warranted for this feature.
+- No full layers panel. If added later, `CanvasState.version` (currently `1`) should be bumped to `2` and a migration guard added in `useCanvasState.ts` to convert the flat `nodes[]` to `layers[]` on load.
+
+**Follow-up:**
+- Rotation-aware single-edge locking (directional expand with a pinned opposite edge) is the next natural step if users request finer control.
+- Generative outpainting (AI-driven expand) would follow the same server-side pattern as `POST /canvas/me/remove-bg` — upload image + mask, call outpainting API, return new S3 URL. Not planned.
+
+---
+
 ## 2026-04-15 — Logging Env Vars: Hardcoded in Compose Files, Not in GitHub Secrets
 
 **Decision:** `LOG_LEVEL`, `SLOW_REQUEST_MS`, and `SLOW_QUERY_MS` are set directly in `docker-compose.prod.yml` and `docker-compose.example.yml` as literal values, not sourced from GitHub Actions secrets or the `.env` file written by the CD pipeline.
@@ -889,7 +1079,7 @@ Reporting your own content has no meaningful moderation use case. The button is 
 
 ---
 
-## 2026-04-21 � frontend � Reposition Post Info Below Image & Increase Grid Spacing
+## 2026-04-21 � frontend � Reposition Post Info Below Image & Increase Grid Spacing
 
 **Decision:** Increased the bottom margin of posts in the grid (PostCard components) and moved the hover overlay's 'info row' (avatar, username, like button) to appear below the image instead of on top of it.
 
@@ -901,7 +1091,7 @@ Reporting your own content has no meaningful moderation use case. The button is 
 
 ---
 
-## 2026-04-21 � frontend � Styled 'Rectangleish' Info Box for Post Hover
+## 2026-04-21 � frontend � Styled 'Rectangleish' Info Box for Post Hover
 
 **Decision:** Refined the post hover information row to be a distinct, white, rounded-xl container with a shadow-lg and border, appearing in the 48px (mb-12) gap below the image.
 
@@ -911,7 +1101,7 @@ Reporting your own content has no meaningful moderation use case. The button is 
 
 **Follow-up:** None.
 
-## 2026-04-21 � frontend � Global Top Navigation Bar and Refactored Search
+## 2026-04-21 � frontend � Global Top Navigation Bar and Refactored Search
 
 **Decision:** Added a global top-positioned Header containing the search bar and refactored the layout so the SideBar spans the full height of the viewport on the left.
 
@@ -921,9 +1111,32 @@ Reporting your own content has no meaningful moderation use case. The button is 
 
 **Follow-up:** None.
 
+---
+
+## 2026-04-28 — backend + frontend — Google OAuth 2.0 Sign-In/Sign-Up
+
+**Decision:** Implemented Google OAuth using the Authorization Code Flow (server-side), not PKCE/implicit. New Google users are prompted to pick a username before account creation. Existing email/password accounts are silently linked if the Google email matches.
+
+**Reasoning:**
+- **Authorization Code Flow:** The app already uses httpOnly cookies for session management. The server receives the authorization code and exchanges it for tokens — the access/ID tokens never touch the browser. PKCE is for SPAs or mobile apps that can't keep a client secret.
+- **No auto-generated usernames:** Usernames are user-facing identities (profile URLs are `/:username`). Auto-generating a random string would create ugly, permanent URLs. Prompting once at signup respects the existing identity model.
+- **Pending JWT cookie for username picker:** After the Google callback verifies identity but before a user row exists, a short-lived `google_pending_token` (10 min, type-checked) is set as an httpOnly cookie. `/setup-profile` displays a welcome message and POSTs to `/auth/google/complete` to finalize. This avoids creating zombie user rows with placeholder usernames.
+- **Account linking:** If the Google email already exists in the users table, `google_id` is set on the existing row and the user is logged in normally. No merge friction for users who sign up with email first.
+- **State CSRF:** `secrets.token_urlsafe(32)` stored in an httpOnly cookie, verified with `secrets.compare_digest` (constant-time). Prevents authorization code injection from a third-party page.
+- **AuthComplete page:** For returning/linked users, the backend redirects to `/auth/complete`. This page calls `/users/me`, populates localStorage, dispatches `auth:login`, then navigates to the profile. Avoids duplicating token-handling logic already in `/users/login`.
+- **`samesite=lax` (not strict):** OAuth requires the browser to follow a cross-origin redirect from `accounts.google.com` back to our domain. `strict` drops cookies on any cross-site navigation, breaking state verification. `lax` sends cookies on top-level navigations while blocking CSRF from embedded content.
+- **Only `.../userinfo.email` and `.../userinfo.profile` scopes:** Email is needed to identify/link accounts. Profile is needed for `name`/`given_name` to pre-fill the welcome message on the username picker.
+
+**Trade-offs:**
+- `password_hash` is now nullable, requiring null-guards in `POST /users/login` and `POST /users/me/password`. Any new endpoint that calls `verify_password` must check first.
+- The pending-token pattern adds one extra round-trip for new users (callback → /setup-profile → /auth/google/complete), but is necessary to avoid partial account state in the DB.
+- Account linking is silent (no confirmation email). Acceptable at this stage; can add explicit confirmation later if needed.
+
+**Follow-up:** None.
+
  - - - 
  
- # #   2 0 2 6 - 0 4 - 2 2   �   f r o n t e n d   �   U n i f i e d   S e a r c h   E x p e r i e n c e   &   S i m p l i f i e d   H o m e   P a g e 
+ # #   2 0 2 6 - 0 4 - 2 2   �   f r o n t e n d   �   U n i f i e d   S e a r c h   E x p e r i e n c e   &   S i m p l i f i e d   H o m e   P a g e 
  
  * * D e c i s i o n : * *   R e m o v e d   t h e   \  
  E x p l o r e  
@@ -938,3 +1151,80 @@ Reporting your own content has no meaningful moderation use case. The button is 
  
  * * F o l l o w - u p : * *   N o n e .  
  
+ 
+ # #   2 0 2 6 - 0 4 - 2 9      H o l o g r a p h i c   S t i c k e r   E f f e c t 
+ 
+ # # #   D O M - b a s e d   C a n v a s V i e w e r   r e p l a c e s   s t a t i c   P N G   o n   p r o f i l e   s h o w c a s e 
+ 
+ * * D e c i s i o n : * *   A d d e d   a   n e w   p u b l i c   G E T   / c a n v a s / { u s e r n a m e } / d a t a   e n d p o i n t   r e t u r n i n g   t h e   f u l l   c a n v a s   J S O N .   T h e   p r o f i l e   s h o w c a s e   n o w   r e n d e r s   s t i c k e r s   a s   D O M   e l e m e n t s   v i a   C a n v a s V i e w e r   i n s t e a d   o f   a   f l a t   P N G   i m a g e .   S t i c k e r s   m a r k e d   h o l o :   t r u e   a r e   w r a p p e d   i n   H o l o S t i c k e r E f f e c t ,   w h i c h   a p p l i e s   C S S   c u s t o m - p r o p e r t y - d r i v e n   3 D   t i l t   +   r a i n b o w   s h i n e   ( c o l o r - d o d g e )   +   g l a r e   ( o v e r l a y )   o n   m o u s e   h o v e r      p o r t e d   f r o m   s i m e y d o t m e / p o k e m o n - c a r d s - c s s . 
+ 
+ * * R e a s o n i n g : * *   C S S   b l e n d   m o d e s   ( c o l o r - d o d g e ,   o v e r l a y )   a n d   p e r s p e c t i v e - b a s e d   t r a n s f o r m s   r e q u i r e   D O M   e l e m e n t s ;   t h e y   c a n n o t   b e   a p p l i e d   t o   i n d i v i d u a l   n o d e s   i n s i d e   a   K o n v a   H T M L 5   c a n v a s .   E x p o s i n g   t h e   c a n v a s   J S O N   p u b l i c l y   i s   s a f e      t h e   s t i c k e r   i m a g e   U R L s   a r e   a l r e a d y   v i s i b l e   i n   t h e   r e n d e r e d   P N G   p r e v i e w ,   a n d   t h e   p o s i t i o n a l   d a t a   c a r r i e s   n o   s e n s i t i v e   i n f o r m a t i o n . 
+ 
+ * * T r a d e - o f f s : * *   T h e   K o n v a   s t a g e   ( e d i t   m o d e )   i s   u n c h a n g e d ;   t h e   h o l o   e f f e c t   i s   v i e w - o n l y .   T h e   s a v e   p i p e l i n e   s t i l l   u s e s   s t a g e . t o D a t a U R L ( )   �!  S 3   P N G ,   s o   t h e   h o l o   e f f e c t   d o e s   n o t   a p p e a r   i n   t h e   s t a t i c   p r e v i e w   t h u m b n a i l .   T h e   p u b l i c   e n d p o i n t   a d d s   a   s e c o n d   n e t w o r k   r e q u e s t   o n   p r o f i l e   l o a d   ( p a r a l l e l   w i t h   t h e   p r e v i e w   f e t c h ) . 
+ 
+ * * F o l l o w - u p : * *   N o n e .  
+ 
+
+## 2026-05-01 — Google OAuth Security Hardening
+
+### Token reuse detection, rate limiting, and cookie helper consolidation
+
+**Decision:** Three security improvements to the OAuth and token refresh flows.
+
+**1. Reuse detection on POST /auth/refresh-token**
+A revoked refresh token presented outside the 60 s grace period is treated as a theft signal. The endpoint now bulk-revokes all active RefreshToken rows for that user before returning 401, and emits a structured WARNING log (event: auth.token_reuse_detected). This implements the OAuth 2.0 Security BCP recommendation: the attacker and the legitimate client both hold the stolen token; the first to use it triggers rotation; the second use of the now-revoked token kills every session.
+
+**Why bulk-revoke all sessions, not just the token family:** A amily_id column would allow surgical per-chain revocation (the true RFC approach), but adds a migration and a second FK. Given the app's current scale, logging out all devices on a theft signal is an acceptable trade-off — the event is rare and the security gain is the same.
+
+**2. Rate limit GET /auth/google**
+Matched to POST /users/login: 5/minute per IP. Without this, the OAuth initiation endpoint was the only auth entrypoint with no slowapi guard. The endpoint now takes equest: Request as required by slowapi.
+
+**3. _apply_auth_cookies shared helper**
+Extracted from _cookie_response in outers/auth.py. Sets both httpOnly cookies on any response object (JSONResponse or RedirectResponse). _login_and_redirect in oauth.py previously duplicated the cookie settings inline with a "mirror these settings" comment — a maintenance hazard. Both paths now call the same function.
+
+**Follow-up:** Add email verification on POST /users/create-user (requires Gmail API). Without it, the pre-registration attack vector exists — an attacker can register with a victim's email before the victim does, then link a Google account to it via the silent-merge path. Silent merging is safe once email verification is in place.
+
+
+## 2026-05-02 — Admin Post Moderation
+
+### Inline admin/moderator delete on any post
+
+**Decision:** Allow users with role=admin or role=moderator to delete any post. No separate admin login or admin route — moderation surfaces inline on the existing 3-dot menu (PostCard) and as a parallel red button on PostDetailModal. Hard delete reuses the existing DELETE /posts/{post_id} cascade + S3 cleanup path; no schema change.
+
+**Architecture seams introduced:**
+1. `backend/utils/permissions.py` — pure predicates (`can_delete_post`, `is_acting_as_moderator`). Authorization rules live here, not in the route handler. New rules ("moderators can only delete posts under 24h old") become a one-file change.
+2. `backend/utils/audit.py` — `log_admin_action` helper emits structured logs under the `admin.*` event prefix. Future swap to a DB audit table changes only this module — no callsite edits.
+3. `frontend/src/shared/auth/session.ts` — single owner of all auth-related localStorage I/O. `LogIn`, `AuthComplete`, `AppProviders`, `AccountTab`, `fetchWithAuth`, `RequireAuth`, `PostCard`, `PostDetailModal` all migrated to `getSession`/`setSession`/`clearSession`. Future migration to Zustand or React Context becomes a one-file change.
+4. `frontend/src/shared/auth/permissions.ts` — `canModeratePosts(session)` predicate. UI components ask the question, never read the role string directly.
+
+**Why one endpoint with predicate auth, not a parallel /admin/posts route:** Parallel routes drift over time. A single endpoint with a small predicate function is the simpler contract and keeps the cascade/S3 cleanup logic in one place.
+
+**Why role on a regular account, not a separate admin login portal:** Industry standard. Roles already existed on the User model with `user|moderator|admin` enum and the JWT already carries `role`. A second login form would duplicate auth surface for no security gain — the trust boundary is the JWT, not the form.
+
+**Why localStorage role is acceptable for UI gating:** The frontend role flag is a UI hint only. Backend `can_delete_post` is the gate. A user who edits localStorage to set `role=admin` will see the menu entry but the API will return 403 — confirmed in the verification step. Documented this explicitly so future UI gates don't drift toward client-side trust.
+
+**Why a separate `onAdminDeleteClick` callback rather than re-using `onDeleteClick`:** Keeps the menu component pure (no global state reads) and lets the parent show different confirm copy and emit different telemetry without the menu knowing about it.
+
+**Bootstrap:** No UI to assign roles in v1. First admin promoted via SQL: `UPDATE users SET role = 'admin' WHERE email = '<addr>';`. User must log out and back in for the new JWT to carry the elevated role.
+
+**Follow-up:**
+- `/admin` page listing pending reports (the `reports` table is built and `_process_report` is a stub — wiring an admin queue UI on top of it is the natural next step).
+- Self-serve role-promotion endpoint guarded by `RoleChecker(["admin"])` so admins can promote moderators without DB access.
+- Migrate the remaining read-only `localStorage.getItem('userId')` callsites (FolderPage, CreateFolder, PostPickerModal, useSocketFrameHandler, ProfileTab, ChatPage) to `getSession()`. Behavior-equivalent, deferred to keep this PR focused on the moderation feature.
+- DB-backed audit log replacing the log-line helper if moderation volume grows.
+
+---
+
+## 2026-05-05 — Quick Search Post Integration
+
+### Added posts to the header search dropdown with inline modal preview
+
+**Decision:** The quick search dropdown (header) now returns up to 4 matching posts alongside users. Clicking a post result opens the `PostDetailModal` immediately rather than navigating to a search results page.
+
+**Why:** Clicking on posts in "search results" was a specific user requirement. The quick search dropdown is the primary search interface; requiring a full page transition to `SearchResultsPage` before a post could be clicked was a high-friction "dead end" for quick navigation. Inline modal support makes the app feel faster and more integrated.
+
+**Backend change:** `_search_posts` is now called even for `search_type == "quick"`, but with a lower limit (4) to keep the dropdown response fast and the UI compact.
+
+**Trade-offs accepted:**
+- The dropdown can now get quite tall if both users (limit 10) and posts (limit 4) have many matches. Added a `max-h-[500px] overflow-y-auto` to the dropdown container to prevent it from pushing off-screen.
+- Clicking a post in the dropdown closes the dropdown and clears the query, but doesn't change the URL. This is consistent with other modal-based interactions in the app.
