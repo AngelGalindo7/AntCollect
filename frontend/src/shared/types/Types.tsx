@@ -108,6 +108,7 @@ export interface Folder {
   is_public: boolean;
   folder_type: FolderType;
   post_count: number;
+  preview_images: string[];
   created_at: string;
   updated_at: string;
 }
