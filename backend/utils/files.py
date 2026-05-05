@@ -3,7 +3,7 @@ import os
 import uuid
 
 from fastapi import UploadFile, HTTPException
-from PIL import Image
+from PIL import Image, ImageOps
 from typing import Dict
 
 from ..errors import AppError, ErrorCode
@@ -103,6 +103,7 @@ def process_and_save_image(file: UploadFile, user_id: int, folder_prefix: str = 
 
     try:
         image = Image.open(io.BytesIO(contents))
+        image = ImageOps.exif_transpose(image)
         original_width, original_height = image.size
         image = handle_transparent_images(image)
         image = strip_metadata(image)
