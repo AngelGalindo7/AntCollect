@@ -75,8 +75,9 @@ test('visiting a different user profile shows no avatar upload button', async ({
 
 test('clicking a folder card navigates to /folders/:folderId', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
-  // Default tab is Showcase — switch to Collection to see folder cards.
+  // Default tab is Showcase — switch to Collection, then to the "folders" sub-filter.
   await page.getByRole('button', { name: 'Collection' }).click();
+  await page.getByRole('button', { name: 'folders', exact: true }).click();
   await page.locator('[data-testid="folder-card"]').first().click();
   await expect(page).toHaveURL(/\/folders\/\d+/);
 });
