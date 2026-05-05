@@ -3,25 +3,6 @@ import { test, expect } from '@playwright/test';
 // Uses the project-level storageState (authenticated).
 // All own-profile tests navigate to /${TEST_USERNAME}.
 
-// The CI seed step creates users but no folders, so we create one here and
-// clean it up afterwards to keep the DB in the same state.
-let seedFolderId: number;
-
-test.beforeAll(async ({ request }) => {
-  const res = await request.post('http://localhost:8000/folders', {
-    data: { name: 'CI Test Folder', folder_type: 'collection' },
-  });
-  if (!res.ok()) throw new Error(`Failed to create seed folder: ${res.status()} ${await res.text()}`);
-  const body = await res.json();
-  seedFolderId = body.id;
-});
-
-test.afterAll(async ({ request }) => {
-  if (seedFolderId) {
-    await request.delete(`http://localhost:8000/folders/${seedFolderId}`);
-  }
-});
-
 test('own profile renders the avatar upload button', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
   await expect(page.getByRole('button', { name: 'Upload avatar' })).toBeVisible();
@@ -75,9 +56,23 @@ test('visiting a different user profile shows no avatar upload button', async ({
 
 test('clicking a folder card navigates to /folders/:folderId', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
+
+  // Seed a folder via the page's authenticated context. page.request shares
+  // cookies with the page so this is guaranteed to use the same session as
+  // the rest of the test — unlike the worker-scoped `request` fixture in
+  // beforeAll, which has historically not picked up storageState reliably.
+  const seedRes = await page.request.post('http://localhost:8000/folders', {
+    data: { name: 'Folder Card Nav Test', folder_type: 'collection' },
+  });
+  expect(seedRes.ok(), `seed folder failed: ${seedRes.status()} ${await seedRes.text()}`).toBeTruthy();
+  await page.reload();
+
   // Default tab is Showcase — switch to Collection, then to the "folders" sub-filter.
   await page.getByRole('button', { name: 'Collection' }).click();
   await page.getByRole('button', { name: 'folders', exact: true }).click();
-  await page.locator('[data-testid="folder-card"]').first().click();
+
+  const folderCard = page.locator('[data-testid="folder-card"]').first();
+  await expect(folderCard).toBeVisible();
+  await folderCard.click();
   await expect(page).toHaveURL(/\/folders\/\d+/);
 });
