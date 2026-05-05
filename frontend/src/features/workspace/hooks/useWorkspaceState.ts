@@ -55,8 +55,12 @@ export function useWorkspaceState(): UseWorkspaceState {
   const blur = useCallback(() => setFocusedId(null), []);
 
   const spawnPanel = useCallback(async () => {
-    const data = await createPanel();
-    setPanels(data.panels);
+    try {
+      const data = await createPanel();
+      setPanels(data.panels);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to spawn panel');
+    }
   }, []);
 
   const deletePanel = useCallback(async (id: number) => {
@@ -81,24 +85,26 @@ export function useWorkspaceState(): UseWorkspaceState {
   );
 
   const commitPanelRect = useCallback(async (id: number) => {
-    setPanels((prev) => {
-      const panel = prev.find((p) => p.id === id);
-      if (!panel) return prev;
-      const { x, y, w, h } = panel;
-      updatePanelMeta(id, { x, y, w, h })
-        .then((updated) => setPanels((current) => replacePanel(current, updated)))
-        .catch((err: unknown) => {
-          setError(err instanceof Error ? err.message : 'Failed to commit rect');
-        });
-      return prev;
-    });
-  }, []);
+    const panel = panels.find((p) => p.id === id);
+    if (!panel) return;
+    const { x, y, w, h } = panel;
+    try {
+      const updated = await updatePanelMeta(id, { x, y, w, h });
+      setPanels((prev) => replacePanel(prev, updated));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to commit rect');
+    }
+  }, [panels]);
 
   const bringToFront = useCallback(async (id: number) => {
-    const nextZ = panels.length > 0 ? Math.max(...panels.map((p) => p.z)) + 1 : 1;
+    let nextZ = 1;
+    setPanels((prev) => {
+      nextZ = prev.length > 0 ? Math.max(...prev.map((p) => p.z)) + 1 : 1;
+      return prev;
+    });
     const updated = await updatePanelMeta(id, { z: nextZ });
     setPanels((prev) => replacePanel(prev, updated));
-  }, [panels]);
+  }, []);
 
   const lockPanel = useCallback(async (id: number, locked: boolean) => {
     const updated = await updatePanelMeta(id, { locked });

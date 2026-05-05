@@ -62,8 +62,8 @@ export async function uploadPanelPreview(id: number, blob: Blob): Promise<string
     body: form,
   });
   if (!res.ok) throw new Error('Failed to upload panel preview');
-  const data = await res.json();
-  return data.preview_path as string;
+  const data: { preview_path: string } = await res.json();
+  return data.preview_path;
 }
 
 export async function deletePanel(id: number): Promise<void> {

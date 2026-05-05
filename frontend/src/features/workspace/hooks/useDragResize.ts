@@ -36,7 +36,7 @@ export function useDragResize(opts: UseDragResizeOptions): {
       const state = dragStateRef.current;
       if (!state || e.pointerId !== state.pointerId) return;
 
-      const { panelId, rect, others, bounds, onRectChange } = optsRef.current;
+      const { panelId, others, bounds, onRectChange } = optsRef.current;
       const dx = e.clientX - state.startX;
       const dy = e.clientY - state.startY;
       const { startRect, mode } = state;
@@ -48,7 +48,7 @@ export function useDragResize(opts: UseDragResizeOptions): {
         candidate = applyResizeDelta(startRect, dx, dy, mode);
       }
 
-      const resolved = resolveCollision(rect, candidate, others, bounds, mode);
+      const resolved = resolveCollision(startRect, candidate, others, bounds, mode);
       onRectChange(panelId, resolved);
     }
 
