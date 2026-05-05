@@ -429,7 +429,7 @@ def remove_post_from_folder(
 
 
 @router.post("/{folder_id}/upload", status_code=201)
-@limiter.limit("5/hour", key_func=get_user_or_ip_key)
+@limiter.limit("100/hour", key_func=get_user_or_ip_key)
 def upload_stickers_to_folder(
     request: Request,
     folder_id: int,
