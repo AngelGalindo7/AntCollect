@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import PostCard from './PostCard';
 import FolderCard from '@/features/create/components/FolderCard';
 import type { GridItem, Post, Folder, FolderType } from '@/shared/types/Types';
+import { useMasonryLayout, type MasonryItemDims } from '@/shared/hooks/useMasonryLayout';
 
 interface PostGridLayoutProps {
   items: GridItem[];
@@ -13,17 +14,42 @@ interface PostGridLayoutProps {
   postOwnerId?: number;
 }
 
+const MASONRY_CONFIG = {
+  gap: 24,
+  breakpoints: [
+    { minWidth: 0, cols: 2 },
+    { minWidth: 768, cols: 3 },
+    { minWidth: 1100, cols: 4 },
+  ],
+};
+
+const FOLDER_LABEL_HEIGHT = 32;
+
+function dimsForItem(item: GridItem): MasonryItemDims {
+  if (item.kind === 'folder') {
+    return { aspectRatio: 1, extraHeight: FOLDER_LABEL_HEIGHT };
+  }
+  const meta = item.data.images?.[0];
+  if (meta && meta.original_width > 0 && meta.original_height > 0) {
+    return { aspectRatio: meta.original_height / meta.original_width };
+  }
+  return { aspectRatio: 1 };
+}
+
 const PostGridLayout: React.FC<PostGridLayoutProps> = ({
   items,
   onPostClick,
   onLikeToggle,
   onPostDelete,
   onFolderClick,
-  // folderType and postOwnerId reserved for trade button re-enable
 }) => {
-  if (!items || items.length === 0) {
+  const safeItems = items ?? [];
+  const dims = useMemo(() => safeItems.map(dimsForItem), [safeItems]);
+  const { containerRef, positions, containerHeight, ready } = useMasonryLayout(dims, MASONRY_CONFIG);
+
+  if (safeItems.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
+      <div data-testid="post-grid-empty" className="text-center py-12 text-gray-500">
         <svg
           className="w-16 h-16 mx-auto mb-4 text-gray-300"
           fill="none"
@@ -45,12 +71,7 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
   const renderItem = (item: GridItem) => {
     switch (item.kind) {
       case 'folder':
-        return (
-          <FolderCard
-            folder={item.data}
-            onClick={onFolderClick}
-          />
-        );
+        return <FolderCard folder={item.data} onClick={onFolderClick} />;
       case 'post':
         return (
           <PostCard
@@ -66,15 +87,32 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
   };
 
   return (
-    <div className="columns-2 min-[768px]:columns-3 min-[1100px]:columns-4 gap-6">
-      {items.map((item) => {
-        const key = item.kind === 'folder' ? `folder-${item.data.id}` : `post-${item.data.post_id}`;
-        return (
-          <div key={key} className="break-inside-avoid mb-6">
-            {renderItem(item)}
-          </div>
-        );
-      })}
+    <div
+      ref={containerRef}
+      data-testid="post-grid-masonry"
+      className="relative w-full"
+      style={{ height: ready ? containerHeight : undefined }}
+    >
+      {ready &&
+        safeItems.map((item, idx) => {
+          const pos = positions[idx];
+          if (!pos) return null;
+          const key = item.kind === 'folder' ? `folder-${item.data.id}` : `post-${item.data.post_id}`;
+          return (
+            <div
+              key={key}
+              data-testid="post-grid-item"
+              className="absolute"
+              style={{
+                transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`,
+                width: pos.width,
+                height: pos.height,
+              }}
+            >
+              {renderItem(item)}
+            </div>
+          );
+        })}
     </div>
   );
 };
