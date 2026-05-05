@@ -60,9 +60,14 @@ export function PanelFrame({
         zIndex: panel.z,
       }}
       className="group"
+      onDoubleClick={(e) => {
+        if ((e.target as HTMLElement).closest('[data-title-bar]')) return;
+        if (!isEditing && isOwner) onEnterEdit(panel.id);
+      }}
     >
       {/* Title bar */}
       <div
+        data-title-bar
         style={{ height: TITLE_H, background: accent }}
         className="flex items-center px-2 gap-1 select-none rounded-t-lg cursor-grab active:cursor-grabbing"
         onPointerDown={(e) => {
@@ -119,7 +124,6 @@ export function PanelFrame({
           overflow: 'hidden',
           pointerEvents: isEditing ? 'auto' : 'none',
         }}
-        onDoubleClick={() => { if (isOwner) onEnterEdit(panel.id); }}
       >
         {children}
       </div>

@@ -123,8 +123,7 @@ export function Workspace({ posts, isOwner }: Props) {
               panel={panel}
               isEditing={editingPanelId === panel.id}
               isOwner={isOwner}
-              posts={posts}
-              stageRef={stageRef}
+              stageRef={editingPanelId === panel.id ? stageRef : undefined}
               onCanvasState={(api) => {
                 if (editingPanelId === panel.id) setCanvasApi(api);
               }}

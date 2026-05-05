@@ -32,7 +32,8 @@ function dataURLtoBlob(dataUrl: string): Blob {
 export function PanelPickerPalette({
   panel, bounds, canvasApi, stageRef, posts, onSaveSuccess, onDiscard,
 }: Props) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedId = canvasApi?.selectedId ?? null;
+  const setSelectedId = (id: string | null) => canvasApi?.setSelectedId(id);
   const [keepRatio, setKeepRatio] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);

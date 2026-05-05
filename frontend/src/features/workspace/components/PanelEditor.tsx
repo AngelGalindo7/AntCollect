@@ -5,12 +5,13 @@ import { useCanvasState, CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/h
 import type { CanvasState, CanvasNode, BackgroundConfig } from '@/features/canvas/types/canvas';
 import type { NodeSource } from '@/features/canvas/types/canvas';
 import type { Panel } from '../types/workspace';
-import type { Post } from '@/shared/types/Types';
 
 export interface CanvasApiHandle {
   nodes: CanvasNode[];
   background: BackgroundConfig;
   isDirty: boolean;
+  selectedId: string | null;
+  setSelectedId: (id: string | null) => void;
   getCanvasJson: () => CanvasState;
   addNode: (url: string, source: NodeSource) => void;
   updateNode: (id: string, attrs: Partial<CanvasNode>) => void;
@@ -25,7 +26,6 @@ interface Props {
   panel: Panel;
   isEditing: boolean;
   isOwner: boolean;
-  posts: Post[];
   stageRef?: React.RefObject<Konva.Stage | null>;
   onCanvasState?: (api: CanvasApiHandle) => void;
 }
@@ -59,6 +59,8 @@ export function PanelEditor({ panel, isEditing, isOwner, stageRef, onCanvasState
       nodes,
       background,
       isDirty,
+      selectedId,
+      setSelectedId,
       getCanvasJson,
       addNode,
       updateNode,
@@ -70,7 +72,7 @@ export function PanelEditor({ panel, isEditing, isOwner, stageRef, onCanvasState
     });
   }, [
     isEditing, onCanvasState,
-    nodes, background, isDirty,
+    nodes, background, isDirty, selectedId, setSelectedId,
     getCanvasJson, addNode, updateNode, removeNode,
     moveNodeUp, moveNodeDown, changeBackground, markClean,
   ]);
