@@ -305,3 +305,67 @@ class ReportResponse(BaseModel):
     reason: str
     status: str
     created_at: datetime
+
+
+class PanelRect(BaseModel):
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    w: int = Field(ge=280)
+    h: int = Field(ge=220)
+
+
+class PanelCreateRequest(BaseModel):
+    rect: Optional[PanelRect] = None
+    title: Optional[str] = Field(default=None, max_length=80)
+    accent: Optional[str] = Field(default=None, max_length=16)
+
+
+class PanelMetaUpdate(BaseModel):
+    x: Optional[int] = Field(default=None, ge=0)
+    y: Optional[int] = Field(default=None, ge=0)
+    w: Optional[int] = Field(default=None, ge=280)
+    h: Optional[int] = Field(default=None, ge=220)
+    z: Optional[int] = None
+    locked: Optional[bool] = None
+    title: Optional[str] = Field(default=None, max_length=80)
+    accent: Optional[str] = Field(default=None, max_length=16)
+
+
+class PanelCanvasUpdate(BaseModel):
+    canvas_json: dict
+
+
+class PanelResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    x: int
+    y: int
+    w: int
+    h: int
+    z: int
+    locked: bool
+    title: Optional[str] = None
+    accent: Optional[str] = None
+    canvas_json: Optional[dict] = None
+    preview_path: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkspaceMeta(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    z_counter: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkspaceResponse(BaseModel):
+    workspace: WorkspaceMeta
+    panels: List[PanelResponse]
+
+
+class PanelPreviewResponse(BaseModel):
+    preview_path: str
