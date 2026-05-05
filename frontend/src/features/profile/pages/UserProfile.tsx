@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
-import { CanvasViewer } from "@/features/canvas/components/CanvasViewer";
-import { InlineCanvasEditor } from "@/features/canvas/components/InlineCanvasEditor";
-import { getPublicCanvasPreview, getPublicCanvasData } from "@/features/canvas/api/canvasApi";
-import type { CanvasState } from "@/features/canvas/types/canvas";
+import { Workspace } from "@/features/workspace/components/Workspace";
+import { WorkspaceViewer } from "@/features/workspace/components/WorkspaceViewer";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useParams, useNavigate } from "react-router-dom";
@@ -41,11 +39,6 @@ const UserProfile: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("posts");
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-
-  // Canvas showcase state
-  const [canvasPreviewPath, setCanvasPreviewPath] = useState<string | null>(null);
-  const [canvasData, setCanvasData] = useState<CanvasState | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
 
   // Avatar upload state
   const [uploading, setUploading] = useState(false);
@@ -99,14 +92,6 @@ const UserProfile: React.FC = () => {
           const folderData: Folder[] = await foldersRes.json();
           setFolders(folderData);
         }
-
-        // Fetch canvas data and preview in parallel (both public — no auth needed)
-        const [previewPath, canvasJson] = await Promise.all([
-          getPublicCanvasPreview(String(username)).catch(() => null),
-          getPublicCanvasData(String(username)).catch(() => null),
-        ]);
-        setCanvasPreviewPath(previewPath);
-        setCanvasData(canvasJson);
       } catch (err) {
         console.error(err);
       } finally {
@@ -120,7 +105,6 @@ const UserProfile: React.FC = () => {
   // Reset to showcase tab when navigating to a different profile
   useEffect(() => {
     setActiveTab("showcase");
-    setIsEditing(false);
   }, [username]);
 
   // Reset sub-filter to posts whenever the active tab changes
@@ -405,23 +389,10 @@ const UserProfile: React.FC = () => {
 
       {/* ── Section 3: Tab content ── */}
       {activeTab === "showcase" ? (
-        isEditing ? (
-          <InlineCanvasEditor
-            posts={profile.posts}
-            onClose={() => setIsEditing(false)}
-            onSaveSuccess={(path, state) => {
-              setCanvasPreviewPath(path);
-              setCanvasData(state);
-              setIsEditing(false);
-            }}
-          />
+        profile.is_owner ? (
+          <Workspace username={String(username)} posts={profile.posts} isOwner={true} />
         ) : (
-          <CanvasViewer
-            canvasData={canvasData}
-            previewPath={canvasPreviewPath}
-            isOwner={profile.is_owner}
-            onEditClick={() => setIsEditing(true)}
-          />
+          <WorkspaceViewer username={String(username)} />
         )
       ) : (
         <div className="max-w-6xl mx-auto px-4 mt-6">
