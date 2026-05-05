@@ -32,11 +32,17 @@ const HomePage: React.FC = () => {
         isFetchingNextPage,
         hasNextPage,
         fetchNextPage,
-    } = useInfiniteQuery<TopPostsResponse, Error>({
+    } = useInfiniteQuery<
+        TopPostsResponse,
+        Error,
+        InfiniteData<TopPostsResponse, string | null>,
+        typeof HOME_FEED_KEY,
+        string | null
+    >({
         queryKey: HOME_FEED_KEY,
         queryFn: fetchHomeFeedPage,
-        initialPageParam: null as string | null,
-        getNextPageParam: (lastPage) => lastPage.next_cursor ?? undefined,
+        initialPageParam: null,
+        getNextPageParam: (lastPage) => lastPage.next_cursor ?? null,
     });
 
     const posts: PostWithEngagement[] = useMemo(
