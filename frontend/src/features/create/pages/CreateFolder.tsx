@@ -158,10 +158,11 @@ const CreateFolder: React.FC = () => {
         });
       }
 
-      // Step 3: bulk-upload new sticker images (one Post per file, atomic)
-      if (uploadFiles.length > 0) {
+      // Step 3: upload sticker images one at a time so each request body stays small
+      // (avoids nginx body-size limits and gives even progress).
+      for (const file of uploadFiles) {
         const fd = new FormData();
-        uploadFiles.forEach((f) => fd.append('files', f));
+        fd.append('files', file);
         fd.append('is_published', 'true');
         const uploadRes = await fetchWithAuth(`${API_BASE}/folders/${folder.id}/upload`, {
           method: 'POST',
