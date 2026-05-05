@@ -446,7 +446,12 @@ def upload_stickers_to_folder(
             detail=f"Too many files (max {MAX_FILES_PER_FOLDER_UPLOAD})",
         )
 
-    folder = db.query(Folder).filter(Folder.id == folder_id).first()
+    folder = (
+        db.query(Folder)
+        .filter(Folder.id == folder_id)
+        .with_for_update()
+        .first()
+    )
     if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
     if folder.user_id != user.user_id:
