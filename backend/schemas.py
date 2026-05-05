@@ -211,6 +211,7 @@ class FolderResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     post_count: int = 0
+    preview_images: List[str] = []
 
 
 class AddPostToFolderRequest(BaseModel):
