@@ -94,6 +94,7 @@ export interface TopPostsResponse {
   total_returned: number;
   k_value: number;
   posts: PostWithEngagement[];
+  next_cursor: string | null;
 }
 
 export type FolderType = 'collection' | 'looking_for' | 'trading';
