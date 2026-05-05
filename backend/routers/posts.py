@@ -17,6 +17,8 @@ from ..utils.audit import log_admin_action
 
 logger = logging.getLogger(__name__)
 
+MAX_IMAGES_PER_POST = 5
+
 router = APIRouter(
     prefix="/posts",
     tags=["Posts"]
@@ -37,6 +39,15 @@ def upload_post(
     ):
      
     user_id = current_user.user_id
+
+    if not post_images:
+        raise HTTPException(status_code=400, detail="No images provided")
+    if len(post_images) > MAX_IMAGES_PER_POST:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many images (max {MAX_IMAGES_PER_POST} per post)",
+        )
+
     all_created_files: list[str] = []
 
     try:
