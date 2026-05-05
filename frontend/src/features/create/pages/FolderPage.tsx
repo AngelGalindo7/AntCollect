@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchWithAuth } from '@/shared/api/api';
 import PostGridLayout from '@/features/posts/components/PostGridLayout';
 import PostDetailModal from '@/features/posts/components/PostDetailModal';
+import AddStickersModal from '@/features/create/components/AddStickersModal';
 import type { GridItem, Post, FolderType } from '@/shared/types/Types';
 
 import { API_BASE } from '@/shared/api/api';
@@ -35,43 +36,45 @@ const FolderPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const currentUserId = parseInt(localStorage.getItem('userId') ?? '0', 10);
   const isOwner = !!folder && folder.user_id === currentUserId;
 
-  useEffect(() => {
-    const fetchFolder = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetchWithAuth(`${API_BASE}/folders/${folderId}`, {
-          credentials: 'include',
-        });
-        if (res.status === 403) { setError('This folder is private.'); return; }
-        if (res.status === 404) { setError('Folder not found.'); return; }
-        if (!res.ok) throw new Error(`Error ${res.status}`);
+  const fetchFolder = useCallback(async () => {
+    if (!folderId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/folders/${folderId}`, {
+        credentials: 'include',
+      });
+      if (res.status === 403) { setError('This folder is private.'); return; }
+      if (res.status === 404) { setError('Folder not found.'); return; }
+      if (!res.ok) throw new Error(`Error ${res.status}`);
 
-        const data = await res.json();
-        const transformed: FolderDetail = {
-          ...data,
-          posts: (data.posts ?? []).map((post: any) => ({
-            ...post,
-            image_paths: (post.images ?? [])
-              .filter((img: any) => img && img.paths?.original)
-              .map((img: any) => img.paths.original),
-          })),
-        };
-        setFolder(transformed);
-      } catch (err) {
-        console.error(err);
-        setError('Failed to load folder.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (folderId) fetchFolder();
+      const data = await res.json();
+      const transformed: FolderDetail = {
+        ...data,
+        posts: (data.posts ?? []).map((post: any) => ({
+          ...post,
+          image_paths: (post.images ?? [])
+            .filter((img: any) => img && img.paths?.original)
+            .map((img: any) => img.paths.original),
+        })),
+      };
+      setFolder(transformed);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to load folder.');
+    } finally {
+      setLoading(false);
+    }
   }, [folderId]);
+
+  useEffect(() => {
+    fetchFolder();
+  }, [fetchFolder]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -200,12 +203,22 @@ const FolderPage: React.FC = () => {
             </p>
           </div>
 
-          <button
-            onClick={() => navigate(-1)}
-            className="shrink-0 text-sm text-gray-400 hover:text-gray-600"
-          >
-            ← Back
-          </button>
+          <div className="shrink-0 flex items-center gap-3">
+            {isOwner && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="px-4 py-2 text-sm font-bold bg-uci-gold text-espresso rounded-xl hover:bg-amber-400 transition-colors"
+              >
+                + Add Stickers
+              </button>
+            )}
+            <button
+              onClick={() => navigate(-1)}
+              className="text-sm text-gray-400 hover:text-gray-600"
+            >
+              ← Back
+            </button>
+          </div>
         </div>
       </div>
 
@@ -228,6 +241,17 @@ const FolderPage: React.FC = () => {
           }}
           postOwnerId={folder.user_id}
           folderType={folder.folder_type}
+        />
+      )}
+
+      {showAddModal && (
+        <AddStickersModal
+          folderId={folder.id}
+          folderType={folder.folder_type}
+          onClose={() => setShowAddModal(false)}
+          onUploaded={() => {
+            fetchFolder();
+          }}
         />
       )}
     </div>
