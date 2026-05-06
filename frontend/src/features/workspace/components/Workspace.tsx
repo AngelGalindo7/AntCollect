@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Post } from '@/shared/types/Types';
-import type { WorkspaceBounds, Panel, Rect } from '../types/workspace';
+import type { WorkspaceBounds, Rect } from '../types/workspace';
 import { useWorkspaceState } from '../hooks/useWorkspaceState';
 import { PanelFrame } from './PanelFrame';
 import { PanelEditor } from './PanelEditor';
@@ -35,7 +35,6 @@ export function Workspace({ posts, isOwner }: Props) {
     bringToFront,
     lockPanel,
     savePanelCanvas,
-    uploadPanelPreview,
     isLoading,
     error,
   } = useWorkspaceState();
