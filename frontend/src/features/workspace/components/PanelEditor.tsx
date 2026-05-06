@@ -89,8 +89,8 @@ export function PanelEditor({ panel, isEditing, isOwner, stageRef, onCanvasState
       );
     }
     return (
-      <div className="w-full h-full flex items-center justify-center bg-neutral-50">
-        <p className="text-neutral-300 text-xs select-none">Double-click to edit</p>
+      <div className="w-full h-full flex items-center justify-center" style={{ background: '#F5F0EB' }}>
+        <p className="text-neutral-300 text-xs select-none">Hover to edit</p>
       </div>
     );
   }
