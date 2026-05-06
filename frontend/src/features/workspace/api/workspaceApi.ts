@@ -3,6 +3,8 @@ import type { Panel, WorkspaceData } from '../types/workspace';
 
 export interface PanelCreateRequest {
   rect?: { x: number; y: number; w: number; h: number };
+  w?: number;
+  h?: number;
   title?: string;
   accent?: string;
 }
@@ -24,7 +26,7 @@ export async function getMyWorkspace(): Promise<WorkspaceData> {
   return res.json();
 }
 
-export async function createPanel(req?: PanelCreateRequest): Promise<WorkspaceData> {
+export async function createPanel(req?: PanelCreateRequest): Promise<Panel> {
   const res = await fetchWithAuth(`${API_BASE}/workspace/me/panels`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
