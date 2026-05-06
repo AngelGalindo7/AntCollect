@@ -14,7 +14,7 @@ interface UseWorkspaceState {
   focusedId: number | null;
   focus: (id: number) => void;
   blur: () => void;
-  spawnPanel: () => Promise<void>;
+  spawnPanel: (rect: { x: number; y: number; w: number; h: number }) => Promise<void>;
   deletePanel: (id: number) => Promise<void>;
   updatePanelRect: (id: number, rect: Partial<Pick<Panel, 'x' | 'y' | 'w' | 'h'>>) => void;
   commitPanelRect: (id: number) => Promise<void>;
@@ -54,11 +54,9 @@ export function useWorkspaceState(): UseWorkspaceState {
   const focus = useCallback((id: number) => setFocusedId(id), []);
   const blur = useCallback(() => setFocusedId(null), []);
 
-  const spawnPanel = useCallback(async () => {
+  const spawnPanel = useCallback(async (rect: { x: number; y: number; w: number; h: number }) => {
     try {
-      const w = Math.round(Math.min(Math.max(window.innerWidth * 0.38, 380), 600));
-      const h = Math.round(Math.min(Math.max(window.innerHeight * 0.38, 300), 480));
-      const newPanel = await createPanel({ w, h });
+      const newPanel = await createPanel({ rect });
       setPanels((prev) => [...prev, newPanel]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to spawn panel');

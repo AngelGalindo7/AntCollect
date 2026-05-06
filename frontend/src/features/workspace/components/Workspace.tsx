@@ -17,24 +17,24 @@ interface Props {
 
 const GRID_STEP = 40;
 
-function hasFreeSpot(
+function findFreeSpot(
   panels: { x: number; y: number; w: number; h: number }[],
   bounds: WorkspaceBounds,
   w: number,
   h: number,
-): boolean {
+): { x: number; y: number } | null {
   const maxX = bounds.w - w;
   const maxY = bounds.h - h;
-  if (maxX < 0 || maxY < 0) return false;
-  for (let y = 0; y <= maxY; y += GRID_STEP) {
-    for (let x = 0; x <= maxX; x += GRID_STEP) {
+  if (maxX < 0 || maxY < 0) return null;
+  for (let fy = 0; fy <= maxY; fy += GRID_STEP) {
+    for (let fx = 0; fx <= maxX; fx += GRID_STEP) {
       const blocked = panels.some(
-        (p) => x < p.x + p.w && x + w > p.x && y < p.y + p.h && y + h > p.y,
+        (p) => fx < p.x + p.w && fx + w > p.x && fy < p.y + p.h && fy + h > p.y,
       );
-      if (!blocked) return true;
+      if (!blocked) return { x: fx, y: fy };
     }
   }
-  return false;
+  return null;
 }
 
 export function Workspace({ posts, isOwner }: Props) {
@@ -62,11 +62,14 @@ export function Workspace({ posts, isOwner }: Props) {
     error,
   } = useWorkspaceState();
 
-  const canAdd = useMemo(() => {
+  const spawnSpec = useMemo(() => {
     const w = Math.round(Math.min(Math.max(window.innerWidth * 0.38, 380), 600));
     const h = Math.round(Math.min(Math.max(window.innerHeight * 0.38, 300), 480));
-    return hasFreeSpot(panels, bounds, w, h);
+    const spot = findFreeSpot(panels, bounds, w, h);
+    return spot ? { x: spot.x, y: spot.y, w, h } : null;
   }, [panels, bounds]);
+
+  const canAdd = spawnSpec !== null;
 
   // Height = max(viewport remaining height, panel content bottom)
   useLayoutEffect(() => {
@@ -224,7 +227,7 @@ export function Workspace({ posts, isOwner }: Props) {
             <>
               <button
                 onClick={() => {
-                  if (canAdd) spawnPanel().catch(() => {});
+                  if (spawnSpec) spawnPanel(spawnSpec).catch(() => {});
                 }}
                 disabled={!canAdd}
                 title={!canAdd ? 'No room — resize or remove a canvas first' : undefined}
