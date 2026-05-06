@@ -1,13 +1,13 @@
-import { Lock, Unlock, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Lock, Unlock, Trash2, Pencil } from 'lucide-react';
 import type { Panel, WorkspaceBounds, Rect, ResizeMode } from '../types/workspace';
 import { useDragResize } from '../hooks/useDragResize';
-
-const TITLE_H = 28;
 
 interface Props {
   panel: Panel;
   isOwner: boolean;
   isEditing: boolean;
+  isWorkspaceEditMode: boolean;
   bounds: WorkspaceBounds;
   others: Rect[];
   onUpdateRect: (id: number, rect: Partial<Pick<Panel, 'x' | 'y' | 'w' | 'h'>>) => void;
@@ -32,22 +32,25 @@ const RESIZE_MODES: { mode: ResizeMode; cursor: string; style: React.CSSProperti
 ];
 
 export function PanelFrame({
-  panel, isOwner, isEditing, bounds, others,
+  panel, isOwner, isEditing, isWorkspaceEditMode, bounds, others,
   onUpdateRect, onCommitRect, onFocus, onBringToFront,
   onDelete, onLock, onEnterEdit, children,
 }: Props) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  const isDraggable = isOwner && isWorkspaceEditMode && !panel.locked && !isEditing;
+  const showControls = isOwner && isWorkspaceEditMode && isHovered && !isEditing;
+
   const { dragHandleProps, resizeHandleProps } = useDragResize({
     panelId: panel.id,
     rect: { x: panel.x, y: panel.y, w: panel.w, h: panel.h },
-    locked: panel.locked,
+    locked: panel.locked || !isWorkspaceEditMode || isEditing,
     others,
     bounds,
     onRectChange: (id, rect) => onUpdateRect(id, rect),
     onCommit: onCommitRect,
     onFocus,
   });
-
-  const accent = panel.accent ?? '#FFD200';
 
   return (
     <div
@@ -59,68 +62,19 @@ export function PanelFrame({
         height: panel.h,
         zIndex: panel.z,
       }}
-      className="group"
-      onDoubleClick={(e) => {
-        if ((e.target as HTMLElement).closest('[data-title-bar]')) return;
-        if (!isEditing && isOwner) onEnterEdit(panel.id);
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onPointerDown={() => {
+        onFocus(panel.id);
+        onBringToFront(panel.id);
       }}
     >
-      {/* Title bar */}
-      <div
-        data-title-bar
-        style={{ height: TITLE_H, background: accent }}
-        className="flex items-center px-2 gap-1 select-none rounded-t-lg cursor-grab active:cursor-grabbing"
-        onPointerDown={(e) => {
-          const target = e.target as HTMLElement;
-          if (target.closest('button')) return;
-          dragHandleProps(e);
-          onBringToFront(panel.id);
-        }}
-        onClick={(e) => {
-          if ((e.target as HTMLElement).closest('button')) return;
-          onBringToFront(panel.id);
-        }}
-      >
-        <span
-          className="flex-1 truncate text-xs font-semibold"
-          style={{ color: '#332D2A' }}
-        >
-          {panel.title ?? 'Panel'}
-        </span>
-
-        {isOwner && (
-          <>
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); onLock(panel.id, !panel.locked); }}
-              className="p-0.5 rounded hover:bg-black/10 transition-colors shrink-0"
-              title={panel.locked ? 'Unlock' : 'Lock'}
-            >
-              {panel.locked
-                ? <Lock size={12} className="text-espresso" />
-                : <Unlock size={12} className="text-espresso" />
-              }
-            </button>
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); onDelete(panel.id); }}
-              className="p-0.5 rounded hover:bg-red-100 transition-colors shrink-0"
-              title="Delete panel"
-            >
-              <Trash2 size={12} className="text-red-500" />
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Body */}
+      {/* Canvas content — full height, clipped with border radius */}
       <div
         style={{
           position: 'absolute',
-          top: TITLE_H,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          inset: 0,
+          borderRadius: 10,
           overflow: 'hidden',
           pointerEvents: isEditing ? 'auto' : 'none',
         }}
@@ -128,42 +82,113 @@ export function PanelFrame({
         {children}
       </div>
 
-      {/* Lock overlay */}
-      {panel.locked && (
+      {/* Drag overlay — sits above canvas, blocked by control buttons */}
+      {isDraggable && (
         <div
           style={{
             position: 'absolute',
-            top: TITLE_H,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(51,45,42,0.08)',
-            pointerEvents: 'none',
+            inset: 0,
+            borderRadius: 10,
+            zIndex: 2,
+            cursor: 'grab',
+          }}
+          onPointerDown={(e) => {
+            if ((e.target as HTMLElement).closest('[data-panel-ctrl]')) return;
+            dragHandleProps(e);
           }}
         />
       )}
 
-      {/* Size badge */}
-      <div
-        className="absolute bottom-1.5 right-1.5 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-      >
-        {Math.round(panel.w)}×{Math.round(panel.h)}
-      </div>
-
-      {/* Resize handles */}
-      {isOwner && !panel.locked && RESIZE_MODES.map(({ mode, cursor, style }) => (
+      {/* Hover controls — Edit pill + Lock + Delete */}
+      {showControls && (
         <div
-          key={mode}
+          data-panel-ctrl
           style={{
             position: 'absolute',
-            cursor,
-            zIndex: 10,
-            ...style,
+            top: 8,
+            right: 8,
+            zIndex: 20,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
           }}
-          onPointerDown={resizeHandleProps(mode)}
-        />
-      ))}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); onEnterEdit(panel.id); }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/90 backdrop-blur-sm text-espresso text-xs font-semibold shadow-md hover:bg-white transition-colors"
+          >
+            <Pencil size={11} strokeWidth={2.5} />
+            Edit
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onLock(panel.id, !panel.locked); }}
+            title={panel.locked ? 'Unlock canvas' : 'Lock canvas'}
+            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm text-espresso shadow-md hover:bg-white transition-colors"
+          >
+            {panel.locked ? <Unlock size={12} /> : <Lock size={12} />}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(panel.id); }}
+            title="Delete canvas"
+            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm text-red-400 shadow-md hover:bg-white transition-colors"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
+      )}
 
+      {/* Locked badge */}
+      {panel.locked && isWorkspaceEditMode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 8,
+            left: 8,
+            zIndex: 5,
+            background: 'rgba(255,255,255,0.80)',
+            borderRadius: 20,
+            padding: '2px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            pointerEvents: 'none',
+          }}
+        >
+          <Lock size={9} style={{ color: 'rgba(51,45,42,0.5)' }} />
+          <span style={{ fontSize: 10, color: 'rgba(51,45,42,0.5)', fontWeight: 500 }}>Locked</span>
+        </div>
+      )}
+
+      {/* Size badge on hover */}
+      {isHovered && isWorkspaceEditMode && !isEditing && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 8,
+            left: 8,
+            zIndex: 5,
+            background: 'rgba(0,0,0,0.35)',
+            borderRadius: 20,
+            padding: '2px 8px',
+            pointerEvents: 'none',
+          }}
+        >
+          <span style={{ fontSize: 10, color: '#fff' }}>
+            {Math.round(panel.w)}×{Math.round(panel.h)}
+          </span>
+        </div>
+      )}
+
+      {/* Resize handles */}
+      {isOwner && isWorkspaceEditMode && !panel.locked && !isEditing &&
+        RESIZE_MODES.map(({ mode, cursor, style }) => (
+          <div
+            key={mode}
+            style={{ position: 'absolute', cursor, zIndex: 10, ...style }}
+            onPointerDown={resizeHandleProps(mode)}
+          />
+        ))}
     </div>
   );
 }
