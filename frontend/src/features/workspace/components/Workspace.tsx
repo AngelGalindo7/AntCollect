@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Plus, PenLine } from 'lucide-react';
 import type { Post } from '@/shared/types/Types';
 import type { WorkspaceBounds, Rect } from '../types/workspace';
@@ -13,6 +13,28 @@ interface Props {
   username: string;
   posts: Post[];
   isOwner: boolean;
+}
+
+const GRID_STEP = 40;
+
+function hasFreeSpot(
+  panels: { x: number; y: number; w: number; h: number }[],
+  bounds: WorkspaceBounds,
+  w: number,
+  h: number,
+): boolean {
+  const maxX = bounds.w - w;
+  const maxY = bounds.h - h;
+  if (maxX < 0 || maxY < 0) return false;
+  for (let y = 0; y <= maxY; y += GRID_STEP) {
+    for (let x = 0; x <= maxX; x += GRID_STEP) {
+      const blocked = panels.some(
+        (p) => x < p.x + p.w && x + w > p.x && y < p.y + p.h && y + h > p.y,
+      );
+      if (!blocked) return true;
+    }
+  }
+  return false;
 }
 
 export function Workspace({ posts, isOwner }: Props) {
@@ -39,6 +61,12 @@ export function Workspace({ posts, isOwner }: Props) {
     isLoading,
     error,
   } = useWorkspaceState();
+
+  const canAdd = useMemo(() => {
+    const w = Math.round(Math.min(Math.max(window.innerWidth * 0.38, 380), 600));
+    const h = Math.round(Math.min(Math.max(window.innerHeight * 0.38, 300), 480));
+    return hasFreeSpot(panels, bounds, w, h);
+  }, [panels, bounds]);
 
   // Height = max(viewport remaining height, panel content bottom)
   useLayoutEffect(() => {
@@ -196,9 +224,15 @@ export function Workspace({ posts, isOwner }: Props) {
             <>
               <button
                 onClick={() => {
-                  spawnPanel().catch(() => {});
+                  if (canAdd) spawnPanel().catch(() => {});
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-espresso text-white text-xs font-semibold shadow-md hover:bg-espresso/90 transition-colors"
+                disabled={!canAdd}
+                title={!canAdd ? 'No room — resize or remove a canvas first' : undefined}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md transition-colors ${
+                  canAdd
+                    ? 'bg-espresso text-white hover:bg-espresso/90 cursor-pointer'
+                    : 'bg-espresso/40 text-white/70 cursor-not-allowed'
+                }`}
               >
                 <Plus size={13} strokeWidth={2.5} />
                 Add Canvas
