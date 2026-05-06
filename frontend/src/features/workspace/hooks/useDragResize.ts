@@ -8,6 +8,7 @@ interface UseDragResizeOptions {
   locked: boolean;
   others: Rect[];
   bounds: WorkspaceBounds;
+  uniform?: boolean;
   onRectChange: (id: number, rect: Rect) => void;
   onCommit: (id: number) => void;
   onFocus: (id: number) => void;
@@ -36,7 +37,7 @@ export function useDragResize(opts: UseDragResizeOptions): {
       const state = dragStateRef.current;
       if (!state || e.pointerId !== state.pointerId) return;
 
-      const { panelId, others, bounds, onRectChange } = optsRef.current;
+      const { panelId, others, bounds, onRectChange, uniform } = optsRef.current;
       const dx = e.clientX - state.startX;
       const dy = e.clientY - state.startY;
       const { startRect, mode } = state;
@@ -45,7 +46,8 @@ export function useDragResize(opts: UseDragResizeOptions): {
       if (mode === 'move') {
         candidate = { x: startRect.x + dx, y: startRect.y + dy, w: startRect.w, h: startRect.h };
       } else {
-        candidate = applyResizeDelta(startRect, dx, dy, mode);
+        const aspect = uniform ? startRect.w / startRect.h : undefined;
+        candidate = applyResizeDelta(startRect, dx, dy, mode, aspect);
       }
 
       const resolved = resolveCollision(startRect, candidate, others, bounds, mode);
@@ -103,13 +105,26 @@ export function useDragResize(opts: UseDragResizeOptions): {
   return { dragHandleProps, resizeHandleProps };
 }
 
-function applyResizeDelta(base: Rect, dx: number, dy: number, mode: ResizeMode): Rect {
+function applyResizeDelta(base: Rect, dx: number, dy: number, mode: ResizeMode, aspect?: number): Rect {
   let { x, y, w, h } = base;
 
-  if (mode.includes('e')) w += dx;
-  if (mode.includes('s')) h += dy;
-  if (mode.includes('w')) { x += dx; w -= dx; }
-  if (mode.includes('n')) { y += dy; h -= dy; }
+  if (aspect !== undefined) {
+    // Proportional resize: average the scale factor across both axes, then enforce aspect ratio.
+    let scale = 1;
+    if (mode === 'se') scale = ((base.w + dx) / base.w + (base.h + dy) / base.h) / 2;
+    else if (mode === 'sw') scale = ((base.w - dx) / base.w + (base.h + dy) / base.h) / 2;
+    else if (mode === 'ne') scale = ((base.w + dx) / base.w + (base.h - dy) / base.h) / 2;
+    else if (mode === 'nw') scale = ((base.w - dx) / base.w + (base.h - dy) / base.h) / 2;
+    w = base.w * scale;
+    h = base.h * scale;
+    if (mode.includes('w')) x = base.x + base.w - w;
+    if (mode.includes('n')) y = base.y + base.h - h;
+  } else {
+    if (mode.includes('e')) w += dx;
+    if (mode.includes('s')) h += dy;
+    if (mode.includes('w')) { x += dx; w -= dx; }
+    if (mode.includes('n')) { y += dy; h -= dy; }
+  }
 
   return { x, y, w, h };
 }

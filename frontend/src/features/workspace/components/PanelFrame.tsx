@@ -21,14 +21,10 @@ interface Props {
 }
 
 const RESIZE_MODES: { mode: ResizeMode; cursor: string; style: React.CSSProperties }[] = [
-  { mode: 'n',  cursor: 'ns-resize',   style: { top: -4, left: 8, right: 8, height: 8 } },
-  { mode: 's',  cursor: 'ns-resize',   style: { bottom: -4, left: 8, right: 8, height: 8 } },
-  { mode: 'e',  cursor: 'ew-resize',   style: { right: -4, top: 8, bottom: 8, width: 8 } },
-  { mode: 'w',  cursor: 'ew-resize',   style: { left: -4, top: 8, bottom: 8, width: 8 } },
-  { mode: 'ne', cursor: 'nesw-resize', style: { top: -4, right: -4, width: 12, height: 12 } },
-  { mode: 'nw', cursor: 'nwse-resize', style: { top: -4, left: -4, width: 12, height: 12 } },
-  { mode: 'se', cursor: 'nwse-resize', style: { bottom: -4, right: -4, width: 12, height: 12 } },
-  { mode: 'sw', cursor: 'nesw-resize', style: { bottom: -4, left: -4, width: 12, height: 12 } },
+  { mode: 'ne', cursor: 'nesw-resize', style: { top: -6, right: -6, width: 14, height: 14 } },
+  { mode: 'nw', cursor: 'nwse-resize', style: { top: -6, left: -6, width: 14, height: 14 } },
+  { mode: 'se', cursor: 'nwse-resize', style: { bottom: -6, right: -6, width: 14, height: 14 } },
+  { mode: 'sw', cursor: 'nesw-resize', style: { bottom: -6, left: -6, width: 14, height: 14 } },
 ];
 
 export function PanelFrame({
@@ -47,6 +43,7 @@ export function PanelFrame({
     locked: panel.locked || !isWorkspaceEditMode || isEditing,
     others,
     bounds,
+    uniform: true,
     onRectChange: (id, rect) => onUpdateRect(id, rect),
     onCommit: onCommitRect,
     onFocus,
