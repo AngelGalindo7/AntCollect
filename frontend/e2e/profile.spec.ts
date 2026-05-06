@@ -15,12 +15,10 @@ test('showcase tab is the default active tab on profile load', async ({ page }) 
   await expect(showcaseTab).toHaveClass(/border-uci-gold/);
 });
 
-test('owner sees showcase canvas or create CTA in showcase tab', async ({ page }) => {
+test('owner sees the workspace Add Panel button in showcase tab', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
-  // Either the saved canvas preview image or the "Create your showcase" CTA must be visible.
-  const cta = page.getByRole('button', { name: /create your showcase/i });
-  const editBtn = page.getByRole('button', { name: /edit canvas/i });
-  await expect(cta.or(editBtn)).toBeVisible();
+  // The Showcase tab renders the multi-panel Workspace; owners always see the SpawnButton.
+  await expect(page.getByRole('button', { name: /add panel/i })).toBeVisible();
 });
 
 test('sticker count is inline-editable', async ({ page }) => {
@@ -65,7 +63,7 @@ test('clicking a folder card navigates to /folders/:folderId', async ({ page }) 
     data: { name: 'Folder Card Nav Test', folder_type: 'collection' },
   });
   expect(seedRes.ok(), `seed folder failed: ${seedRes.status()} ${await seedRes.text()}`).toBeTruthy();
-  await page.reload();
+  await page.reload({ waitUntil: 'networkidle' });
 
   // Default tab is Showcase — switch to Collection, then to the "folders" sub-filter.
   await page.getByRole('button', { name: 'Collection' }).click();
