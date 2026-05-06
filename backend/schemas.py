@@ -316,6 +316,8 @@ class PanelRect(BaseModel):
 
 class PanelCreateRequest(BaseModel):
     rect: Optional[PanelRect] = None
+    w: Optional[int] = Field(default=None, ge=280)
+    h: Optional[int] = Field(default=None, ge=220)
     title: Optional[str] = Field(default=None, max_length=80)
     accent: Optional[str] = Field(default=None, max_length=16)
 
