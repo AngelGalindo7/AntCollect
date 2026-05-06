@@ -221,6 +221,9 @@ jobs:
             docker pull "$ECR_REGISTRY/petrcollect-backend:latest"
             docker pull "$ECR_REGISTRY/petrcollect-messaging:latest"
 
+            # Tear down first (removes orphan containers from old naming schemes that cause name conflicts)
+            docker compose -f docker-compose.prod.yml down --remove-orphans
+
             # Restart services — force-recreate ensures the freshly pulled image is always used
             docker compose -f docker-compose.prod.yml up -d --force-recreate
 
