@@ -46,8 +46,8 @@ router = APIRouter(
 _MAX_PNG_SIZE = 15 * 1024 * 1024
 _DEFAULT_WORKSPACE_W = 1280
 _DEFAULT_WORKSPACE_H = 800
-_DEFAULT_PANEL_W = 280
-_DEFAULT_PANEL_H = 220
+_DEFAULT_PANEL_W = 420
+_DEFAULT_PANEL_H = 320
 _GRID_STEP = 40
 _FALLBACK_POS = (20, 20)
 
@@ -141,7 +141,8 @@ def create_panel(
         x, y, w, h = body.rect.x, body.rect.y, body.rect.w, body.rect.h
     else:
         existing = _list_panels(db, workspace.id)
-        w, h = _DEFAULT_PANEL_W, _DEFAULT_PANEL_H
+        w = body.w if body.w is not None else _DEFAULT_PANEL_W
+        h = body.h if body.h is not None else _DEFAULT_PANEL_H
         x, y = _find_grid_spot(existing, w, h)
 
     workspace.z_counter = workspace.z_counter + 1
