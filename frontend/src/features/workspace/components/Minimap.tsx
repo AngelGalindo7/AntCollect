@@ -21,6 +21,7 @@ export function Minimap({ panels, bounds, focusedId, onFocus }: Props) {
         position: 'absolute',
         bottom: 20,
         left: 20,
+        zIndex: 9999,
         width: MINIMAP_W,
         height: aspectH,
         background: 'rgba(51,45,42,0.08)',
