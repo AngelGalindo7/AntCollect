@@ -108,7 +108,6 @@ export function Workspace({ posts, isOwner }: Props) {
             panel={panel}
             isOwner={isOwner}
             isEditing={editingPanelId === panel.id}
-            isFocused={panel.id === focusedId}
             bounds={bounds}
             others={others}
             onUpdateRect={(id, rect) => updatePanelRect(id, rect)}
