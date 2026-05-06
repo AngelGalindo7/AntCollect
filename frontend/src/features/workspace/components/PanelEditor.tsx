@@ -102,7 +102,7 @@ export function PanelEditor({ panel, isEditing, isOwner, stageRef, onCanvasState
         nodes={nodes}
         background={background}
         selectedId={selectedId}
-        keepRatio={true}
+        keepRatio={false}
         onSelect={setSelectedId}
         onNodeUpdate={updateNode}
         onNodeDelete={removeNode}
