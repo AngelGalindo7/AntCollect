@@ -56,8 +56,10 @@ export function useWorkspaceState(): UseWorkspaceState {
 
   const spawnPanel = useCallback(async () => {
     try {
-      const data = await createPanel();
-      setPanels(data.panels);
+      const w = Math.round(Math.min(Math.max(window.innerWidth * 0.38, 380), 600));
+      const h = Math.round(Math.min(Math.max(window.innerHeight * 0.38, 300), 480));
+      const newPanel = await createPanel({ w, h });
+      setPanels((prev) => [...prev, newPanel]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to spawn panel');
     }
@@ -87,7 +89,10 @@ export function useWorkspaceState(): UseWorkspaceState {
   const commitPanelRect = useCallback(async (id: number) => {
     const panel = panels.find((p) => p.id === id);
     if (!panel) return;
-    const { x, y, w, h } = panel;
+    const x = Math.round(panel.x);
+    const y = Math.round(panel.y);
+    const w = Math.max(280, Math.round(panel.w));
+    const h = Math.max(220, Math.round(panel.h));
     try {
       const updated = await updatePanelMeta(id, { x, y, w, h });
       setPanels((prev) => replacePanel(prev, updated));
