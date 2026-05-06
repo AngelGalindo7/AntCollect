@@ -8,6 +8,7 @@ interface Props {
   panel: Panel;
   isOwner: boolean;
   isEditing: boolean;
+  isFocused: boolean;
   bounds: WorkspaceBounds;
   others: Rect[];
   onUpdateRect: (id: number, rect: Partial<Pick<Panel, 'x' | 'y' | 'w' | 'h'>>) => void;
@@ -32,7 +33,7 @@ const RESIZE_MODES: { mode: ResizeMode; cursor: string; style: React.CSSProperti
 ];
 
 export function PanelFrame({
-  panel, isOwner, isEditing, bounds, others,
+  panel, isOwner, isEditing, isFocused, bounds, others,
   onUpdateRect, onCommitRect, onFocus, onBringToFront,
   onDelete, onLock, onEnterEdit, children,
 }: Props) {
@@ -164,16 +165,17 @@ export function PanelFrame({
         />
       ))}
 
-      {/* Panel border */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          border: `2px solid ${accent}`,
-          borderRadius: 8,
-          pointerEvents: 'none',
-        }}
-      />
+      {/* Panel border — only visible when focused/dragging */}
+      {isFocused && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            border: `2px solid ${accent}`,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
     </div>
   );
 }
