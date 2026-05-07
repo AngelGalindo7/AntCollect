@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { BackgroundConfig, CanvasNode } from '../types/canvas';
 import { BACKGROUND_PRESETS } from '../constants/backgroundPresets';
 
@@ -6,165 +7,222 @@ interface RightPanelProps {
   onChangeBackground: (bg: BackgroundConfig) => void;
   selectedId: string | null;
   nodes: CanvasNode[];
-  keepRatio: boolean;
-  onSetKeepRatio: (v: boolean) => void;
   isRemovingBg: boolean;
   removeBgError: string | null;
   onToggleRemoveBg: () => void;
-  onMoveNodeUp: (id: string) => void;
-  onMoveNodeDown: (id: string) => void;
   onToggleHolo: (id: string) => void;
-  onCropNode: (id: string) => void;
-  onDeleteNode: (id: string) => void;
-  isDirty: boolean;
-  isSaving: boolean;
-  saveError: string | null;
-  onSave: () => void;
-  onDiscard: () => void;
+}
+
+const eyebrow: CSSProperties = {
+  fontSize: 10.5,
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+  color: 'var(--pw-ink3)',
+  margin: 0,
+};
+
+function ToggleRow({
+  label,
+  hint,
+  on,
+  disabled,
+  onToggle,
+}: {
+  label: string;
+  hint: string;
+  on: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      disabled={disabled}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        padding: '8px 10px',
+        border: '1px solid var(--pw-line)',
+        borderRadius: 8,
+        background: on ? 'var(--pw-surface2)' : 'transparent',
+        opacity: disabled ? 0.6 : 1,
+        textAlign: 'left',
+        transition: 'background 120ms ease',
+      }}
+    >
+      <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--pw-ink)' }}>{label}</span>
+        <span style={{ fontSize: 11, color: 'var(--pw-ink3)' }}>{hint}</span>
+      </span>
+      <span
+        aria-hidden
+        style={{
+          position: 'relative',
+          width: 28,
+          height: 16,
+          borderRadius: 999,
+          background: on ? 'var(--pw-ink)' : 'var(--pw-line2)',
+          transition: 'background 120ms ease',
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: 2,
+            left: on ? 14 : 2,
+            width: 12,
+            height: 12,
+            background: '#fff',
+            borderRadius: 999,
+            boxShadow: '0 1px 2px rgba(0,0,0,.2)',
+            transition: 'left 140ms ease',
+          }}
+        />
+      </span>
+    </button>
+  );
 }
 
 export function StickerControls({
-  background, onChangeBackground,
-  selectedId, nodes, keepRatio, onSetKeepRatio,
-  isRemovingBg, removeBgError, onToggleRemoveBg,
-  onMoveNodeUp, onMoveNodeDown, onToggleHolo, onCropNode, onDeleteNode,
-  isDirty, isSaving, saveError, onSave, onDiscard,
+  background,
+  onChangeBackground,
+  selectedId,
+  nodes,
+  isRemovingBg,
+  removeBgError,
+  onToggleRemoveBg,
+  onToggleHolo,
 }: RightPanelProps) {
   const selectedNode = nodes.find((n) => n.id === selectedId);
-  const nodeIdx = nodes.findIndex((n) => n.id === selectedId);
-  const isTop = nodeIdx === nodes.length - 1;
-  const isBottom = nodeIdx === 0;
 
   return (
-    <div className="w-64 shrink-0 bg-white border-l border-neutral-200 flex flex-col">
-      {/* Background presets */}
-      <div className="p-3 border-b border-neutral-100 shrink-0">
-        <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mb-2.5">Background</p>
-        <div className="flex flex-wrap gap-2">
-          {BACKGROUND_PRESETS.map((p) => (
-            <button
-              key={p.label}
-              title={p.label}
-              onClick={() => onChangeBackground(p.bg)}
-              className={`w-6 h-6 rounded-full border-2 transition-all ${
-                background.value === p.bg.value
-                  ? 'border-espresso scale-110 shadow'
-                  : 'border-neutral-300 hover:border-neutral-500 hover:scale-105'
-              }`}
-              style={
-                p.bg.type === 'color'
-                  ? { background: p.bg.value }
-                  : { background: `linear-gradient(135deg, ${p.bg.value}, ${p.bg.gradientEnd})` }
-              }
-            />
-          ))}
+    <div
+      className="paper-workshop"
+      style={{
+        width: 280,
+        flexShrink: 0,
+        background: 'var(--pw-paper)',
+        borderLeft: '1px solid var(--pw-line)',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 16,
+        gap: 14,
+        overflowY: 'auto',
+      }}
+    >
+      <div>
+        <p style={{ ...eyebrow, marginBottom: 10 }}>Background</p>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(8, 1fr)',
+            gap: 6,
+          }}
+        >
+          {BACKGROUND_PRESETS.map((p) => {
+            const selected = background.value === p.bg.value;
+            return (
+              <button
+                key={p.label}
+                type="button"
+                title={p.label}
+                onClick={() => onChangeBackground(p.bg)}
+                style={{
+                  aspectRatio: '1 / 1',
+                  borderRadius: 999,
+                  border: selected ? '1.5px solid var(--pw-ink)' : '1px solid var(--pw-line2)',
+                  outline: selected ? '2px solid var(--pw-ink)' : 'none',
+                  outlineOffset: selected ? 2 : 0,
+                  background: p.bg.value,
+                  cursor: 'pointer',
+                  transition: 'transform 120ms ease',
+                }}
+              />
+            );
+          })}
         </div>
       </div>
 
-      {/* Node controls — only shown when an image is selected */}
-      {selectedId && selectedNode && (
-        <div className="p-3 border-b border-neutral-100 shrink-0">
-          <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest mb-2.5">Selected Image</p>
-
-          <p className="text-xs text-neutral-500 mb-1.5">Resize mode</p>
-          <div className="flex rounded-lg overflow-hidden border border-neutral-200 mb-3">
-            <button
-              onClick={() => onSetKeepRatio(true)}
-              className={`flex-1 py-1.5 text-xs font-medium transition-colors ${keepRatio ? 'bg-espresso text-white' : 'text-neutral-500 hover:text-espresso'}`}
+      <div style={{ borderTop: '1px solid var(--pw-line)', paddingTop: 10 }}>
+        <p style={{ ...eyebrow, marginBottom: 8 }}>Selected · {selectedNode ? 1 : 0}</p>
+        {selectedNode ? (
+          <div
+            style={{
+              display: 'flex',
+              gap: 10,
+              alignItems: 'center',
+              padding: 10,
+              background: 'var(--pw-surface2)',
+              border: '1px solid var(--pw-line)',
+              borderRadius: 10,
+            }}
+          >
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                background: 'var(--pw-paper)',
+                border: '1px solid var(--pw-line)',
+                borderRadius: 6,
+                overflow: 'hidden',
+                flexShrink: 0,
+              }}
             >
-              Proportional
-            </button>
-            <button
-              onClick={() => onSetKeepRatio(false)}
-              className={`flex-1 py-1.5 text-xs font-medium transition-colors ${!keepRatio ? 'bg-espresso text-white' : 'text-neutral-500 hover:text-espresso'}`}
-            >
-              Free
-            </button>
+              <img
+                src={selectedNode.image_url}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+              <span
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: 500,
+                  color: 'var(--pw-ink)',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {selectedNode.source === 'library' ? 'Library sticker' : selectedNode.source === 'post' ? 'Post image' : 'Upload'}
+              </span>
+              <span className="pw-mono" style={{ fontSize: 11, color: 'var(--pw-ink3)' }}>
+                {Math.round(selectedNode.x)}, {Math.round(selectedNode.y)} · {Math.round(selectedNode.width)}×{Math.round(selectedNode.height)}
+              </span>
+            </div>
           </div>
+        ) : (
+          <p style={{ fontSize: 12, color: 'var(--pw-ink3)' }}>Click a sticker on the canvas to edit it.</p>
+        )}
+      </div>
 
-          <p className="text-xs text-neutral-500 mb-1.5">Layer order</p>
-          <div className="flex gap-1.5 mb-3">
-            <button
-              onClick={() => onMoveNodeDown(selectedId)}
-              disabled={isBottom}
-              className="flex-1 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 text-neutral-700 hover:bg-neutral-200 disabled:opacity-30 transition-colors"
-            >
-              Send Back
-            </button>
-            <button
-              onClick={() => onMoveNodeUp(selectedId)}
-              disabled={isTop}
-              className="flex-1 py-1.5 rounded-lg text-xs font-medium bg-neutral-100 text-neutral-700 hover:bg-neutral-200 disabled:opacity-30 transition-colors"
-            >
-              Bring Fwd
-            </button>
-          </div>
-
-          <button
-            onClick={onToggleRemoveBg}
+      {selectedNode && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <p style={eyebrow}>Effects</p>
+          <ToggleRow
+            label="Holographic"
+            hint="Iridescent foil"
+            on={!!selectedNode.holo}
+            onToggle={() => onToggleHolo(selectedNode.id)}
+          />
+          <ToggleRow
+            label="Background removed"
+            hint="Die-cut edge"
+            on={!!selectedNode.bgRemoved}
             disabled={isRemovingBg}
-            className={`w-full py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 mb-1.5 ${
-              selectedNode.bgRemoved
-                ? 'bg-uci-gold text-espresso'
-                : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-            }`}
-          >
-            {isRemovingBg ? 'Removing BG…' : selectedNode.bgRemoved ? 'BG Removed ✓' : 'Remove BG'}
-          </button>
-          {removeBgError && <p className="text-red-500 text-xs mb-2">{removeBgError}</p>}
-
-          <button
-            onClick={() => onCropNode(selectedId)}
-            className="w-full py-1.5 rounded-lg text-xs font-medium bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors mb-1.5"
-          >
-            Crop
-          </button>
-
-          <button
-            onClick={() => onToggleHolo(selectedId)}
-            className={`w-full py-1.5 rounded-lg text-xs font-medium transition-colors mb-1.5 ${
-              selectedNode.holo
-                ? 'bg-uci-gold text-espresso'
-                : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-            }`}
-          >
-            {selectedNode.holo ? '✦ Holo On' : '✦ Holo Off'}
-          </button>
-
-          <button
-            onClick={() => onDeleteNode(selectedId)}
-            className="w-full py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-          >
-            Delete Image
-          </button>
+            onToggle={onToggleRemoveBg}
+          />
+          {removeBgError && (
+            <p style={{ fontSize: 11, color: 'var(--pw-danger)', margin: 0 }}>{removeBgError}</p>
+          )}
         </div>
       )}
-
-      <div className="flex-1" />
-
-      {/* Save / Discard */}
-      <div className="p-3 border-t border-neutral-100 space-y-2 shrink-0">
-        {saveError && <p className="text-red-500 text-xs">{saveError}</p>}
-        {isDirty && (
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-            <p className="text-amber-600 text-xs">Unsaved changes</p>
-          </div>
-        )}
-        <button
-          onClick={onSave}
-          disabled={isSaving || !isDirty}
-          className="w-full py-2 bg-uci-gold text-espresso text-sm font-semibold rounded-lg hover:opacity-90 disabled:opacity-40 transition-opacity"
-        >
-          {isSaving ? 'Saving…' : 'Save'}
-        </button>
-        <button
-          onClick={onDiscard}
-          className="w-full py-2 text-neutral-500 hover:text-espresso text-sm rounded-lg transition-colors"
-        >
-          Discard
-        </button>
-      </div>
     </div>
   );
 }
