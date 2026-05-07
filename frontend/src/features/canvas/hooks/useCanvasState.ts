@@ -16,6 +16,7 @@ export function useCanvasState(initial: CanvasState | null) {
   const [isDirty, setIsDirty] = useState(false);
 
   const addNode = useCallback((imageUrl: string, source: NodeSource) => {
+    const isPreCut = source === 'library';
     const node: CanvasNode = {
       id: crypto.randomUUID(),
       image_url: imageUrl,
@@ -27,6 +28,8 @@ export function useCanvasState(initial: CanvasState | null) {
       rotation: 0,
       scaleX: 1,
       scaleY: 1,
+      bgRemoved: isPreCut,
+      removedBgUrl: isPreCut ? imageUrl : undefined,
     };
     setNodes((prev) => [...prev, node]);
     setIsDirty(true);
