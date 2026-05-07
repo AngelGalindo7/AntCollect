@@ -101,6 +101,58 @@ export function BackgroundImagePositioner({
     }
   };
 
+  const zoomStateRef = useRef({
+    scale,
+    offsetX: clampedOffsetX,
+    offsetY: clampedOffsetY,
+    cover,
+    naturalSize,
+    frameWidth,
+    frameHeight,
+    previewToFrame,
+  });
+  zoomStateRef.current = {
+    scale,
+    offsetX: clampedOffsetX,
+    offsetY: clampedOffsetY,
+    cover,
+    naturalSize,
+    frameWidth,
+    frameHeight,
+    previewToFrame,
+  };
+
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      const s = zoomStateRef.current;
+      if (!s.naturalSize || s.previewToFrame === 0) return;
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const cursorFrameX = (e.clientX - rect.left) / s.previewToFrame;
+      const cursorFrameY = (e.clientY - rect.top) / s.previewToFrame;
+      const factor = Math.exp(-e.deltaY * 0.0015);
+      const nextScale = Math.max(1, Math.min(3, s.scale * factor));
+      if (nextScale === s.scale) return;
+      const oldDrawW = s.naturalSize.w * s.cover * s.scale;
+      const oldDrawH = s.naturalSize.h * s.cover * s.scale;
+      const newDrawW = s.naturalSize.w * s.cover * nextScale;
+      const newDrawH = s.naturalSize.h * s.cover * nextScale;
+      const oldImageLeft = (s.frameWidth - oldDrawW) / 2 + s.offsetX;
+      const oldImageTop = (s.frameHeight - oldDrawH) / 2 + s.offsetY;
+      const fracX = (cursorFrameX - oldImageLeft) / oldDrawW;
+      const fracY = (cursorFrameY - oldImageTop) / oldDrawH;
+      const newOffsetX = cursorFrameX - fracX * newDrawW - (s.frameWidth - newDrawW) / 2;
+      const newOffsetY = cursorFrameY - fracY * newDrawH - (s.frameHeight - newDrawH) / 2;
+      setScale(nextScale);
+      setOffsetX(newOffsetX);
+      setOffsetY(newOffsetY);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
   const handleApply = () => {
     onApply({
       offsetX: clampedOffsetX,
@@ -142,7 +194,7 @@ export function BackgroundImagePositioner({
               {title}
             </span>
             <span style={{ fontSize: 12, color: 'var(--pw-ink3)' }}>
-              Drag to reposition · use the slider to zoom
+              Drag to reposition · scroll or pinch to zoom
             </span>
           </div>
           <button
@@ -206,24 +258,6 @@ export function BackgroundImagePositioner({
               boxShadow: 'inset 0 0 0 1px rgba(28,26,22,0.06)',
               pointerEvents: 'none',
             }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 12, color: 'var(--pw-ink2)', fontWeight: 500 }}>Zoom</span>
-            <span className="pw-mono" style={{ fontSize: 11, color: 'var(--pw-ink3)' }}>
-              {scale.toFixed(2)}×
-            </span>
-          </div>
-          <input
-            type="range"
-            min={1}
-            max={3}
-            step={0.01}
-            value={scale}
-            onChange={(e) => setScale(parseFloat(e.target.value))}
-            style={{ width: '100%' }}
           />
         </div>
 
