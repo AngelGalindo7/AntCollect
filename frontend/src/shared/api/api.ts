@@ -133,3 +133,13 @@ export async function fetchWithAuth(
 export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
     return fetchWithAuth(url, { ...options, throwOnError: true });
 }
+
+/**
+ * Fetch for public (optional-auth) endpoints. Sends cookies so authenticated
+ * users get personalized data (is_liked, is_owner). On 401 does NOT redirect
+ * to login — the backend simply returns guest-level data instead.
+ * Use this for read endpoints that back optional_auth_token on the server.
+ */
+export async function fetchPublic(url: string, options: RequestInit = {}): Promise<Response> {
+    return fetch(url, { ...options, credentials: 'include' });
+}
