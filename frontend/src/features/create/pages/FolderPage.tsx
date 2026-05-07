@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchWithAuth } from '@/shared/api/api';
+import { fetchPublic, fetchWithAuth } from '@/shared/api/api';
 import PostGridLayout from '@/features/posts/components/PostGridLayout';
 import PostDetailModal from '@/features/posts/components/PostDetailModal';
 import AddStickersModal from '@/features/create/components/AddStickersModal';
@@ -47,9 +47,7 @@ const FolderPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchWithAuth(`${API_BASE}/folders/${folderId}`, {
-        credentials: 'include',
-      });
+      const res = await fetchPublic(`${API_BASE}/folders/${folderId}`);
       if (res.status === 403) { setError('This folder is private.'); return; }
       if (res.status === 404) { setError('Folder not found.'); return; }
       if (!res.ok) throw new Error(`Error ${res.status}`);

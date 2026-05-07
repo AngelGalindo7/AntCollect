@@ -4,7 +4,7 @@ import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import { Workspace } from "@/features/workspace/components/Workspace";
 import { WorkspaceViewer } from "@/features/workspace/components/WorkspaceViewer";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
-import { fetchWithAuth, API_BASE } from "@/shared/api/api";
+import { fetchPublic, fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useParams, useNavigate } from "react-router-dom";
 
 type TabValue = "showcase" | "collection" | "looking_for" | "trading";
@@ -57,15 +57,12 @@ const UserProfile: React.FC = () => {
       setLoading(true);
       try {
         const [profileRes, foldersRes] = await Promise.all([
-          fetchWithAuth(`${API_BASE}/users/get_user_`, {
+          fetchPublic(`${API_BASE}/users/get_user_`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
             body: JSON.stringify({ username: String(username) }),
           }),
-          fetchWithAuth(`${API_BASE}/folders/user/${username}`, {
-            credentials: "include",
-          }),
+          fetchPublic(`${API_BASE}/folders/user/${username}`),
         ]);
 
         if (!profileRes.ok) throw new Error(`Failed to load profile: ${profileRes.status}`);

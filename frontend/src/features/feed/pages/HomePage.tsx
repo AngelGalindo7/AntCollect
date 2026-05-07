@@ -3,7 +3,7 @@ import { useInfiniteQuery, useQueryClient, type InfiniteData } from "@tanstack/r
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import type { Post, TopPostsResponse, PostWithEngagement, GridItem, FolderType } from "@/shared/types/Types";
-import { fetchWithAuth, API_BASE } from "@/shared/api/api";
+import { fetchPublic, fetchWithAuth, API_BASE } from "@/shared/api/api";
 
 const PAGE_SIZE = 20;
 const HOME_FEED_KEY = ["homeFeed"] as const;
@@ -12,7 +12,7 @@ async function fetchHomeFeedPage({ pageParam }: { pageParam: string | null }): P
     const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
     if (pageParam) params.set("cursor", pageParam);
 
-    const res = await fetchWithAuth(`${API_BASE}/posts/top?${params.toString()}`, {
+    const res = await fetchPublic(`${API_BASE}/posts/top?${params.toString()}`, {
         method: "GET",
         headers: { "Content-Type": "application/json" },
     });
