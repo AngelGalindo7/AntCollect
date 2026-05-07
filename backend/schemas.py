@@ -320,6 +320,7 @@ class PanelCreateRequest(BaseModel):
     h: Optional[int] = Field(default=None, ge=220)
     title: Optional[str] = Field(default=None, max_length=80)
     accent: Optional[str] = Field(default=None, max_length=16)
+    placed: bool = True
 
 
 class PanelMetaUpdate(BaseModel):
@@ -329,6 +330,7 @@ class PanelMetaUpdate(BaseModel):
     h: Optional[int] = Field(default=None, ge=220)
     z: Optional[int] = None
     locked: Optional[bool] = None
+    placed: Optional[bool] = None
     title: Optional[str] = Field(default=None, max_length=80)
     accent: Optional[str] = Field(default=None, max_length=16)
 
@@ -347,6 +349,7 @@ class PanelResponse(BaseModel):
     h: int
     z: int
     locked: bool
+    placed: bool
     title: Optional[str] = None
     accent: Optional[str] = None
     canvas_json: Optional[dict] = None
