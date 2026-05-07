@@ -10,13 +10,15 @@ interface Props {
 export function PanelPreview({ panel }: Props) {
   const canvas = panel.canvas_json as CanvasState | null;
   const holoNodes = canvas?.nodes.filter((n) => n.holo) ?? [];
+  const cw = canvas?.width ?? CANVAS_WIDTH;
+  const ch = canvas?.height ?? CANVAS_HEIGHT;
 
   if (panel.preview_path) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-[#f5f0e8]">
         <div
           className="relative"
-          style={{ aspectRatio: '16 / 9', maxWidth: '100%', maxHeight: '100%', width: '100%' }}
+          style={{ aspectRatio: `${cw} / ${ch}`, maxWidth: '100%', maxHeight: '100%', width: '100%' }}
         >
           <img
             src={panel.preview_path}
@@ -25,10 +27,10 @@ export function PanelPreview({ panel }: Props) {
             draggable={false}
           />
           {holoNodes.map((node) => {
-            const left = (node.x / CANVAS_WIDTH) * 100;
-            const top = (node.y / CANVAS_HEIGHT) * 100;
-            const width = (node.width / CANVAS_WIDTH) * 100;
-            const height = (node.height / CANVAS_HEIGHT) * 100;
+            const left = (node.x / cw) * 100;
+            const top = (node.y / ch) * 100;
+            const width = (node.width / cw) * 100;
+            const height = (node.height / ch) * 100;
 
             return (
               <div
