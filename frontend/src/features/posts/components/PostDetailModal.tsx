@@ -36,7 +36,8 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
   const session = getSession();
   const isOwn = postOwnerId !== undefined && String(postOwnerId) === session?.userId;
-  const canTrade = !isOwn && postOwnerId !== undefined && folderType !== undefined;
+  // Guests must not see the trade button — no session means no trade.
+  const canTrade = !!session && !isOwn && postOwnerId !== undefined && folderType !== undefined;
   // Only allow deletion if the callback is provided (intended for Profile page)
   const canDelete = isOwn && !!onDeleteSuccess;
   const canAdminDelete = !isOwn && canModeratePosts(session) && !!onDeleteSuccess;
