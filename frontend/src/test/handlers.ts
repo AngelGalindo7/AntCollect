@@ -30,6 +30,10 @@ export const handlers = [
       email: 'test@example.com',
       bio: null,
       avatar_path: null,
+      background_path: null,
+      background_offset_x: 0,
+      background_offset_y: 0,
+      background_scale: 1,
     })
   }),
   http.patch('http://localhost:8000/users/me/profile', () => {
@@ -64,6 +68,9 @@ export const handlers = [
       bio: null,
       avatar_path: null,
       background_path: null,
+      background_offset_x: 0,
+      background_offset_y: 0,
+      background_scale: 1,
       sticker_count: 0,
       is_owner: false,
       posts: [mockPost],

@@ -8,8 +8,8 @@ import {
 import {
   HEADER_FRAME_WIDTH,
   HEADER_FRAME_HEIGHT,
-  bakePositionedImage,
 } from '@/shared/utils/profileBackground';
+import { PositionedBackgroundImage } from '@/shared/components/PositionedBackgroundImage';
 
 interface UserMe {
   id: number;
@@ -18,6 +18,9 @@ interface UserMe {
   bio: string | null;
   avatar_path: string | null;
   background_path: string | null;
+  background_offset_x: number;
+  background_offset_y: number;
+  background_scale: number;
 }
 
 function fetchMe(): Promise<UserMe> {
@@ -39,6 +42,8 @@ export default function ProfileTab() {
   const [usernameError, setUsernameError] = useState('');
 
   const [bgPositionerOpen, setBgPositionerOpen] = useState(false);
+  const [bgPositionerMode, setBgPositionerMode] = useState<'upload' | 'reposition'>('upload');
+  const [pendingBgFile, setPendingBgFile] = useState<File | null>(null);
   const [pendingBgUrl, setPendingBgUrl] = useState<string | null>(null);
   const [bgError, setBgError] = useState<string | null>(null);
 
@@ -90,10 +95,13 @@ export default function ProfileTab() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['me'] }),
   });
 
-  const backgroundMutation = useMutation({
-    mutationFn: (blob: Blob) => {
+  const backgroundUploadMutation = useMutation({
+    mutationFn: ({ file, pos }: { file: File; pos: BackgroundImagePosition }) => {
       const form = new FormData();
-      form.append('file', blob, 'background.jpg');
+      form.append('file', file);
+      form.append('offset_x', String(pos.offsetX));
+      form.append('offset_y', String(pos.offsetY));
+      form.append('scale', String(pos.scale));
       return fetchWithAuth(`${API_BASE}/users/me/background`, { method: 'POST', body: form }).then(
         async (r) => {
           if (!r.ok) throw new Error('Background upload failed');
@@ -108,41 +116,61 @@ export default function ProfileTab() {
     onError: () => setBgError('Background upload failed. Try again.'),
   });
 
+  const backgroundPositionMutation = useMutation({
+    mutationFn: (pos: BackgroundImagePosition) =>
+      fetchWithAuth(`${API_BASE}/users/me/background-position`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offset_x: pos.offsetX, offset_y: pos.offsetY, scale: pos.scale }),
+      }).then(async (r) => {
+        if (!r.ok) throw new Error('Reposition failed');
+        return r.json();
+      }),
+    onSuccess: () => {
+      setBgError(null);
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+    },
+    onError: () => setBgError('Reposition failed. Try again.'),
+  });
+
   const handleBackgroundFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
     setBgError(null);
-    if (pendingBgUrl) URL.revokeObjectURL(pendingBgUrl);
+    if (pendingBgUrl && pendingBgUrl.startsWith('blob:')) URL.revokeObjectURL(pendingBgUrl);
+    setPendingBgFile(file);
     setPendingBgUrl(URL.createObjectURL(file));
+    setBgPositionerMode('upload');
     setBgPositionerOpen(true);
   };
 
-  const handleBackgroundPositionApply = async (pos: BackgroundImagePosition) => {
-    if (!pendingBgUrl) return;
+  const handleBackgroundReposition = () => {
+    if (!user?.background_path) return;
+    setBgError(null);
+    setPendingBgFile(null);
+    setPendingBgUrl(user.background_path);
+    setBgPositionerMode('reposition');
+    setBgPositionerOpen(true);
+  };
+
+  const handleBackgroundPositionApply = (pos: BackgroundImagePosition) => {
     setBgPositionerOpen(false);
-    try {
-      const blob = await bakePositionedImage(
-        pendingBgUrl,
-        HEADER_FRAME_WIDTH,
-        HEADER_FRAME_HEIGHT,
-        pos,
-      );
-      backgroundMutation.mutate(blob);
-    } catch {
-      setBgError('Background upload failed. Try again.');
-    } finally {
-      URL.revokeObjectURL(pendingBgUrl);
-      setPendingBgUrl(null);
+    if (bgPositionerMode === 'upload' && pendingBgFile) {
+      backgroundUploadMutation.mutate({ file: pendingBgFile, pos });
+    } else if (bgPositionerMode === 'reposition') {
+      backgroundPositionMutation.mutate(pos);
     }
+    if (pendingBgUrl && pendingBgUrl.startsWith('blob:')) URL.revokeObjectURL(pendingBgUrl);
+    setPendingBgFile(null);
+    setPendingBgUrl(null);
   };
 
   const handleBackgroundPositionCancel = () => {
     setBgPositionerOpen(false);
-    if (pendingBgUrl) {
-      URL.revokeObjectURL(pendingBgUrl);
-      setPendingBgUrl(null);
-    }
+    if (pendingBgUrl && pendingBgUrl.startsWith('blob:')) URL.revokeObjectURL(pendingBgUrl);
+    setPendingBgFile(null);
+    setPendingBgUrl(null);
   };
 
   if (isLoading) return <p className="text-sm text-gray-500">Loading…</p>;
@@ -188,20 +216,39 @@ export default function ProfileTab() {
       {/* Background image */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Profile Background</label>
-        <div className="relative w-full h-28 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+        <div className="relative w-full aspect-[6/1] rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
           {user.background_path ? (
-            <img src={user.background_path} alt="background" className="w-full h-full object-cover" />
+            <PositionedBackgroundImage
+              src={user.background_path}
+              offsetX={user.background_offset_x}
+              offsetY={user.background_offset_y}
+              scale={user.background_scale}
+            />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-sm text-gray-400">
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">
               No background set
             </div>
           )}
-          <button
-            onClick={() => bgFileInputRef.current?.click()}
-            className="absolute bottom-2 right-2 bg-white/90 hover:bg-white text-sm text-gray-700 font-medium px-3 py-1 rounded-md border border-gray-200 transition-colors"
-          >
-            {backgroundMutation.isPending ? 'Uploading…' : user.background_path ? 'Change' : 'Upload'}
-          </button>
+          <div className="absolute bottom-2 right-2 z-10 flex gap-2">
+            {user.background_path && (
+              <button
+                onClick={handleBackgroundReposition}
+                className="bg-white/90 hover:bg-white text-sm text-gray-700 font-medium px-3 py-1 rounded-md border border-gray-200 transition-colors"
+              >
+                {backgroundPositionMutation.isPending ? 'Saving…' : 'Reposition'}
+              </button>
+            )}
+            <button
+              onClick={() => bgFileInputRef.current?.click()}
+              className="bg-white/90 hover:bg-white text-sm text-gray-700 font-medium px-3 py-1 rounded-md border border-gray-200 transition-colors"
+            >
+              {backgroundUploadMutation.isPending
+                ? 'Uploading…'
+                : user.background_path
+                ? 'Change'
+                : 'Upload'}
+            </button>
+          </div>
         </div>
         <input
           ref={bgFileInputRef}
@@ -257,7 +304,16 @@ export default function ProfileTab() {
           imageUrl={pendingBgUrl}
           frameWidth={HEADER_FRAME_WIDTH}
           frameHeight={HEADER_FRAME_HEIGHT}
-          title="Position profile background"
+          initial={
+            bgPositionerMode === 'reposition'
+              ? {
+                  offsetX: user.background_offset_x,
+                  offsetY: user.background_offset_y,
+                  scale: user.background_scale,
+                }
+              : undefined
+          }
+          title={bgPositionerMode === 'reposition' ? 'Reposition background' : 'Position profile background'}
           onCancel={handleBackgroundPositionCancel}
           onApply={handleBackgroundPositionApply}
         />
