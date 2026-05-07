@@ -3,7 +3,7 @@ import { useInfiniteQuery, useQueryClient, type InfiniteData } from "@tanstack/r
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import type { Post, TopPostsResponse, PostWithEngagement, GridItem, FolderType } from "@/shared/types/Types";
-import { fetchPublic, fetchWithAuth, API_BASE } from "@/shared/api/api";
+import { fetchPublic, API_BASE } from "@/shared/api/api";
 
 const PAGE_SIZE = 20;
 const HOME_FEED_KEY = ["homeFeed"] as const;
