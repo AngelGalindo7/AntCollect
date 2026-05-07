@@ -21,6 +21,7 @@ export interface Panel {
   h: number;
   z: number;
   locked: boolean;
+  placed: boolean;
   title: string | null;
   accent: string | null;
   canvas_json: unknown | null;

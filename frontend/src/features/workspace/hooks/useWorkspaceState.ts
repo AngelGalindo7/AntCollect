@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Panel } from '../types/workspace';
 import {
   getMyWorkspace,
   createPanel,
+  createLibraryPanel as apiCreateLibraryPanel,
+  placePanel as apiPlacePanel,
   updatePanelMeta,
   savePanelCanvas as apiSavePanelCanvas,
   uploadPanelPreview as apiUploadPanelPreview,
@@ -11,10 +13,15 @@ import {
 
 interface UseWorkspaceState {
   panels: Panel[];
+  placedPanels: Panel[];
+  libraryPanels: Panel[];
   focusedId: number | null;
   focus: (id: number) => void;
   blur: () => void;
   spawnPanel: (rect: { x: number; y: number; w: number; h: number }) => Promise<void>;
+  createLibraryCanvas: () => Promise<Panel>;
+  placePanel: (id: number, rect: { x: number; y: number; w: number; h: number }) => Promise<void>;
+  removeFromWorkspace: (id: number) => Promise<void>;
   deletePanel: (id: number) => Promise<void>;
   updatePanelRect: (id: number, rect: Partial<Pick<Panel, 'x' | 'y' | 'w' | 'h'>>) => void;
   commitPanelRect: (id: number) => Promise<void>;
@@ -22,6 +29,7 @@ interface UseWorkspaceState {
   lockPanel: (id: number, locked: boolean) => Promise<void>;
   savePanelCanvas: (id: number, canvasJson: unknown) => Promise<void>;
   uploadPanelPreview: (id: number, blob: Blob) => Promise<void>;
+  setPanelById: (updated: Panel) => void;
   isLoading: boolean;
   error: string | null;
 }
@@ -51,6 +59,9 @@ export function useWorkspaceState(): UseWorkspaceState {
     return () => { cancelled = true; };
   }, []);
 
+  const placedPanels = useMemo(() => panels.filter((p) => p.placed), [panels]);
+  const libraryPanels = useMemo(() => panels.filter((p) => !p.placed), [panels]);
+
   const focus = useCallback((id: number) => setFocusedId(id), []);
   const blur = useCallback(() => setFocusedId(null), []);
 
@@ -61,6 +72,40 @@ export function useWorkspaceState(): UseWorkspaceState {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to spawn panel');
     }
+  }, []);
+
+  const createLibraryCanvas = useCallback(async (): Promise<Panel> => {
+    const newPanel = await apiCreateLibraryPanel();
+    setPanels((prev) => [...prev, newPanel]);
+    return newPanel;
+  }, []);
+
+  const placePanel = useCallback(async (id: number, rect: { x: number; y: number; w: number; h: number }) => {
+    setPanels((prev) => prev.map((p) => (p.id === id ? { ...p, placed: true, ...rect } : p)));
+    try {
+      const updated = await apiPlacePanel(id, rect);
+      setPanels((prev) => replacePanel(prev, updated));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to place panel');
+      const data = await getMyWorkspace();
+      setPanels(data.panels);
+    }
+  }, []);
+
+  const removeFromWorkspace = useCallback(async (id: number) => {
+    setPanels((prev) => prev.map((p) => (p.id === id ? { ...p, placed: false } : p)));
+    try {
+      const updated = await updatePanelMeta(id, { placed: false });
+      setPanels((prev) => replacePanel(prev, updated));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove panel from workspace');
+      const data = await getMyWorkspace();
+      setPanels(data.panels);
+    }
+  }, []);
+
+  const setPanelById = useCallback((updated: Panel) => {
+    setPanels((prev) => replacePanel(prev, updated));
   }, []);
 
   const deletePanel = useCallback(async (id: number) => {
@@ -128,10 +173,15 @@ export function useWorkspaceState(): UseWorkspaceState {
 
   return {
     panels,
+    placedPanels,
+    libraryPanels,
     focusedId,
     focus,
     blur,
     spawnPanel,
+    createLibraryCanvas,
+    placePanel,
+    removeFromWorkspace,
     deletePanel,
     updatePanelRect,
     commitPanelRect,
@@ -139,6 +189,7 @@ export function useWorkspaceState(): UseWorkspaceState {
     lockPanel,
     savePanelCanvas,
     uploadPanelPreview,
+    setPanelById,
     isLoading,
     error,
   };

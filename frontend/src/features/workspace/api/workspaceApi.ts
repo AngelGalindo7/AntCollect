@@ -16,6 +16,7 @@ export interface PanelMetaUpdate {
   h?: number;
   z?: number;
   locked?: boolean;
+  placed?: boolean;
   title?: string | null;
   accent?: string | null;
 }
@@ -66,6 +67,20 @@ export async function uploadPanelPreview(id: number, blob: Blob): Promise<string
   if (!res.ok) throw new Error('Failed to upload panel preview');
   const data: { preview_path: string } = await res.json();
   return data.preview_path;
+}
+
+export async function createLibraryPanel(): Promise<Panel> {
+  const res = await fetchWithAuth(`${API_BASE}/workspace/me/panels`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ placed: false }),
+  });
+  if (!res.ok) throw new Error('Failed to create library panel');
+  return res.json();
+}
+
+export async function placePanel(id: number, rect: { x: number; y: number; w: number; h: number }): Promise<Panel> {
+  return updatePanelMeta(id, { placed: true, ...rect });
 }
 
 export async function deletePanel(id: number): Promise<void> {
