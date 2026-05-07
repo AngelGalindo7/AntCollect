@@ -139,6 +139,10 @@ def create_panel(
 
     if body.rect is not None:
         x, y, w, h = body.rect.x, body.rect.y, body.rect.w, body.rect.h
+    elif not body.placed:
+        w = body.w if body.w is not None else _DEFAULT_PANEL_W
+        h = body.h if body.h is not None else _DEFAULT_PANEL_H
+        x, y = 0, 0
     else:
         existing = _list_panels(db, workspace.id)
         w = body.w if body.w is not None else _DEFAULT_PANEL_W
@@ -153,6 +157,7 @@ def create_panel(
         w=w,
         h=h,
         z=workspace.z_counter,
+        placed=body.placed,
         title=body.title,
         accent=body.accent,
     )
@@ -309,5 +314,13 @@ def get_public_workspace(username: str, db: Session = Depends(get_db)):
     if workspace is None:
         raise HTTPException(404, "Workspace not found")
 
-    panels = _list_panels(db, workspace.id)
+    panels = (
+        db.execute(
+            select(Panel)
+            .where(Panel.workspace_id == workspace.id, Panel.placed == True)  # noqa: E712
+            .order_by(Panel.z.asc(), Panel.id.asc())
+        )
+        .scalars()
+        .all()
+    )
     return _build_workspace_response(workspace, panels)
