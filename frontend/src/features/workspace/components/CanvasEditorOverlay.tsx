@@ -5,6 +5,7 @@ import type Konva from 'konva';
 import { CanvasStage } from '@/features/canvas/components/CanvasStage';
 import { StickerPicker } from '@/features/canvas/components/StickerPicker';
 import { StickerControls } from '@/features/canvas/components/StickerControls';
+import { CropModal } from '@/features/canvas/components/CropModal';
 import { useCanvasState, CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/hooks/useCanvasState';
 import type { CanvasState } from '@/features/canvas/types/canvas';
 import { removeBackground } from '@/features/canvas/api/canvasApi';
@@ -40,6 +41,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [removeBgError, setRemoveBgError] = useState<string | null>(null);
+  const [cropTargetId, setCropTargetId] = useState<string | null>(null);
   const stageRef = useRef<Konva.Stage | null>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
 
@@ -191,6 +193,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
             const node = nodes.find((n) => n.id === id);
             updateNode(id, { holo: !node?.holo });
           }}
+          onCropNode={(id) => { setSelectedId(null); setCropTargetId(id); }}
           onDeleteNode={(id) => { removeNode(id); setSelectedId(null); }}
           isDirty={isDirty}
           isSaving={isSaving}
@@ -202,5 +205,27 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
     </div>
   );
 
-  return ReactDOM.createPortal(content, document.body);
+  const cropNode = cropTargetId ? nodes.find((n) => n.id === cropTargetId) : null;
+
+  return (
+    <>
+      {ReactDOM.createPortal(content, document.body)}
+      {cropTargetId && cropNode && (
+        <CropModal
+          imageUrl={cropNode.image_url}
+          onUpload={uploadWorkspaceAsset}
+          onConfirm={(newUrl) => {
+            updateNode(cropTargetId, {
+              image_url: newUrl,
+              originalUrl: cropNode.originalUrl ?? cropNode.image_url,
+              bgRemoved: false,
+              removedBgUrl: undefined,
+            });
+            setCropTargetId(null);
+          }}
+          onCancel={() => setCropTargetId(null)}
+        />
+      )}
+    </>
+  );
 }
