@@ -1,20 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
-import { ConversationList } from '@/features/messaging/components/ConversationList';
-import { ConversationSearch } from '@/features/messaging/components/ConversationSearch';
-import { useWebSocketContext } from '@/features/messaging/providers/WebSocketProvider';
-import { useTradeRequestStore } from '@/features/trading/store/tradeRequestStore';
-import {
-  getTradeInboxCount,
-  getTradeInbox,
-  getSentTradeRequests,
-  acceptTradeRequest,
-  declineTradeRequest,
-} from '@/features/trading/api/tradeRequestApi';
-import type { TradeRequest } from '@/features/trading/types';
+// DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+// import { useState } from 'react';
+// import { ConversationList } from '@/features/messaging/components/ConversationList';
+// import { ConversationSearch } from '@/features/messaging/components/ConversationSearch';
+// import { useWebSocketContext } from '@/features/messaging/providers/WebSocketProvider';
+// import { useTradeRequestStore } from '@/features/trading/store/tradeRequestStore';
+// import {
+//   getTradeInboxCount,
+//   getTradeInbox,
+//   getSentTradeRequests,
+//   acceptTradeRequest,
+//   declineTradeRequest,
+// } from '@/features/trading/api/tradeRequestApi';
+// import type { TradeRequest } from '@/features/trading/types';
 
 
 interface UserMe {
@@ -28,23 +30,27 @@ interface SideBarProps {
   isChatRoute?: boolean;
 }
 
-export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute = false }) => {
+// DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+// Props kept on the public interface for re-enable; the body ignores both.
+export const SideBar: React.FC<SideBarProps> = ({ unreadCount: _unreadCount = 0, isChatRoute: _isChatRoute = false }) => {
+  void _unreadCount;
+  void _isChatRoute;
   const openCreateMenu = useUIStore((state) => state.openCreateMenu);
-  const [messagesOpen, setMessagesOpen] = useState(false);
-  const [tradeRequestsOpen, setTradeRequestsOpen] = useState(false);
   const navigate = useNavigate();
 
-  const { sendMessage } = useWebSocketContext();
-
-  const {
-    pendingRequests,
-    sentRequests,
-    pendingCount,
-    setPendingRequests,
-    setSentRequests,
-    setPendingCount,
-    removeRequest
-  } = useTradeRequestStore();
+  // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+  // const [messagesOpen, setMessagesOpen] = useState(false);
+  // const [tradeRequestsOpen, setTradeRequestsOpen] = useState(false);
+  // const { sendMessage } = useWebSocketContext();
+  // const {
+  //   pendingRequests,
+  //   sentRequests,
+  //   pendingCount,
+  //   setPendingRequests,
+  //   setSentRequests,
+  //   setPendingCount,
+  //   removeRequest
+  // } = useTradeRequestStore();
 
   const { data: me } = useQuery<UserMe>({
     queryKey: ['me'],
@@ -56,87 +62,88 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: tradeCount = 0 } = useQuery<number>({
-    queryKey: ['trade-requests', 'inbox-count'],
-    queryFn: getTradeInboxCount,
-    refetchInterval: 30_000,
-    staleTime: 15_000,
-  });
-
-  React.useEffect(() => {
-    setPendingCount(tradeCount);
-  }, [tradeCount, setPendingCount]);
-
-  const handleOpenTradePanel = async () => {
-    const opening = !tradeRequestsOpen;
-    setTradeRequestsOpen(opening);
-    setMessagesOpen(false);
-    if (opening) {
-      try {
-        const [inbox, sent] = await Promise.all([
-          getTradeInbox(),
-          getSentTradeRequests(),
-        ]);
-        setPendingRequests(inbox);
-        setSentRequests(sent);
-      } catch {
-        // panel shows empty list on failure
-      }
-    }
-  };
-
-  const handleAccept = async (tradeRequest: TradeRequest) => {
-    try {
-      const accepted = await acceptTradeRequest(tradeRequest.id);
-
-      const convRes = await fetchWithAuth(`${API_BASE}/conversations`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userIds: [accepted.requester_id, accepted.recipient_id],
-          isGroup: false,
-          groupName: null,
-        }),
-      });
-
-      if (!convRes.ok) {
-        throw new Error(`Failed to create conversation: ${convRes.status}`);
-      }
-      const conversation = await convRes.json();
-      const conversationId: string = String(conversation.conversationId ?? conversation.id);
-
-      const clientMessageId = crypto.randomUUID();
-      sendMessage(
-        conversationId,
-        JSON.stringify({
-          type: accepted.request_type,
-          targetPostId: accepted.target_post_id,
-          postCaption: accepted.post_caption,
-          postThumbnail: accepted.post_thumbnail,
-          offeredFolderId: accepted.offered_folder_id,
-          offeredFolderName: accepted.offered_folder_name,
-          requesterUsername: accepted.requester_username,
-          recipientUsername: me?.username,
-        }),
-        clientMessageId,
-        'trade_context',
-      );
-
-      removeRequest(tradeRequest.id);
-      navigate(`/messages/${conversationId}`);
-    } catch (err) {
-      console.error('[Trade] Accept failed', err);
-    }
-  };
-
-  const handleDecline = async (tradeRequest: TradeRequest) => {
-    try {
-      await declineTradeRequest(tradeRequest.id);
-      removeRequest(tradeRequest.id);
-    } catch (err) {
-      console.error('[Trade] Decline failed', err);
-    }
-  };
+  // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+  // const { data: tradeCount = 0 } = useQuery<number>({
+  //   queryKey: ['trade-requests', 'inbox-count'],
+  //   queryFn: getTradeInboxCount,
+  //   refetchInterval: 30_000,
+  //   staleTime: 15_000,
+  // });
+  //
+  // React.useEffect(() => {
+  //   setPendingCount(tradeCount);
+  // }, [tradeCount, setPendingCount]);
+  //
+  // const handleOpenTradePanel = async () => {
+  //   const opening = !tradeRequestsOpen;
+  //   setTradeRequestsOpen(opening);
+  //   setMessagesOpen(false);
+  //   if (opening) {
+  //     try {
+  //       const [inbox, sent] = await Promise.all([
+  //         getTradeInbox(),
+  //         getSentTradeRequests(),
+  //       ]);
+  //       setPendingRequests(inbox);
+  //       setSentRequests(sent);
+  //     } catch {
+  //       // panel shows empty list on failure
+  //     }
+  //   }
+  // };
+  //
+  // const handleAccept = async (tradeRequest: TradeRequest) => {
+  //   try {
+  //     const accepted = await acceptTradeRequest(tradeRequest.id);
+  //
+  //     const convRes = await fetchWithAuth(`${API_BASE}/conversations`, {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({
+  //         userIds: [accepted.requester_id, accepted.recipient_id],
+  //         isGroup: false,
+  //         groupName: null,
+  //       }),
+  //     });
+  //
+  //     if (!convRes.ok) {
+  //       throw new Error(`Failed to create conversation: ${convRes.status}`);
+  //     }
+  //     const conversation = await convRes.json();
+  //     const conversationId: string = String(conversation.conversationId ?? conversation.id);
+  //
+  //     const clientMessageId = crypto.randomUUID();
+  //     sendMessage(
+  //       conversationId,
+  //       JSON.stringify({
+  //         type: accepted.request_type,
+  //         targetPostId: accepted.target_post_id,
+  //         postCaption: accepted.post_caption,
+  //         postThumbnail: accepted.post_thumbnail,
+  //         offeredFolderId: accepted.offered_folder_id,
+  //         offeredFolderName: accepted.offered_folder_name,
+  //         requesterUsername: accepted.requester_username,
+  //         recipientUsername: me?.username,
+  //       }),
+  //       clientMessageId,
+  //       'trade_context',
+  //     );
+  //
+  //     removeRequest(tradeRequest.id);
+  //     navigate(`/messages/${conversationId}`);
+  //   } catch (err) {
+  //     console.error('[Trade] Accept failed', err);
+  //   }
+  // };
+  //
+  // const handleDecline = async (tradeRequest: TradeRequest) => {
+  //   try {
+  //     await declineTradeRequest(tradeRequest.id);
+  //     removeRequest(tradeRequest.id);
+  //   } catch (err) {
+  //     console.error('[Trade] Decline failed', err);
+  //   }
+  // };
 
   const avatarUrl = me?.avatar_path ?? null;
   const initials = me ? me.username.slice(0, 2).toUpperCase() : '?';
@@ -148,10 +155,10 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
 
   const iconButtonClass = 'w-9 h-9 mx-auto flex items-center justify-center rounded-lg text-white/70 hover:text-white transition-all duration-200';
 
-  const messagesActive = isChatRoute || messagesOpen;
-
-  const wantToTrade = pendingRequests.filter((r) => r.request_type === 'WANT_TO_TRADE');
-  const hasWhatYouNeed = pendingRequests.filter((r) => r.request_type === 'HAVE_WHAT_YOU_NEED');
+  // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+  // const messagesActive = isChatRoute || messagesOpen;
+  // const wantToTrade = pendingRequests.filter((r) => r.request_type === 'WANT_TO_TRADE');
+  // const hasWhatYouNeed = pendingRequests.filter((r) => r.request_type === 'HAVE_WHAT_YOU_NEED');
 
   return (
     <>
@@ -170,7 +177,8 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
             </svg>
           </NavLink>
 
-          <button
+          {/* DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md */}
+          {/* <button
             onClick={isChatRoute ? undefined : () => { setMessagesOpen((prev) => !prev); setTradeRequestsOpen(false); }}
             className={`${iconButtonClass} ${messagesActive ? 'bg-white/12 text-white' : ''}`}
             title="Messages"
@@ -185,10 +193,10 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
                 </span>
               )}
             </div>
-          </button>
+          </button> */}
 
-          {/* Trade requests icon */}
-          <button
+          {/* DECOMMISSIONED 2026-05-06: Trade requests icon */}
+          {/* <button
             onClick={handleOpenTradePanel}
             className={`${iconButtonClass} ${tradeRequestsOpen ? 'bg-white/12 text-white' : ''}`}
             title="Trade Requests"
@@ -203,7 +211,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
                 </span>
               )}
             </div>
-          </button>
+          </button> */}
 
           <button onClick={openCreateMenu} className={iconButtonClass} title="Create">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -236,8 +244,9 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
         </nav>
       </aside>
 
+      {/* DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md */}
       {/* Messages slide-out panel — only shown on non-chat routes */}
-      {!isChatRoute && (
+      {/* {!isChatRoute && (
         <div
           className={`absolute left-14 top-0 h-full bg-white border-r border-gray-200 transition-all duration-200 overflow-hidden z-10 ${messagesOpen ? 'w-80' : 'w-0'
             }`}
@@ -256,10 +265,10 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
-      {/* Trade requests slide-out panel */}
-      <div
+      {/* DECOMMISSIONED 2026-05-06: Trade requests slide-out panel */}
+      {/* <div
         className={`absolute left-14 top-0 h-full bg-white border-r border-gray-200 transition-all duration-200 overflow-hidden z-10 ${tradeRequestsOpen ? 'w-80' : 'w-0'
           }`}
       >
@@ -278,7 +287,6 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
               <p className="text-sm text-gray-400 text-center mt-8">No trade activity</p>
             )}
 
-            {/* Inbox Section */}
             {(wantToTrade.length > 0 || hasWhatYouNeed.length > 0) && (
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
@@ -322,7 +330,6 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
               </div>
             )}
 
-            {/* Sent Section */}
             {sentRequests.length > 0 && (
               <div className="space-y-4 pt-4 border-t border-gray-100">
                 <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
@@ -337,154 +344,151 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
             )}
           </div>
         </div>
-      </div>
+      </div> */}
     </>
   );
 };
 
+// DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
 // ── TradeRequestCard ──────────────────────────────────────────────────────────
-
-interface TradeRequestCardProps {
-  request: TradeRequest;
-  onAccept: (r: TradeRequest) => void;
-  onDecline: (r: TradeRequest) => void;
-}
-
-function TradeRequestCard({ request, onAccept, onDecline }: TradeRequestCardProps) {
-  const thumbnailUrl = request.post_thumbnail ?? null;
-  const avatarUrl = request.requester_avatar ?? null;
-
-  return (
-    <div className="rounded-lg border border-gray-200 p-3 bg-gray-50 text-sm space-y-2">
-      {/* Requester */}
-      <a
-        href={`/${request.requester_username}`}
-        className="flex items-center gap-2 hover:underline"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="w-6 h-6 rounded-full overflow-hidden bg-blue-400 flex items-center justify-center text-white text-xs font-semibold shrink-0">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt={request.requester_username} className="w-full h-full object-cover" />
-          ) : (
-            request.requester_username.charAt(0).toUpperCase()
-          )}
-        </div>
-        <span className="font-medium text-gray-800">@{request.requester_username}</span>
-      </a>
-
-      {/* Post */}
-      <div className="flex items-center gap-2">
-        {thumbnailUrl && (
-          <img src={thumbnailUrl} alt={request.post_caption ?? `Post ${request.target_post_id}`} className="w-10 h-10 rounded object-cover shrink-0" />
-        )}
-        <span className="text-gray-700 line-clamp-2">{request.post_caption || 'Untitled'}</span>
-      </div>
-
-      {/* Offered folder */}
-      {request.offered_folder_id && request.offered_folder_name && (
-        <p className="text-xs text-gray-500">
-          Offering:{' '}
-          <a href={`/folders/${request.offered_folder_id}`} className="text-blue-500 hover:underline">
-            {request.offered_folder_name}
-          </a>
-        </p>
-      )}
-
-      {/* Actions */}
-      <div className="flex gap-2 pt-1">
-        <button
-          onClick={() => onAccept(request)}
-          className="flex-1 rounded bg-blue-500 text-white text-xs font-semibold py-1 hover:bg-blue-600 transition-colors"
-        >
-          Accept
-        </button>
-        <button
-          onClick={() => onDecline(request)}
-          className="flex-1 rounded bg-gray-200 text-gray-700 text-xs font-semibold py-1 hover:bg-gray-300 transition-colors"
-        >
-          Decline
-        </button>
-      </div>
-    </div>
-  );
-}
-
+//
+// interface TradeRequestCardProps {
+//   request: TradeRequest;
+//   onAccept: (r: TradeRequest) => void;
+//   onDecline: (r: TradeRequest) => void;
+// }
+//
+// function TradeRequestCard({ request, onAccept, onDecline }: TradeRequestCardProps) {
+//   const thumbnailUrl = request.post_thumbnail ?? null;
+//   const avatarUrl = request.requester_avatar ?? null;
+//
+//   return (
+//     <div className="rounded-lg border border-gray-200 p-3 bg-gray-50 text-sm space-y-2">
+//       <a
+//         href={`/${request.requester_username}`}
+//         className="flex items-center gap-2 hover:underline"
+//         onClick={(e) => e.stopPropagation()}
+//       >
+//         <div className="w-6 h-6 rounded-full overflow-hidden bg-blue-400 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+//           {avatarUrl ? (
+//             <img src={avatarUrl} alt={request.requester_username} className="w-full h-full object-cover" />
+//           ) : (
+//             request.requester_username.charAt(0).toUpperCase()
+//           )}
+//         </div>
+//         <span className="font-medium text-gray-800">@{request.requester_username}</span>
+//       </a>
+//
+//       <div className="flex items-center gap-2">
+//         {thumbnailUrl && (
+//           <img src={thumbnailUrl} alt={request.post_caption ?? `Post ${request.target_post_id}`} className="w-10 h-10 rounded object-cover shrink-0" />
+//         )}
+//         <span className="text-gray-700 line-clamp-2">{request.post_caption || 'Untitled'}</span>
+//       </div>
+//
+//       {request.offered_folder_id && request.offered_folder_name && (
+//         <p className="text-xs text-gray-500">
+//           Offering:{' '}
+//           <a href={`/folders/${request.offered_folder_id}`} className="text-blue-500 hover:underline">
+//             {request.offered_folder_name}
+//           </a>
+//         </p>
+//       )}
+//
+//       <div className="flex gap-2 pt-1">
+//         <button
+//           onClick={() => onAccept(request)}
+//           className="flex-1 rounded bg-blue-500 text-white text-xs font-semibold py-1 hover:bg-blue-600 transition-colors"
+//         >
+//           Accept
+//         </button>
+//         <button
+//           onClick={() => onDecline(request)}
+//           className="flex-1 rounded bg-gray-200 text-gray-700 text-xs font-semibold py-1 hover:bg-gray-300 transition-colors"
+//         >
+//           Decline
+//         </button>
+//       </div>
+//     </div>
+//   );
+// }
+//
 // ── SentTradeRequestCard ──────────────────────────────────────────────────────
-
-interface SentTradeRequestCardProps {
-  request: TradeRequest;
-}
-
-function SentTradeRequestCard({ request }: SentTradeRequestCardProps) {
-  const thumbnailUrl = request.post_thumbnail ?? null;
-  const avatarUrl = request.recipient_avatar ?? null;
-
-  const getStatusDisplay = (status: string) => {
-    switch (status) {
-      case 'PENDING':
-        return {
-          label: 'Pending',
-          classes: 'bg-amber-100 text-amber-700 border-amber-200'
-        };
-      case 'ACCEPTED':
-        return {
-          label: 'Accepted',
-          classes: 'bg-green-100 text-green-700 border-green-200'
-        };
-      case 'DECLINED':
-        return {
-          label: 'Rejected',
-          classes: 'bg-red-100 text-red-700 border-red-200'
-        };
-      case 'EXPIRED':
-        return {
-          label: 'Expired',
-          classes: 'bg-gray-100 text-gray-500 border-gray-200'
-        };
-      default:
-        return {
-          label: status,
-          classes: 'bg-gray-100 text-gray-700 border-gray-200'
-        };
-    }
-  };
-
-  const status = getStatusDisplay(request.status);
-
-  return (
-    <div className="rounded-lg border border-gray-200 p-3 bg-white text-sm space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${status.classes}`}>
-          {status.label}
-        </span>
-        <span className="text-[10px] text-gray-400">
-          {new Date(request.created_at).toLocaleDateString()}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center text-[10px] font-semibold shrink-0">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt={request.recipient_username} className="w-full h-full object-cover" />
-          ) : (
-            request.recipient_username.charAt(0).toUpperCase()
-          )}
-        </div>
-        <p className="text-xs text-gray-500 truncate">
-          Requested from <span className="font-medium text-gray-700">@{request.recipient_username}</span>
-        </p>
-      </div>
-
-      <div className="flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-100">
-        {thumbnailUrl && (
-          <img src={thumbnailUrl} alt={request.post_caption ?? `Post ${request.target_post_id}`} className="w-8 h-8 rounded object-cover shrink-0" />
-        ) || (
-            <div className="w-8 h-8 rounded bg-gray-200 shrink-0" />
-          )}
-        <span className="text-xs text-gray-600 line-clamp-1 italic">"{request.post_caption || 'Untitled'}"</span>
-      </div>
-    </div>
-  );
-}
+//
+// interface SentTradeRequestCardProps {
+//   request: TradeRequest;
+// }
+//
+// function SentTradeRequestCard({ request }: SentTradeRequestCardProps) {
+//   const thumbnailUrl = request.post_thumbnail ?? null;
+//   const avatarUrl = request.recipient_avatar ?? null;
+//
+//   const getStatusDisplay = (status: string) => {
+//     switch (status) {
+//       case 'PENDING':
+//         return {
+//           label: 'Pending',
+//           classes: 'bg-amber-100 text-amber-700 border-amber-200'
+//         };
+//       case 'ACCEPTED':
+//         return {
+//           label: 'Accepted',
+//           classes: 'bg-green-100 text-green-700 border-green-200'
+//         };
+//       case 'DECLINED':
+//         return {
+//           label: 'Rejected',
+//           classes: 'bg-red-100 text-red-700 border-red-200'
+//         };
+//       case 'EXPIRED':
+//         return {
+//           label: 'Expired',
+//           classes: 'bg-gray-100 text-gray-500 border-gray-200'
+//         };
+//       default:
+//         return {
+//           label: status,
+//           classes: 'bg-gray-100 text-gray-700 border-gray-200'
+//         };
+//     }
+//   };
+//
+//   const status = getStatusDisplay(request.status);
+//
+//   return (
+//     <div className="rounded-lg border border-gray-200 p-3 bg-white text-sm space-y-2">
+//       <div className="flex items-center justify-between gap-2">
+//         <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${status.classes}`}>
+//           {status.label}
+//         </span>
+//         <span className="text-[10px] text-gray-400">
+//           {new Date(request.created_at).toLocaleDateString()}
+//         </span>
+//       </div>
+//
+//       <div className="flex items-center gap-2">
+//         <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center text-[10px] font-semibold shrink-0">
+//           {avatarUrl ? (
+//             <img src={avatarUrl} alt={request.recipient_username} className="w-full h-full object-cover" />
+//           ) : (
+//             request.recipient_username.charAt(0).toUpperCase()
+//           )}
+//         </div>
+//         <p className="text-xs text-gray-500 truncate">
+//           Requested from <span className="font-medium text-gray-700">@{request.recipient_username}</span>
+//         </p>
+//       </div>
+//
+//       <div className="flex items-center gap-2 bg-gray-50 p-2 rounded border border-gray-100">
+//         {thumbnailUrl && (
+//           <img src={thumbnailUrl} alt={request.post_caption ?? `Post ${request.target_post_id}`} className="w-8 h-8 rounded object-cover shrink-0" />
+//         ) || (
+//             <div className="w-8 h-8 rounded bg-gray-200 shrink-0" />
+//           )}
+//         <span className="text-xs text-gray-600 line-clamp-1 italic">"{request.post_caption || 'Untitled'}"</span>
+//       </div>
+//     </div>
+//   );
+// }
 
 export default SideBar;
