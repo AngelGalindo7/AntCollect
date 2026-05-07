@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import type { Post, FolderType } from '@/shared/types/Types';
-import PostImageFrame from './PostImageFrame';
 // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
 // import TradeEntryButton from './TradeEntryButton';
 // import TradeOfferPanel from '@/features/trading/components/TradeOfferPanel';
@@ -19,9 +18,9 @@ interface PostDetailModalProps {
 }
 
 /**
- * Full-screen post detail overlay.
- * Layout: [TradeOfferPanel?] [profile header → PostImageFrame → caption bar]
- * Trade button is shown only when viewing another user's post with a folder context.
+ * Full-screen image lightbox for a post.
+ * Image floats on a dark blurred backdrop; metadata (avatar/@username, caption,
+ * "Open original" link) renders below the image as muted text.
  * Portals to #modal-root to escape layout stacking contexts.
  */
 const PostDetailModal: React.FC<PostDetailModalProps> = ({
@@ -32,14 +31,10 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
   folderType,
 }) => {
   const navigate = useNavigate();
-  // DECOMMISSIONED 2026-05-06: trade panel state retained as commented reference
-  // const [tradeOpen, setTradeOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const session = getSession();
   const isOwn = postOwnerId !== undefined && String(postOwnerId) === session?.userId;
-  // DECOMMISSIONED 2026-05-06: trading disabled — canTrade always false
-  // const canTrade = !!session && !isOwn && postOwnerId !== undefined && folderType !== undefined;
   void folderType;
   const canAdminDelete = !isOwn && canModeratePosts(session) && !!onDeleteSuccess;
 
@@ -48,13 +43,11 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
   const currentImg = images[activeIdx];
   const canNav = images.length > 1;
 
-  // Scroll lock
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  // Escape to close, arrow keys to navigate
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -99,142 +92,136 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-10"
       onClick={onClose}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80" />
+      {/* Dark blurred backdrop */}
+      <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" />
 
-      {/* Content row: panel + image */}
+      {/* Close button — fixed to viewport top-right */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl leading-none flex items-center justify-center backdrop-blur transition-colors"
+        aria-label="Close"
+      >
+        ×
+      </button>
+
+      {/* Stage: image + metadata */}
       <div
-        className="relative z-10 flex items-center gap-0"
+        className="relative z-10 flex flex-col items-center max-w-full max-h-full"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md */}
-        {/* Trade panel slides in to the left of the image */}
-        {/* {tradeOpen && canTrade && (
-          <div className="bg-soft-white rounded-l-sticker shadow-soft h-full animate-slide-in-left">
-            <TradeOfferPanel
-              targetPost={post}
-              postOwnerId={postOwnerId!}
-              folderType={folderType}
+        {/* Image with carousel arrows + admin badge layered on top */}
+        <div className="relative inline-flex">
+          {imageSrc ? (
+            <img
+              src={imageSrc}
+              alt={post.caption || `Post ${post.post_id}`}
+              className="max-h-[80vh] max-w-[90vw] w-auto h-auto object-contain rounded-md shadow-2xl select-none"
+              draggable={false}
             />
-          </div>
-        )} */}
+          ) : (
+            <div className="w-[min(85vw,500px)] h-[min(60vh,500px)] flex flex-col items-center justify-center text-white/40 gap-3 rounded-md bg-white/5">
+              <svg className="w-16 h-16 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span className="text-xs font-medium uppercase tracking-wider">Image not found</span>
+            </div>
+          )}
 
-        {/* Image + overlays */}
-        <div className="relative rounded-sticker bg-soft-white overflow-hidden shadow-soft">
-          {/* Profile header */}
+          {canAdminDelete && (
+            <button
+              onClick={handleAdminDelete}
+              disabled={isDeleting}
+              className="absolute top-3 left-3 bg-red-700/90 hover:bg-red-800 text-white px-3 py-1.5 rounded-full text-[10px] font-medium uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-1.5 shadow"
+              title="Delete as moderator"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z" />
+              </svg>
+              {isDeleting ? 'Deleting...' : 'Delete (admin)'}
+            </button>
+          )}
+
+          {canNav && activeIdx > 0 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setActiveIdx(i => i - 1); }}
+              className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+              aria-label="Previous image"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
+          {canNav && activeIdx < images.length - 1 && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setActiveIdx(i => i + 1); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+              aria-label="Next image"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Metadata row */}
+        <div className="mt-4 flex flex-col items-center gap-2 max-w-[90vw]">
           {post.user && (
             <button
               type="button"
-              className="w-full flex items-center gap-3 px-4 py-3 bg-warm-cream/60 hover:bg-warm-cream transition-colors"
               onClick={() => { onClose(); navigate(`/${post.user!.username}`); }}
+              className="flex items-center gap-2 text-white/80 hover:text-white transition-colors"
             >
               {post.user.avatar_path ? (
                 <img
                   src={post.user.avatar_path}
-                  alt={post.user.username}
-                  className="w-9 h-9 rounded-full object-cover ring-2 ring-uci-gold/40 shrink-0"
+                  alt=""
+                  className="w-5 h-5 rounded-full object-cover ring-1 ring-white/20"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-warm-cream ring-2 ring-uci-gold/40 flex items-center justify-center text-espresso font-medium text-sm shrink-0">
+                <div className="w-5 h-5 rounded-full bg-white/15 flex items-center justify-center text-[10px] font-medium">
                   {post.user.username.charAt(0).toUpperCase()}
                 </div>
               )}
-              <div className="flex flex-col items-start min-w-0">
-                <span className="text-xs text-espresso/50 font-medium leading-none mb-0.5">Posted by</span>
-                <span className="text-sm font-medium text-espresso leading-none">@{post.user.username}</span>
-              </div>
-              <svg className="w-4 h-4 text-espresso/30 ml-auto shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              <span className="text-sm font-medium">@{post.user.username}</span>
             </button>
           )}
 
-          <PostImageFrame
-            src={imageSrc}
-            alt={post.caption || `Post ${post.post_id}`}
-            originalWidth={currentImg?.original_width}
-            originalHeight={currentImg?.original_height}
-          >
-            {/* DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md */}
-            {/* {canTrade && (
-              <TradeEntryButton
-                isOpen={tradeOpen}
-                onClick={() => setTradeOpen((o) => !o)}
-              />
-            )} */}
+          {post.caption && (
+            <p className="text-center text-white/60 text-xs leading-relaxed line-clamp-3 max-w-md">
+              {post.caption}
+            </p>
+          )}
 
-            {canAdminDelete && (
-              <button
-                onClick={handleAdminDelete}
-                disabled={isDeleting}
-                className="absolute top-4 left-4 bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-full text-xs font-medium uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2 shadow-soft"
-                title="Delete as moderator"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-4z" />
-                </svg>
-                {isDeleting ? 'Deleting...' : 'Delete (admin)'}
-              </button>
-            )}
-
-            {/* Carousel navigation */}
-            {canNav && activeIdx > 0 && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setActiveIdx(i => i - 1); }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/60 text-white rounded-full p-2 transition-colors"
-                aria-label="Previous image"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            )}
-            {canNav && activeIdx < images.length - 1 && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setActiveIdx(i => i + 1); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/30 hover:bg-black/60 text-white rounded-full p-2 transition-colors"
-                aria-label="Next image"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            )}
-          </PostImageFrame>
-
-          {/* Dot indicators */}
           {canNav && (
-            <div className="flex gap-1.5 justify-center py-2 bg-warm-cream/60">
+            <div className="flex gap-1.5 mt-1">
               {images.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setActiveIdx(i)}
-                  className={`w-2 h-2 rounded-full transition-colors ${i === activeIdx ? 'bg-uci-gold' : 'bg-warm-gray/50 hover:bg-warm-gray'}`}
+                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === activeIdx ? 'bg-white' : 'bg-white/30 hover:bg-white/60'}`}
                   aria-label={`Image ${i + 1}`}
                 />
               ))}
             </div>
           )}
 
-          {/* Caption bar */}
-          <div className="bg-warm-cream/60 px-6 py-4">
-            <p className="text-espresso/70 text-sm leading-relaxed">
-              {post.caption || 'Untitled Post'}
-            </p>
-          </div>
+          {imageSrc && (
+            <a
+              href={imageSrc}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs text-white/50 hover:text-white/90 hover:underline transition-colors"
+            >
+              Open original
+            </a>
+          )}
         </div>
-
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute -top-10 right-0 text-white/80 hover:text-white text-2xl leading-none"
-          aria-label="Close"
-        >
-          ×
-        </button>
       </div>
     </div>,
     modalRoot,
