@@ -273,7 +273,7 @@ def upload_workspace_asset(
 
 
 @router.post("/me/remove-bg", response_model=RemoveBgResponse)
-@limiter.limit("10/hour", key_func=get_user_or_ip_key)
+@limiter.limit("10/minute", key_func=get_user_or_ip_key)
 def remove_workspace_image_background(
     request: Request,
     body: RemoveBgRequest,
