@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import type { Post, FolderType } from '@/shared/types/Types';
 import PostImageFrame from './PostImageFrame';
-import TradeEntryButton from './TradeEntryButton';
-import TradeOfferPanel from '@/features/trading/components/TradeOfferPanel';
+// DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+// import TradeEntryButton from './TradeEntryButton';
+// import TradeOfferPanel from '@/features/trading/components/TradeOfferPanel';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 import { getSession } from '@/shared/auth/session';
 import { canModeratePosts } from '@/shared/auth/permissions';
@@ -31,13 +32,15 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
   folderType,
 }) => {
   const navigate = useNavigate();
-  const [tradeOpen, setTradeOpen] = useState(false);
+  // DECOMMISSIONED 2026-05-06: trade panel state retained as commented reference
+  // const [tradeOpen, setTradeOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const session = getSession();
   const isOwn = postOwnerId !== undefined && String(postOwnerId) === session?.userId;
-  // Guests must not see the trade button — no session means no trade.
-  const canTrade = !!session && !isOwn && postOwnerId !== undefined && folderType !== undefined;
+  // DECOMMISSIONED 2026-05-06: trading disabled — canTrade always false
+  // const canTrade = !!session && !isOwn && postOwnerId !== undefined && folderType !== undefined;
+  void folderType;
   // Only allow deletion if the callback is provided (intended for Profile page)
   const canDelete = isOwn && !!onDeleteSuccess;
   const canAdminDelete = !isOwn && canModeratePosts(session) && !!onDeleteSuccess;
@@ -116,8 +119,9 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
         className="relative z-10 flex items-center gap-0"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md */}
         {/* Trade panel slides in to the left of the image */}
-        {tradeOpen && canTrade && (
+        {/* {tradeOpen && canTrade && (
           <div className="bg-soft-white rounded-l-sticker shadow-soft h-full animate-slide-in-left">
             <TradeOfferPanel
               targetPost={post}
@@ -125,10 +129,10 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
               folderType={folderType}
             />
           </div>
-        )}
+        )} */}
 
         {/* Image + overlays */}
-        <div className={`relative ${tradeOpen ? 'rounded-r-sticker' : 'rounded-sticker'} bg-soft-white overflow-hidden shadow-soft`}>
+        <div className="relative rounded-sticker bg-soft-white overflow-hidden shadow-soft">
           {/* Profile header */}
           {post.user && (
             <button
@@ -163,12 +167,13 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
             originalWidth={currentImg?.original_width}
             originalHeight={currentImg?.original_height}
           >
-            {canTrade && (
+            {/* DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md */}
+            {/* {canTrade && (
               <TradeEntryButton
                 isOpen={tradeOpen}
                 onClick={() => setTradeOpen((o) => !o)}
               />
-            )}
+            )} */}
 
             {/* Delete button overlay for owners on profile page — uses Brick Red */}
             {canDelete && (
