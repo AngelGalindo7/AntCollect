@@ -1,6 +1,15 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
+import {
+  BackgroundImagePositioner,
+  type BackgroundImagePosition,
+} from '@/features/canvas/components/BackgroundImagePositioner';
+import {
+  HEADER_FRAME_WIDTH,
+  HEADER_FRAME_HEIGHT,
+  bakePositionedImage,
+} from '@/shared/utils/profileBackground';
 
 interface UserMe {
   id: number;
@@ -28,6 +37,10 @@ export default function ProfileTab() {
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [usernameError, setUsernameError] = useState('');
+
+  const [bgPositionerOpen, setBgPositionerOpen] = useState(false);
+  const [pendingBgUrl, setPendingBgUrl] = useState<string | null>(null);
+  const [bgError, setBgError] = useState<string | null>(null);
 
   // Initialise fields once data loads
   const [initialised, setInitialised] = useState(false);
@@ -78,9 +91,9 @@ export default function ProfileTab() {
   });
 
   const backgroundMutation = useMutation({
-    mutationFn: (file: File) => {
+    mutationFn: (blob: Blob) => {
       const form = new FormData();
-      form.append('file', file);
+      form.append('file', blob, 'background.jpg');
       return fetchWithAuth(`${API_BASE}/users/me/background`, { method: 'POST', body: form }).then(
         async (r) => {
           if (!r.ok) throw new Error('Background upload failed');
@@ -88,8 +101,49 @@ export default function ProfileTab() {
         }
       );
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['me'] }),
+    onSuccess: () => {
+      setBgError(null);
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+    },
+    onError: () => setBgError('Background upload failed. Try again.'),
   });
+
+  const handleBackgroundFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBgError(null);
+    if (pendingBgUrl) URL.revokeObjectURL(pendingBgUrl);
+    setPendingBgUrl(URL.createObjectURL(file));
+    setBgPositionerOpen(true);
+  };
+
+  const handleBackgroundPositionApply = async (pos: BackgroundImagePosition) => {
+    if (!pendingBgUrl) return;
+    setBgPositionerOpen(false);
+    try {
+      const blob = await bakePositionedImage(
+        pendingBgUrl,
+        HEADER_FRAME_WIDTH,
+        HEADER_FRAME_HEIGHT,
+        pos,
+      );
+      backgroundMutation.mutate(blob);
+    } catch {
+      setBgError('Background upload failed. Try again.');
+    } finally {
+      URL.revokeObjectURL(pendingBgUrl);
+      setPendingBgUrl(null);
+    }
+  };
+
+  const handleBackgroundPositionCancel = () => {
+    setBgPositionerOpen(false);
+    if (pendingBgUrl) {
+      URL.revokeObjectURL(pendingBgUrl);
+      setPendingBgUrl(null);
+    }
+  };
 
   if (isLoading) return <p className="text-sm text-gray-500">Loading…</p>;
   if (!user) return null;
@@ -154,12 +208,9 @@ export default function ProfileTab() {
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) backgroundMutation.mutate(file);
-            e.target.value = '';
-          }}
+          onChange={handleBackgroundFileChange}
         />
+        {bgError && <p className="mt-2 text-xs text-red-500">{bgError}</p>}
       </div>
 
       {/* Username */}
@@ -200,6 +251,17 @@ export default function ProfileTab() {
       >
         {profileMutation.isPending ? 'Saving…' : 'Save changes'}
       </button>
+
+      {bgPositionerOpen && pendingBgUrl && (
+        <BackgroundImagePositioner
+          imageUrl={pendingBgUrl}
+          frameWidth={HEADER_FRAME_WIDTH}
+          frameHeight={HEADER_FRAME_HEIGHT}
+          title="Position profile background"
+          onCancel={handleBackgroundPositionCancel}
+          onApply={handleBackgroundPositionApply}
+        />
+      )}
     </div>
   );
 }
