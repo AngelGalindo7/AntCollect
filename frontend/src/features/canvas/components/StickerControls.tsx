@@ -1,6 +1,8 @@
-import type { CSSProperties } from 'react';
-import type { BackgroundConfig, CanvasNode } from '../types/canvas';
-import { BACKGROUND_PRESETS } from '../constants/backgroundPresets';
+import { useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
+import { ImagePlus, Trash2 } from 'lucide-react';
+import type { BackgroundConfig, CanvasNode, HoloVariant } from '../types/canvas';
+import { HOLO_VARIANTS } from '../types/canvas';
+import { BackgroundImagePositioner, type BackgroundImagePosition } from './BackgroundImagePositioner';
 
 interface RightPanelProps {
   background: BackgroundConfig;
@@ -11,6 +13,10 @@ interface RightPanelProps {
   removeBgError: string | null;
   onToggleRemoveBg: () => void;
   onToggleHolo: (id: string) => void;
+  onChangeHoloVariant: (id: string, variant: HoloVariant) => void;
+  onUploadAsset: (file: File) => Promise<string>;
+  frameWidth: number;
+  frameHeight: number;
 }
 
 const eyebrow: CSSProperties = {
@@ -97,8 +103,74 @@ export function StickerControls({
   removeBgError,
   onToggleRemoveBg,
   onToggleHolo,
+  onChangeHoloVariant,
+  onUploadAsset,
+  frameWidth,
+  frameHeight,
 }: RightPanelProps) {
   const selectedNode = nodes.find((n) => n.id === selectedId);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [positionerOpen, setPositionerOpen] = useState(false);
+  const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
+
+  const hasBgImage = background.type === 'image' && !!background.imageUrl;
+
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const url = await onUploadAsset(file);
+      setPendingImageUrl(url);
+      setPositionerOpen(true);
+    } catch {
+      setUploadError('Upload failed. Try again.');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleApplyPosition = (pos: BackgroundImagePosition) => {
+    const sourceUrl = pendingImageUrl ?? background.imageUrl;
+    if (!sourceUrl) {
+      setPositionerOpen(false);
+      setPendingImageUrl(null);
+      return;
+    }
+    onChangeBackground({
+      type: 'image',
+      value: '#f6f1e6',
+      imageUrl: sourceUrl,
+      imageOffsetX: pos.offsetX,
+      imageOffsetY: pos.offsetY,
+      imageScale: pos.scale,
+    });
+    setPositionerOpen(false);
+    setPendingImageUrl(null);
+  };
+
+  const handleEditPosition = () => {
+    if (!background.imageUrl) return;
+    setPendingImageUrl(null);
+    setPositionerOpen(true);
+  };
+
+  const handleRemoveBackgroundImage = () => {
+    onChangeBackground({ type: 'color', value: '#f6f1e6' });
+  };
+
+  const positionerImageUrl = pendingImageUrl ?? background.imageUrl ?? '';
+  const positionerInitial = pendingImageUrl
+    ? undefined
+    : {
+        offsetX: background.imageOffsetX ?? 0,
+        offsetY: background.imageOffsetY ?? 0,
+        scale: background.imageScale ?? 1,
+      };
 
   return (
     <div
@@ -117,35 +189,129 @@ export function StickerControls({
     >
       <div>
         <p style={{ ...eyebrow, marginBottom: 10 }}>Background</p>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(8, 1fr)',
-            gap: 6,
-          }}
-        >
-          {BACKGROUND_PRESETS.map((p) => {
-            const selected = background.value === p.bg.value;
-            return (
-              <button
-                key={p.label}
-                type="button"
-                title={p.label}
-                onClick={() => onChangeBackground(p.bg)}
+        {hasBgImage ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              type="button"
+              onClick={handleEditPosition}
+              style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: `${frameWidth} / ${frameHeight}`,
+                background: '#f6f1e6',
+                border: '1px solid var(--pw-line)',
+                borderRadius: 8,
+                overflow: 'hidden',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+              title="Reposition background image"
+            >
+              <img
+                src={background.imageUrl}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+              <span
                 style={{
-                  aspectRatio: '1 / 1',
-                  borderRadius: 999,
-                  border: selected ? '1.5px solid var(--pw-ink)' : '1px solid var(--pw-line2)',
-                  outline: selected ? '2px solid var(--pw-ink)' : 'none',
-                  outlineOffset: selected ? 2 : 0,
-                  background: p.bg.value,
-                  cursor: 'pointer',
-                  transition: 'transform 120ms ease',
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(28,26,22,0)',
+                  transition: 'background 120ms ease',
                 }}
               />
-            );
-          })}
-        </div>
+            </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                type="button"
+                onClick={handleEditPosition}
+                style={{
+                  flex: 1,
+                  height: 30,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: 'var(--pw-ink)',
+                  background: 'var(--pw-surface2)',
+                  border: '1px solid var(--pw-line)',
+                  borderRadius: 7,
+                }}
+              >
+                Reposition
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                style={{
+                  flex: 1,
+                  height: 30,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: 'var(--pw-ink)',
+                  background: 'var(--pw-surface2)',
+                  border: '1px solid var(--pw-line)',
+                  borderRadius: 7,
+                  opacity: uploading ? 0.5 : 1,
+                }}
+              >
+                {uploading ? 'Uploading…' : 'Replace'}
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveBackgroundImage}
+                title="Remove background image"
+                style={{
+                  width: 30,
+                  height: 30,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--pw-danger)',
+                  background: 'transparent',
+                  border: '1px solid var(--pw-line)',
+                  borderRadius: 7,
+                }}
+              >
+                <Trash2 size={14} strokeWidth={1.6} />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              width: '100%',
+              padding: '10px 12px',
+              background: 'var(--pw-surface2)',
+              border: '1px dashed var(--pw-line)',
+              borderRadius: 8,
+              color: 'var(--pw-ink)',
+              fontSize: 12.5,
+              fontWeight: 500,
+              opacity: uploading ? 0.6 : 1,
+              transition: 'background 120ms ease',
+            }}
+          >
+            <ImagePlus size={14} strokeWidth={1.6} />
+            {uploading ? 'Uploading…' : 'Add background image'}
+          </button>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={handleFileChange}
+        />
+        {uploadError && (
+          <p style={{ fontSize: 11, color: 'var(--pw-danger)', margin: '6px 0 0' }}>{uploadError}</p>
+        )}
       </div>
 
       <div style={{ borderTop: '1px solid var(--pw-line)', paddingTop: 10 }}>
@@ -211,6 +377,36 @@ export function StickerControls({
             on={!!selectedNode.holo}
             onToggle={() => onToggleHolo(selectedNode.id)}
           />
+          {selectedNode.holo && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '4px 0 2px' }}>
+              <p style={{ ...eyebrow, marginBottom: 4 }}>Foil style</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                {HOLO_VARIANTS.map((v) => {
+                  const active = (selectedNode.holoVariant ?? 'regular') === v.value;
+                  return (
+                    <button
+                      key={v.value}
+                      type="button"
+                      title={v.hint}
+                      onClick={() => onChangeHoloVariant(selectedNode.id, v.value)}
+                      style={{
+                        padding: '6px 4px',
+                        fontSize: 11,
+                        fontWeight: active ? 600 : 500,
+                        color: active ? 'var(--pw-ink)' : 'var(--pw-ink2)',
+                        background: active ? 'var(--pw-surface2)' : 'transparent',
+                        border: active ? '1.5px solid var(--pw-ink)' : '1px solid var(--pw-line)',
+                        borderRadius: 7,
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {v.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <ToggleRow
             label="Background removed"
             hint="Die-cut edge"
@@ -222,6 +418,20 @@ export function StickerControls({
             <p style={{ fontSize: 11, color: 'var(--pw-danger)', margin: 0 }}>{removeBgError}</p>
           )}
         </div>
+      )}
+
+      {positionerOpen && positionerImageUrl && (
+        <BackgroundImagePositioner
+          imageUrl={positionerImageUrl}
+          frameWidth={frameWidth}
+          frameHeight={frameHeight}
+          initial={positionerInitial}
+          onCancel={() => {
+            setPositionerOpen(false);
+            setPendingImageUrl(null);
+          }}
+          onApply={handleApplyPosition}
+        />
       )}
     </div>
   );
