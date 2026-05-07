@@ -1,4 +1,5 @@
 import { useRef, useCallback } from 'react';
+import { DEFAULT_HOLO_VARIANT, type HoloVariant } from '../types/canvas';
 
 // Math helpers — ported verbatim from simeydotme/pokemon-cards-css Math.js
 const round = (value: number, precision = 3) => parseFloat(value.toFixed(precision));
@@ -9,9 +10,10 @@ const adjust = (value: number, fromMin: number, fromMax: number, toMin: number, 
 interface Props {
   children: React.ReactNode;
   maskUrl?: string;
+  variant?: HoloVariant;
 }
 
-export function HoloStickerEffect({ children, maskUrl }: Props) {
+export function HoloStickerEffect({ children, maskUrl, variant }: Props) {
   const elRef = useRef<HTMLDivElement>(null);
   const rafId = useRef<number | null>(null);
 
@@ -54,6 +56,7 @@ export function HoloStickerEffect({ children, maskUrl }: Props) {
     <div
       ref={elRef}
       className="holo-sticker"
+      data-holo={variant ?? DEFAULT_HOLO_VARIANT}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
