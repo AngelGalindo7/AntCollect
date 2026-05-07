@@ -14,7 +14,8 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from .errors import AppError, ErrorCode
-from .routers import auth, users, posts, folders, trade_requests, library, reports, canvas, workspace, oauth
+# DECOMMISSIONED 2026-05-06: trading + messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+from .routers import auth, users, posts, folders, library, reports, canvas, workspace, oauth  # trade_requests removed
 from .utils.logging_config import configure_logging, request_id_var
 from .utils.rate_limit import get_real_ip, limiter
 
@@ -244,7 +245,8 @@ app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(posts.router)
 app.include_router(folders.router)
-app.include_router(trade_requests.router)
+# DECOMMISSIONED 2026-05-06: trading + messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+# app.include_router(trade_requests.router)
 app.include_router(library.router)
 app.include_router(reports.router)
 app.include_router(canvas.router)
