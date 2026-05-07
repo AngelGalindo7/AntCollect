@@ -11,7 +11,7 @@ import { useCanvasState, CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/h
 import type { CanvasState } from '@/features/canvas/types/canvas';
 import type { LiveBounds } from '@/features/canvas/components/CanvasNode';
 import { removeBackground } from '@/features/canvas/api/canvasApi';
-import { savePanelCanvas, uploadPanelPreview, uploadWorkspaceAsset } from '../api/workspaceApi';
+import { savePanelCanvas, updatePanelMeta, uploadPanelPreview, uploadWorkspaceAsset } from '../api/workspaceApi';
 import type { Panel } from '../types/workspace';
 import type { Post } from '@/shared/types/Types';
 
@@ -46,8 +46,13 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
   const [cropTargetId, setCropTargetId] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [liveBounds, setLiveBounds] = useState<LiveBounds | null>(null);
+  const [title, setTitle] = useState(panel.title ?? '');
   const stageRef = useRef<Konva.Stage | null>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
+
+  const trimmedTitle = title.trim();
+  const initialTitle = (panel.title ?? '').trim();
+  const titleDirty = trimmedTitle !== initialTitle;
 
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedId) ?? null,
@@ -71,15 +76,15 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (isDirty && !window.confirm('Discard unsaved changes?')) return;
+      if ((isDirty || titleDirty) && !window.confirm('Discard unsaved changes?')) return;
       onClose();
     };
     window.addEventListener('keydown', handle);
     return () => window.removeEventListener('keydown', handle);
-  }, [isDirty, onClose]);
+  }, [isDirty, titleDirty, onClose]);
 
   const handleClose = () => {
-    if (isDirty && !window.confirm('Discard unsaved changes?')) return;
+    if ((isDirty || titleDirty) && !window.confirm('Discard unsaved changes?')) return;
     onClose();
   };
 
@@ -97,7 +102,10 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
       stage.batchDraw();
       const blob = dataURLtoBlob(dataUrl);
       await uploadPanelPreview(panel.id, blob);
-      const updated = await savePanelCanvas(panel.id, getCanvasJson());
+      let updated = await savePanelCanvas(panel.id, getCanvasJson());
+      if (titleDirty) {
+        updated = await updatePanelMeta(panel.id, { title: trimmedTitle || null });
+      }
       markClean();
       setLastSavedAt(Date.now());
       onSaved(updated);
@@ -143,11 +151,10 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
     if (newId) setSelectedId(newId);
   };
 
-  const titleText = panel.title?.trim() || 'untitled scene';
   const stickerCountLabel = `${nodes.length} ${nodes.length === 1 ? 'sticker' : 'stickers'}`;
   const savedLabel = isSaving
     ? 'saving…'
-    : isDirty
+    : isDirty || titleDirty
       ? 'unsaved changes'
       : lastSavedAt
         ? 'saved a moment ago'
@@ -213,33 +220,31 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
 
         <span style={{ width: 1, height: 18, background: 'var(--pw-line)', margin: '0 4px' }} />
 
-        <span
-          className="pw-display"
-          style={{
-            width: 26,
-            height: 26,
-            background: 'var(--pw-ink)',
-            color: 'var(--pw-gold)',
-            borderRadius: 6,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 16,
-            fontWeight: 700,
-            lineHeight: 1,
-          }}
-        >
-          P
-        </span>
-
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, marginLeft: 4 }}>
-          <span
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, marginLeft: 4, minWidth: 0 }}>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="untitled"
+            maxLength={80}
+            spellCheck={false}
             className="pw-display"
-            style={{ fontSize: 17, color: 'var(--pw-ink)' }}
-          >
-            {titleText}
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--pw-ink3)' }}>
+            style={{
+              fontSize: 17,
+              color: 'var(--pw-ink)',
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              padding: '2px 4px',
+              borderRadius: 4,
+              width: 240,
+              minWidth: 0,
+            }}
+            onFocus={(e) => { e.currentTarget.style.background = 'var(--pw-surface2)'; }}
+            onBlur={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
+          />
+          <span style={{ fontSize: 11, color: 'var(--pw-ink3)', paddingLeft: 4 }}>
             {stickerCountLabel} · {savedLabel}
           </span>
         </div>
@@ -439,6 +444,10 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
             const n = nodes.find((nn) => nn.id === id);
             updateNode(id, { holo: !n?.holo });
           }}
+          onChangeHoloVariant={(id, variant) => updateNode(id, { holoVariant: variant })}
+          onUploadAsset={uploadWorkspaceAsset}
+          frameWidth={CANVAS_WIDTH}
+          frameHeight={CANVAS_HEIGHT}
         />
       </div>
     </div>
