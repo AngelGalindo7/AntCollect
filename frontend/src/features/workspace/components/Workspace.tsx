@@ -1,13 +1,12 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Plus, PenLine } from 'lucide-react';
+import { useLayoutEffect, useRef, useState } from 'react';
+import { PenLine } from 'lucide-react';
 import type { Post } from '@/shared/types/Types';
 import type { WorkspaceBounds, Rect } from '../types/workspace';
 import { useWorkspaceState } from '../hooks/useWorkspaceState';
 import { PanelFrame } from './PanelFrame';
-import { PanelEditor } from './PanelEditor';
-import { PanelPickerPalette } from './PanelPickerPalette';
-import type Konva from 'konva';
-import type { CanvasApiHandle } from './PanelEditor';
+import { PanelPreview } from './PanelPreview';
+import { CanvasEditorOverlay } from './CanvasEditorOverlay';
+import { CanvasPickerDrawer } from './CanvasPickerDrawer';
 
 interface Props {
   username: string;
@@ -15,61 +14,32 @@ interface Props {
   isOwner: boolean;
 }
 
-const GRID_STEP = 40;
-
-function findFreeSpot(
-  panels: { x: number; y: number; w: number; h: number }[],
-  bounds: WorkspaceBounds,
-  w: number,
-  h: number,
-): { x: number; y: number } | null {
-  const maxX = bounds.w - w;
-  const maxY = bounds.h - h;
-  if (maxX < 0 || maxY < 0) return null;
-  for (let fy = 0; fy <= maxY; fy += GRID_STEP) {
-    for (let fx = 0; fx <= maxX; fx += GRID_STEP) {
-      const blocked = panels.some(
-        (p) => fx < p.x + p.w && fx + w > p.x && fy < p.y + p.h && fy + h > p.y,
-      );
-      if (!blocked) return { x: fx, y: fy };
-    }
-  }
-  return null;
-}
-
 export function Workspace({ posts, isOwner }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState<WorkspaceBounds>({ w: 800, h: 600 });
-  const [editingPanelId, setEditingPanelId] = useState<number | null>(null);
   const [isWorkspaceEditMode, setIsWorkspaceEditMode] = useState(false);
   const [workspaceH, setWorkspaceH] = useState(600);
-  const stageRef = useRef<Konva.Stage | null>(null);
-  const [canvasApi, setCanvasApi] = useState<CanvasApiHandle | null>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [editingPanelId, setEditingPanelId] = useState<number | null>(null);
 
   const {
     panels,
-    focusedId: _focusedId,
+    placedPanels,
+    libraryPanels,
     focus,
     blur,
-    spawnPanel,
+    createLibraryCanvas,
+    placePanel,
+    removeFromWorkspace,
     deletePanel,
     updatePanelRect,
     commitPanelRect,
     bringToFront,
     lockPanel,
-    savePanelCanvas,
+    setPanelById,
     isLoading,
     error,
   } = useWorkspaceState();
-
-  const spawnSpec = useMemo(() => {
-    const w = Math.round(Math.min(Math.max(window.innerWidth * 0.38, 380), 600));
-    const h = Math.round(Math.min(Math.max(window.innerHeight * 0.38, 300), 480));
-    const spot = findFreeSpot(panels, bounds, w, h);
-    return spot ? { x: spot.x, y: spot.y, w, h } : null;
-  }, [panels, bounds]);
-
-  const canAdd = spawnSpec !== null;
 
   // Height = max(viewport remaining height, panel content bottom)
   useLayoutEffect(() => {
@@ -79,15 +49,15 @@ export function Workspace({ posts, isOwner }: Props) {
       const top = el.getBoundingClientRect().top;
       const remainingVH = Math.max(window.innerHeight - top, 400);
       const contentH =
-        panels.length > 0
-          ? Math.max(...panels.map((p) => p.y + p.h)) + 60
+        placedPanels.length > 0
+          ? Math.max(...placedPanels.map((p) => p.y + p.h)) + 60
           : remainingVH;
       setWorkspaceH(Math.max(remainingVH, contentH));
     };
     compute();
     window.addEventListener('resize', compute);
     return () => window.removeEventListener('resize', compute);
-  }, [panels]);
+  }, [placedPanels]);
 
   // Track container dimensions for collision bounds
   useLayoutEffect(() => {
@@ -101,46 +71,12 @@ export function Workspace({ posts, isOwner }: Props) {
     return () => ro.disconnect();
   }, []);
 
-  // Escape exits canvas edit
-  useEffect(() => {
-    if (editingPanelId === null) return;
-    const handle = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      const dirty = canvasApi?.isDirty ?? false;
-      if (dirty && !window.confirm('Discard unsaved changes?')) return;
-      setEditingPanelId(null);
-      setCanvasApi(null);
-    };
-    window.addEventListener('keydown', handle);
-    return () => window.removeEventListener('keydown', handle);
-  }, [editingPanelId, canvasApi]);
-
-  // Leaving workspace edit mode clears any open canvas editor
-  useEffect(() => {
-    if (!isWorkspaceEditMode) {
-      setEditingPanelId(null);
-      setCanvasApi(null);
-    }
-  }, [isWorkspaceEditMode]);
-
-  function handleEnterEdit(id: number) {
-    if (!isOwner) return;
-    focus(id);
-    bringToFront(id).catch(() => {});
-    setEditingPanelId(id);
-  }
-
-  function handleExitEdit() {
-    setEditingPanelId(null);
-    setCanvasApi(null);
-  }
-
   const editingPanel = panels.find((p) => p.id === editingPanelId) ?? null;
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full bg-[#F0EBE5]"
+      className={`relative w-full bg-[#F0EBE5] ${isWorkspaceEditMode ? 'outline-2 outline-dashed outline-espresso/20 -outline-offset-2' : ''}`}
       style={{ height: workspaceH }}
       onClick={(e) => {
         if (e.target === containerRef.current) blur();
@@ -157,9 +93,21 @@ export function Workspace({ posts, isOwner }: Props) {
         </div>
       )}
 
+      {!isLoading && placedPanels.length === 0 && !isWorkspaceEditMode && isOwner && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <p className="text-neutral-400 text-sm">Your showcase is empty.</p>
+          <button
+            onClick={() => setIsWorkspaceEditMode(true)}
+            className="px-4 py-2 rounded-full bg-espresso text-white text-xs font-semibold shadow-md hover:bg-espresso/90 transition-colors"
+          >
+            Start adding canvases
+          </button>
+        </div>
+      )}
+
       {!isLoading &&
-        panels.map((panel) => {
-          const others: Rect[] = panels
+        placedPanels.map((panel) => {
+          const others: Rect[] = placedPanels
             .filter((p) => p.id !== panel.id)
             .map(({ x, y, w, h }) => ({ x, y, w, h }));
 
@@ -168,56 +116,28 @@ export function Workspace({ posts, isOwner }: Props) {
               key={panel.id}
               panel={panel}
               isOwner={isOwner}
-              isEditing={editingPanelId === panel.id}
               isWorkspaceEditMode={isWorkspaceEditMode}
               bounds={bounds}
               others={others}
               onUpdateRect={(id, rect) => updatePanelRect(id, rect)}
               onCommitRect={commitPanelRect}
               onFocus={focus}
-              onBringToFront={(id) => {
+              onBringToFront={(id) => bringToFront(id).catch(() => {})}
+              onDelete={(id) => deletePanel(id).catch(() => {})}
+              onRemoveFromWorkspace={(id) => removeFromWorkspace(id).catch(() => {})}
+              onLock={(id, locked) => lockPanel(id, locked).catch(() => {})}
+              onEnterEdit={(id) => {
+                focus(id);
                 bringToFront(id).catch(() => {});
+                setEditingPanelId(id);
               }}
-              onDelete={(id) => {
-                deletePanel(id).catch(() => {});
-              }}
-              onLock={(id, locked) => {
-                lockPanel(id, locked).catch(() => {});
-              }}
-              onEnterEdit={handleEnterEdit}
             >
-              <PanelEditor
-                panel={panel}
-                isEditing={editingPanelId === panel.id}
-                isOwner={isOwner}
-                stageRef={editingPanelId === panel.id ? stageRef : undefined}
-                onCanvasState={(api) => {
-                  if (editingPanelId === panel.id) setCanvasApi(api);
-                }}
-              />
+              <PanelPreview panel={panel} />
             </PanelFrame>
           );
         })}
 
-      {isOwner && editingPanel && isWorkspaceEditMode && (
-        <PanelPickerPalette
-          panel={editingPanel}
-          bounds={bounds}
-          canvasApi={canvasApi}
-          stageRef={stageRef}
-          posts={posts}
-          onSaveSuccess={(panelId) => {
-            const json = canvasApi?.getCanvasJson();
-            if (json) savePanelCanvas(panelId, json).catch(() => {});
-            canvasApi?.markClean();
-            setEditingPanelId(null);
-            setCanvasApi(null);
-          }}
-          onDiscard={handleExitEdit}
-        />
-      )}
-
-      {/* Owner toolbar — top-right of workspace */}
+      {/* Owner toolbar */}
       {isOwner && (
         <div
           style={{ position: 'absolute', top: 12, right: 12, zIndex: 9999 }}
@@ -226,22 +146,16 @@ export function Workspace({ posts, isOwner }: Props) {
           {isWorkspaceEditMode ? (
             <>
               <button
-                onClick={() => {
-                  if (spawnSpec) spawnPanel(spawnSpec).catch(() => {});
-                }}
-                disabled={!canAdd}
-                title={!canAdd ? 'No room — resize or remove a canvas first' : undefined}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md transition-colors ${
-                  canAdd
-                    ? 'bg-espresso text-white hover:bg-espresso/90 cursor-pointer'
-                    : 'bg-espresso/40 text-white/70 cursor-not-allowed'
-                }`}
+                onClick={() => setIsPickerOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-espresso text-white text-xs font-semibold shadow-md hover:bg-espresso/90 transition-colors"
               >
-                <Plus size={13} strokeWidth={2.5} />
-                Add Canvas
+                + Add Canvas
               </button>
               <button
-                onClick={() => setIsWorkspaceEditMode(false)}
+                onClick={() => {
+                  setIsWorkspaceEditMode(false);
+                  setIsPickerOpen(false);
+                }}
                 className="px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-sm text-espresso text-xs font-semibold shadow-md hover:bg-white transition-colors border border-espresso/10"
               >
                 Done
@@ -257,6 +171,38 @@ export function Workspace({ posts, isOwner }: Props) {
             </button>
           )}
         </div>
+      )}
+
+      {/* Canvas picker drawer */}
+      {isPickerOpen && isOwner && (
+        <CanvasPickerDrawer
+          libraryPanels={libraryPanels}
+          placedPanels={placedPanels}
+          bounds={bounds}
+          onPlace={async (id, rect) => {
+            await placePanel(id, rect);
+            setIsPickerOpen(false);
+          }}
+          onNewCanvas={async () => {
+            const panel = await createLibraryCanvas();
+            setIsPickerOpen(false);
+            setEditingPanelId(panel.id);
+          }}
+          onClose={() => setIsPickerOpen(false)}
+        />
+      )}
+
+      {/* Canvas editor overlay */}
+      {editingPanel !== null && isOwner && (
+        <CanvasEditorOverlay
+          panel={editingPanel}
+          posts={posts}
+          onClose={() => setEditingPanelId(null)}
+          onSaved={(updated) => {
+            setPanelById(updated);
+            setEditingPanelId(null);
+          }}
+        />
       )}
     </div>
   );
