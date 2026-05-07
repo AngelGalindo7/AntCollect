@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: ${{ secrets.DB_USER }}
           POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -37,6 +37,7 @@ jobs:
       - name: Run Alembic migrations
         run: |
           PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h localhost -U ${{ secrets.DB_USER }} -d antcollect_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h localhost -U ${{ secrets.DB_USER }} -d antcollect_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
           DB_NAME=antcollect_test alembic upgrade head
         env:
           DB_USER: ${{ secrets.DB_USER }}
@@ -202,6 +203,7 @@ jobs:
       - name: Run Alembic migrations
         run: |
           PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h localhost -U ${{ secrets.DB_USER }} -d antcollect_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
+          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h localhost -U ${{ secrets.DB_USER }} -d antcollect_test -c "CREATE EXTENSION IF NOT EXISTS vector;"
           DB_NAME=antcollect_test alembic upgrade head
         env:
           DB_USER: ${{ secrets.DB_USER }}
