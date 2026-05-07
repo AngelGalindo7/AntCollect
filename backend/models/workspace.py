@@ -63,6 +63,7 @@ class Panel(Base):
     h: Mapped[int] = mapped_column(Integer, nullable=False)
     z: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     locked: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    placed: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
     title: Mapped[str | None] = mapped_column(String(80), nullable=True)
     accent: Mapped[str | None] = mapped_column(String(16), nullable=True)
     canvas_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
