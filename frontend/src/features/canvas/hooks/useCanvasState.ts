@@ -42,6 +42,24 @@ export function useCanvasState(initial: CanvasState | null) {
     setIsDirty(true);
   }, []);
 
+  const duplicateNode = useCallback((id: string): string | null => {
+    let newId: string | null = null;
+    setNodes((prev) => {
+      const src = prev.find((n) => n.id === id);
+      if (!src) return prev;
+      newId = crypto.randomUUID();
+      const copy: CanvasNode = {
+        ...src,
+        id: newId,
+        x: Math.min(CANVAS_WIDTH - src.width, src.x + 24),
+        y: Math.min(CANVAS_HEIGHT - src.height, src.y + 24),
+      };
+      return [...prev, copy];
+    });
+    setIsDirty(true);
+    return newId;
+  }, []);
+
   const changeBackground = useCallback((bg: BackgroundConfig) => {
     setBackground(bg);
     setIsDirty(true);
@@ -76,5 +94,5 @@ export function useCanvasState(initial: CanvasState | null) {
     [background, nodes],
   );
 
-  return { nodes, background, isDirty, addNode, updateNode, removeNode, moveNodeUp, moveNodeDown, changeBackground, markClean, getCanvasJson };
+  return { nodes, background, isDirty, addNode, updateNode, removeNode, duplicateNode, moveNodeUp, moveNodeDown, changeBackground, markClean, getCanvasJson };
 }
