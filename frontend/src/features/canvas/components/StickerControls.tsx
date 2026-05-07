@@ -14,6 +14,7 @@ interface RightPanelProps {
   onMoveNodeUp: (id: string) => void;
   onMoveNodeDown: (id: string) => void;
   onToggleHolo: (id: string) => void;
+  onCropNode: (id: string) => void;
   onDeleteNode: (id: string) => void;
   isDirty: boolean;
   isSaving: boolean;
@@ -26,7 +27,7 @@ export function StickerControls({
   background, onChangeBackground,
   selectedId, nodes, keepRatio, onSetKeepRatio,
   isRemovingBg, removeBgError, onToggleRemoveBg,
-  onMoveNodeUp, onMoveNodeDown, onToggleHolo, onDeleteNode,
+  onMoveNodeUp, onMoveNodeDown, onToggleHolo, onCropNode, onDeleteNode,
   isDirty, isSaving, saveError, onSave, onDiscard,
 }: RightPanelProps) {
   const selectedNode = nodes.find((n) => n.id === selectedId);
@@ -111,6 +112,13 @@ export function StickerControls({
             {isRemovingBg ? 'Removing BG…' : selectedNode.bgRemoved ? 'BG Removed ✓' : 'Remove BG'}
           </button>
           {removeBgError && <p className="text-red-500 text-xs mb-2">{removeBgError}</p>}
+
+          <button
+            onClick={() => onCropNode(selectedId)}
+            className="w-full py-1.5 rounded-lg text-xs font-medium bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors mb-1.5"
+          >
+            Crop
+          </button>
 
           <button
             onClick={() => onToggleHolo(selectedId)}
