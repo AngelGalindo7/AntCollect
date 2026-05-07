@@ -113,6 +113,33 @@ def _decode_access_token(access_token_str: str):
         role=role
     )
 
+def optional_auth_token(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+) -> "UserSearch | None":
+    access_token_str = request.cookies.get("access_token")
+    if not access_token_str and credentials:
+        access_token_str = credentials.credentials
+    if not access_token_str:
+        return None
+    try:
+        payload = jwt.decode(access_token_str, SECRET_KEY, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        # Expired: treat as guest — frontend refreshes via /auth/refresh-token separately
+        return None
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    user_id = payload.get("sub")
+    if not user_id or payload.get("type") != "access":
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+    return UserSearch(
+        user_id=int(user_id),
+        username=payload.get("username"),
+        email=payload.get("email"),
+        role=payload.get("role", "user"),
+    )
+
+
 def create_google_pending_token(google_id: str, email: str, display_name: str) -> str:
     payload = {
         "google_id": google_id,
