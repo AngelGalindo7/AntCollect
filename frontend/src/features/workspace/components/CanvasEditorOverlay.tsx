@@ -1,13 +1,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { ArrowLeft, Undo2, Redo2 } from 'lucide-react';
+import { ArrowLeft, Undo2, Redo2, Crop } from 'lucide-react';
 import type Konva from 'konva';
 import { CanvasStage } from '@/features/canvas/components/CanvasStage';
 import { StickerPicker } from '@/features/canvas/components/StickerPicker';
 import { StickerControls } from '@/features/canvas/components/StickerControls';
 import { CropModal } from '@/features/canvas/components/CropModal';
 import { ContextualToolbar } from '@/features/canvas/components/ContextualToolbar';
-import { useCanvasState, CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/hooks/useCanvasState';
+import { CanvasSizePopover } from '@/features/canvas/components/CanvasSizePopover';
+import { useCanvasState } from '@/features/canvas/hooks/useCanvasState';
 import type { CanvasState } from '@/features/canvas/types/canvas';
 import type { LiveBounds } from '@/features/canvas/components/CanvasNode';
 import { removeBackground } from '@/features/canvas/api/canvasApi';
@@ -33,8 +34,8 @@ function dataURLtoBlob(dataUrl: string): Blob {
 }
 
 export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
-  const { nodes, background, isDirty, addNode, updateNode, removeNode, duplicateNode,
-    moveNodeUp, moveNodeDown, changeBackground, markClean, getCanvasJson } =
+  const { nodes, background, width, height, isDirty, addNode, updateNode, removeNode, duplicateNode,
+    moveNodeUp, moveNodeDown, changeBackground, setCanvasSize, markClean, getCanvasJson } =
     useCanvasState(panel.canvas_json as CanvasState | null);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -48,6 +49,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [liveBounds, setLiveBounds] = useState<LiveBounds | null>(null);
   const [title, setTitle] = useState(panel.title ?? '');
+  const [isSizePopoverOpen, setIsSizePopoverOpen] = useState(false);
   const stageRef = useRef<Konva.Stage | null>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
 
@@ -81,8 +83,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
     isDragging: bgIsDragging,
   } = useBackgroundPositioning({
     imageUrl: bgEditUrl ?? '',
-    frameWidth: CANVAS_WIDTH,
-    frameHeight: CANVAS_HEIGHT,
+    frameWidth: width,
+    frameHeight: height,
     enabled: bgEditUrl !== null,
     initial: bgEditInitial,
   });
@@ -120,12 +122,12 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
     const el = canvasAreaRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      setScale(Math.min(width / CANVAS_WIDTH, height / CANVAS_HEIGHT));
+      const { width: availW, height: availH } = entry.contentRect;
+      setScale(Math.min(availW / width, availH / height));
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [width, height]);
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
@@ -309,6 +311,39 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
           <span style={{ fontSize: 12, color: 'var(--pw-danger)' }}>{saveError}</span>
         )}
 
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setIsSizePopoverOpen((v) => !v)}
+            title="Canvas size"
+            className="pw-mono"
+            style={{
+              height: 32,
+              padding: '0 10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              color: 'var(--pw-ink2)',
+              fontSize: 12,
+              fontWeight: 500,
+              borderRadius: 6,
+              background: isSizePopoverOpen ? 'var(--pw-surface2)' : 'transparent',
+            }}
+          >
+            <Crop size={14} strokeWidth={1.6} />
+            {Math.round(width)} × {Math.round(height)}
+          </button>
+          {isSizePopoverOpen && (
+            <CanvasSizePopover
+              currentWidth={width}
+              currentHeight={height}
+              nodes={nodes}
+              onApply={(w, h) => { setCanvasSize(w, h); setIsSizePopoverOpen(false); }}
+              onClose={() => setIsSizePopoverOpen(false)}
+            />
+          )}
+        </div>
+
         <button
           type="button"
           title="Undo"
@@ -407,8 +442,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
             <div
               style={{
                 position: 'relative',
-                width: CANVAS_WIDTH * scale,
-                height: CANVAS_HEIGHT * scale,
+                width: width * scale,
+                height: height * scale,
               }}
             >
               <CanvasStage
@@ -432,6 +467,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
                 onNodeDelete={removeNode}
                 onLiveBoundsChange={setLiveBounds}
                 scale={scale}
+                width={width}
+                height={height}
               />
 
               {bgEditUrl && (
@@ -595,8 +632,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
           }}
           onChangeHoloVariant={(id, variant) => updateNode(id, { holoVariant: variant })}
           onUploadAsset={uploadWorkspaceAsset}
-          frameWidth={CANVAS_WIDTH}
-          frameHeight={CANVAS_HEIGHT}
+          frameWidth={width}
+          frameHeight={height}
         />
       </div>
     </div>
