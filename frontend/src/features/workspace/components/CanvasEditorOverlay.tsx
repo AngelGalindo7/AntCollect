@@ -39,7 +39,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
-  const [keepRatio] = useState(true);
+  const [keepRatio, setKeepRatio] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
@@ -497,6 +497,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
                     isBottom={isBottom}
                     bgRemoved={!!selectedNode.bgRemoved}
                     holoOn={!!selectedNode.holo}
+                    keepRatio={keepRatio}
                     isRemovingBg={isRemovingBg}
                     onLayerUp={() => moveNodeUp(selectedNode.id)}
                     onLayerDown={() => moveNodeDown(selectedNode.id)}
@@ -504,6 +505,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
                     onCrop={() => { setSelectedId(null); setCropTargetId(selectedNode.id); }}
                     onToggleRemoveBg={handleToggleRemoveBg}
                     onToggleHolo={() => updateNode(selectedNode.id, { holo: !selectedNode.holo })}
+                    onToggleKeepRatio={() => setKeepRatio((v) => !v)}
                     onDelete={() => { removeNode(selectedNode.id); setSelectedId(null); }}
                   />
                 </>
