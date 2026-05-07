@@ -1,5 +1,9 @@
 export type NodeSource = 'library' | 'post' | 'upload';
 
+export type HoloVariant = 'regular' | 'reverse' | 'rainbow' | 'radiant' | 'secret' | 'amazing';
+
+export const DEFAULT_HOLO_VARIANT: HoloVariant = 'regular';
+
 export interface CanvasNode {
   id: string;
   image_url: string;
@@ -15,6 +19,7 @@ export interface CanvasNode {
   originalUrl?: string;
   removedBgUrl?: string;
   holo?: boolean;
+  holoVariant?: HoloVariant;
 }
 
 export interface BackgroundConfig {
