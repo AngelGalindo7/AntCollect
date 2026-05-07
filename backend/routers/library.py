@@ -10,6 +10,9 @@ from backend.models.media_assets import AssetStatus
 from backend.schemas import UserSearch
 from backend.utils.auth import authenthicate_access_token, RoleChecker
 from backend.utils.files import process_and_save_image, delete_file
+from backend.utils import embeddings
+
+SEMANTIC_SEARCH_LIMIT = 50
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +28,21 @@ def get_library(
 ):
     query = select(StickerLibrary)
     if search:
-        query = query.where(StickerLibrary.title.ilike(f"%{search}%"))
-    
+        if embeddings.embeddings_enabled():
+            try:
+                query_vec = embeddings.embed_text(search)
+                query = (
+                    select(StickerLibrary)
+                    .where(StickerLibrary.embedding.is_not(None))
+                    .order_by(StickerLibrary.embedding.cosine_distance(query_vec))
+                    .limit(SEMANTIC_SEARCH_LIMIT)
+                )
+            except Exception as e:
+                logger.warning("semantic search failed, falling back to ILIKE: %s", e)
+                query = query.where(StickerLibrary.title.ilike(f"%{search}%"))
+        else:
+            query = query.where(StickerLibrary.title.ilike(f"%{search}%"))
+
     results = db.execute(query).scalars().all()
     
     library_data = []
