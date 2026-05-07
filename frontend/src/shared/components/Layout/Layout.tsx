@@ -34,6 +34,7 @@ const AuthenticatedLayout: React.FC = () => {
   const isLibraryRoute = !!useMatch('/library');
   const isSettingsRoute = !!useMatch('/settings');
   const isCreateFolderRoute = !!useMatch('/create-folder');
+  const isFolderRoute = !!useMatch('/folders/:folderId');
   const isProfileRoute = !!useMatch('/:username');
 
   return (
@@ -41,7 +42,7 @@ const AuthenticatedLayout: React.FC = () => {
       <SideBar unreadCount={0} isChatRoute={false} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {!isLibraryRoute && !isSettingsRoute && !isCreateFolderRoute && !isProfileRoute && <Header />}
+        {!isLibraryRoute && !isSettingsRoute && !isCreateFolderRoute && !isFolderRoute && !isProfileRoute && <Header />}
 
         <div className="flex flex-1 overflow-hidden">
           {/* DECOMMISSIONED 2026-05-06: chat-route conversation panel removed */}
