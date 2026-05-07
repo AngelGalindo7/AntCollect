@@ -29,8 +29,7 @@ const LibraryPage: React.FC = () => {
       <div className="flex items-end justify-between mb-6">
         <PageHeader
           eyebrow="◆ ZOT! ZOT! ZOT!"
-          title="Petr"
-          titleHighlight="Stickers."
+          title="Petr Stickers."
         />
 
         <div className="flex items-center gap-3 pb-1">
