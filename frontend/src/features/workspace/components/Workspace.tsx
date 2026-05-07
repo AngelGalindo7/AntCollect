@@ -21,6 +21,7 @@ export function Workspace({ posts, isOwner }: Props) {
   const [workspaceH, setWorkspaceH] = useState(600);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [editingPanelId, setEditingPanelId] = useState<number | null>(null);
+  const freshPanelIdRef = useRef<number | null>(null);
 
   const {
     panels,
@@ -185,6 +186,7 @@ export function Workspace({ posts, isOwner }: Props) {
           }}
           onNewCanvas={async () => {
             const panel = await createLibraryCanvas();
+            freshPanelIdRef.current = panel.id;
             setIsPickerOpen(false);
             setEditingPanelId(panel.id);
           }}
@@ -197,8 +199,18 @@ export function Workspace({ posts, isOwner }: Props) {
         <CanvasEditorOverlay
           panel={editingPanel}
           posts={posts}
-          onClose={() => setEditingPanelId(null)}
+          onClose={() => {
+            const id = editingPanel.id;
+            if (freshPanelIdRef.current === id) {
+              freshPanelIdRef.current = null;
+              deletePanel(id).catch(() => {});
+            }
+            setEditingPanelId(null);
+          }}
           onSaved={(updated) => {
+            if (freshPanelIdRef.current === updated.id) {
+              freshPanelIdRef.current = null;
+            }
             setPanelById(updated);
             setEditingPanelId(null);
           }}
