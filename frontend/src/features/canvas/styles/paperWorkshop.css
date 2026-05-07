@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
+
+.paper-workshop {
+  --pw-bg: #ece6da;
+  --pw-paper: #f6f1e6;
+  --pw-surface: #fbf8f1;
+  --pw-surface2: #f3ede0;
+  --pw-ink: #1c1a16;
+  --pw-ink2: #4a463d;
+  --pw-ink3: #8a8378;
+  --pw-line: #d9d2c2;
+  --pw-line2: #c5bda9;
+  --pw-accent: #1d4ed8;
+  --pw-accent-tint: color-mix(in oklch, #1d4ed8 12%, transparent);
+  --pw-gold: #f1b32a;
+  --pw-danger: #b4310f;
+
+  --pw-font-display: 'Instrument Serif', Georgia, serif;
+  --pw-font-ui: 'Geist', system-ui, sans-serif;
+  --pw-font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  font-family: var(--pw-font-ui);
+  color: var(--pw-ink);
+  background: var(--pw-bg);
+}
+
+.paper-workshop .pw-display {
+  font-family: var(--pw-font-display);
+  font-style: italic;
+}
+
+.paper-workshop .pw-mono {
+  font-family: var(--pw-font-mono);
+}
+
+.paper-workshop .pw-eyebrow {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pw-ink3);
+}
+
+.paper-workshop .pw-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(28, 26, 22, 0.05) 1px, transparent 1px);
+  background-size: 3px 3px;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.paper-workshop .pw-canvas-dots {
+  background-image: radial-gradient(rgba(28, 26, 22, 0.06) 1px, transparent 1px);
+  background-size: 16px 16px;
+  opacity: 0.8;
+}
+
+.paper-workshop .pw-kbd {
+  font-family: var(--pw-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 5px;
+  background: var(--pw-surface);
+  border: 1px solid var(--pw-line);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  color: var(--pw-ink2);
+  display: inline-block;
+}
+
+.paper-workshop .pw-toolbar-shadow {
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.35);
+}
+
+.paper-workshop .pw-artboard-shadow {
+  box-shadow:
+    0 30px 80px -30px rgba(0, 0, 0, 0.35),
+    0 6px 24px -10px rgba(0, 0, 0, 0.18);
+}
+
+.paper-workshop .pw-segmented-active {
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.04),
+    0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.paper-workshop .pw-handle-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
