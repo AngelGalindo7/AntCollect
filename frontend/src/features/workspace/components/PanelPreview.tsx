@@ -7,12 +7,14 @@ interface Props {
 export function PanelPreview({ panel }: Props) {
   if (panel.preview_path) {
     return (
-      <img
-        src={panel.preview_path}
-        className="w-full h-full object-cover"
-        alt=""
-        draggable={false}
-      />
+      <div className="w-full h-full flex items-center justify-center bg-[#f5f0e8]">
+        <img
+          src={panel.preview_path}
+          className="w-full h-full object-contain"
+          alt=""
+          draggable={false}
+        />
+      </div>
     );
   }
   return (
