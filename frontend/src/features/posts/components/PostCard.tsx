@@ -125,6 +125,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
           alt={post.caption || `Post ${post.post_id}`}
           width={imageWidth}
           height={imageHeight}
+          loading="lazy"
+          decoding="async"
           className="w-full h-auto block"
           style={imageAspectRatio ? { aspectRatio: imageAspectRatio } : undefined}
         />
