@@ -19,12 +19,17 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # On RDS the app user lacks privilege to create extensions; CD pipeline
-    # installs `vector` via admin creds. Locally the dev user usually can.
+    # SAVEPOINT isolates a possible CREATE EXTENSION failure (e.g. RDS app user
+    # lacks privilege; admin already installed it) from the rest of the txn.
+    # Without this, a hard failure would abort the whole migration's transaction
+    # and the column add would fail with "current transaction is aborted".
+    bind = op.get_bind()
+    nested = bind.begin_nested()
     try:
-        op.execute('CREATE EXTENSION IF NOT EXISTS vector')
+        bind.execute(sa.text('CREATE EXTENSION IF NOT EXISTS vector'))
+        nested.commit()
     except Exception:
-        pass
+        nested.rollback()
 
     op.add_column(
         'sticker_library',
