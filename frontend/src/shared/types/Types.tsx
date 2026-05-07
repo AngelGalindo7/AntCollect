@@ -67,6 +67,9 @@ export type ProfileResponse = {
   bio: string | null;
   avatar_path: string | null;
   background_path: string | null;
+  background_offset_x: number;
+  background_offset_y: number;
+  background_scale: number;
   sticker_count: number;
   is_owner: boolean;
   posts: Post[];
