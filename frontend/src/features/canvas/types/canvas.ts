@@ -44,6 +44,8 @@ export const HOLO_VARIANTS: { value: HoloVariant; label: string; hint: string }[
 
 export interface CanvasState {
   version: 1;
+  width?: number;
+  height?: number;
   background: BackgroundConfig;
   nodes: CanvasNode[];
 }
