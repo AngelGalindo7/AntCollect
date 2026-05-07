@@ -1,6 +1,7 @@
 import datetime
 from sqlalchemy import BigInteger, Integer, String, DateTime, ForeignKey, Text, text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from pgvector.sqlalchemy import Vector
 from backend.database import Base
 
 class StickerLibrary(Base):
@@ -17,6 +18,7 @@ class StickerLibrary(Base):
     added_by_user_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(512), nullable=True)
 
     images: Mapped[list["StickerLibraryImage"]] = relationship(
         "StickerLibraryImage", back_populates="sticker", cascade="all, delete-orphan"
