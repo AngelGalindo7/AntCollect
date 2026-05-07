@@ -43,9 +43,14 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**").permitAll()
-                .requestMatchers("/ws/**").permitAll()
-                .requestMatchers("/ws-test.html").permitAll()
-                .requestMatchers("/internal/**").permitAll()
+                // DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+                .requestMatchers("/ws/**").denyAll()
+                // DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+                .requestMatchers("/ws-test.html").denyAll()
+                // DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+                .requestMatchers("/internal/**").denyAll()
+                // DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+                .requestMatchers("/conversations/**").denyAll()
                 .anyRequest().authenticated()
             )
 
