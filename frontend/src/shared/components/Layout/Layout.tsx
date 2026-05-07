@@ -7,9 +7,10 @@ import { useUIStore } from '@/shared/store/useUIStore';
 import CreatePost from '@/features/posts/components/CreatePost';
 import CreateMenu from '@/features/create/components/CreateMenu';
 import { CanvasEditorLoader } from '@/features/canvas/components/CanvasEditorLoader';
-import { useUnreadCount } from '@/features/messaging/index';
-import { ConversationList } from '@/features/messaging/components/ConversationList';
-import { ConversationSearch } from '@/features/messaging/components/ConversationSearch';
+// DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+// import { useUnreadCount } from '@/features/messaging/index';
+// import { ConversationList } from '@/features/messaging/components/ConversationList';
+// import { ConversationSearch } from '@/features/messaging/components/ConversationSearch';
 import { useIsAuthenticated } from '@/app/providers/AppProviders';
 import { AuthWallModal } from '@/shared/components/AuthWallModal';
 
@@ -23,11 +24,13 @@ const AuthenticatedLayout: React.FC = () => {
     openCreatePostModal, isCreatePostModalOpen, closeCreatePostModal,
     isCanvasEditorOpen, openCanvasEditor, closeCanvasEditor,
   } = useUIStore();
-  const unreadCount = useUnreadCount();
+  // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+  // const unreadCount = useUnreadCount();
 
-  const chatMatch = useMatch('/messages/:conversationId');
-  const isChatRoute = !!chatMatch;
-  const activeConversationId = chatMatch?.params.conversationId ?? null;
+  // DECOMMISSIONED 2026-05-06: chat route matching disabled
+  // const chatMatch = useMatch('/messages/:conversationId');
+  // const isChatRoute = !!chatMatch;
+  // const activeConversationId = chatMatch?.params.conversationId ?? null;
   const isLibraryRoute = !!useMatch('/library');
   const isSettingsRoute = !!useMatch('/settings');
   const isCreateFolderRoute = !!useMatch('/create-folder');
@@ -35,13 +38,14 @@ const AuthenticatedLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <SideBar unreadCount={unreadCount} isChatRoute={isChatRoute} />
+      <SideBar unreadCount={0} isChatRoute={false} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {!isChatRoute && !isLibraryRoute && !isSettingsRoute && !isCreateFolderRoute && !isProfileRoute && <Header />}
+        {!isLibraryRoute && !isSettingsRoute && !isCreateFolderRoute && !isProfileRoute && <Header />}
 
         <div className="flex flex-1 overflow-hidden">
-          {isChatRoute && (
+          {/* DECOMMISSIONED 2026-05-06: chat-route conversation panel removed */}
+          {/* {isChatRoute && (
             <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full shrink-0">
               <div className="p-4 border-b border-gray-100 shrink-0">
                 <h2 className="text-base font-semibold text-gray-900">Messages</h2>
@@ -56,13 +60,9 @@ const AuthenticatedLayout: React.FC = () => {
                 />
               </div>
             </div>
-          )}
+          )} */}
 
-          {isChatRoute ? (
-            <main data-testid="main-content" className="flex-1 overflow-hidden bg-warm-cream">
-              <Outlet />
-            </main>
-          ) : isProfileRoute ? (
+          {isProfileRoute ? (
             <main data-testid="main-content" className="flex-1 bg-warm-cream overflow-auto text-espresso">
               <Outlet />
             </main>
