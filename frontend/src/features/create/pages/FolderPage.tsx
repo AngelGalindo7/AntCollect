@@ -38,9 +38,20 @@ const FolderPage: React.FC = () => {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const currentUserId = parseInt(localStorage.getItem('userId') ?? '0', 10);
   const isOwner = !!folder && folder.user_id === currentUserId;
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
 
   const fetchFolder = useCallback(async () => {
     if (!folderId) return;
@@ -152,100 +163,139 @@ const FolderPage: React.FC = () => {
     );
   }
 
-  const coverPost = folder.cover_post_id
-    ? folder.posts.find((p) => p.post_id === folder.cover_post_id)
-    : null;
-  const coverImageUrl = folder.avatar_path ?? coverPost?.image_paths?.[0] ?? null;
+  const previewImages = folder.posts
+    .slice(0, 4)
+    .map((p) => p.image_paths?.[0])
+    .filter((s): s is string => !!s);
+  const coverTiles = [...previewImages];
+  while (coverTiles.length < 4) coverTiles.push('');
 
   const gridItems: GridItem[] = folder.posts.map((p): GridItem => ({ kind: 'post', data: p }));
 
   return (
     <div className="w-full">
       {/* ── Folder header ── */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-8 py-6 flex items-start gap-6">
-          {/* Avatar / cover image */}
-          <div className="shrink-0 relative group/avatar w-24 h-24">
-            <div className="w-24 h-24 rounded-lg overflow-hidden bg-purple-50 flex items-center justify-center">
-              {coverImageUrl ? (
-                <img src={coverImageUrl} alt={folder.name} className="w-full h-full object-cover" />
-              ) : (
-                <svg className="w-12 h-12 text-purple-300" fill="currentColor" viewBox="0 0 24 24">
+      <div className="bg-white border-b border-warm-gray/40">
+        <div className="max-w-6xl mx-auto px-8 py-8 flex items-start gap-7">
+          {/* Cover — mirrors FolderCard tile */}
+          <div className="shrink-0 w-44 h-44 rounded-2xl overflow-hidden bg-white border border-black/5 shadow-sm relative">
+            {folder.avatar_path ? (
+              <img
+                src={folder.avatar_path}
+                alt={folder.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : previewImages.length > 0 ? (
+              <div className="grid grid-cols-2 grid-rows-2 gap-px w-full h-full bg-black/5">
+                {coverTiles.map((src, i) =>
+                  src ? (
+                    <img key={i} src={src} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div key={i} className="w-full h-full bg-soft-white" />
+                  )
+                )}
+              </div>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-soft-white">
+                <svg className="w-16 h-16 text-warm-gray/60" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
                 </svg>
-              )}
-            </div>
-
-            {isOwner && (
-              <>
-                <button
-                  onClick={() => avatarInputRef.current?.click()}
-                  disabled={uploadingAvatar}
-                  className="absolute inset-0 rounded-lg bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center disabled:cursor-not-allowed"
-                  aria-label="Upload folder avatar"
-                >
-                  {uploadingAvatar ? (
-                    <svg className="w-6 h-6 text-white animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  )}
-                </button>
-                <input
-                  ref={avatarInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
-              </>
+              </div>
             )}
           </div>
 
+          {isOwner && (
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
+          )}
+
           {/* Folder info */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 pt-2">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold text-gray-900">{folder.name}</h1>
-              <span className="text-xs font-medium text-purple-600 bg-purple-50 rounded-full px-2 py-0.5">
+              <h1 className="text-3xl font-bold text-espresso tracking-tight">{folder.name}</h1>
+              <span className="text-xs font-semibold text-espresso bg-uci-gold/30 rounded-full px-2.5 py-0.5">
                 {FOLDER_TYPE_LABELS[folder.folder_type]}
               </span>
             </div>
 
             {folder.description && (
-              <p className="text-sm text-gray-500 mt-1">{folder.description}</p>
+              <p className="text-sm text-espresso/60 mt-2">{folder.description}</p>
             )}
 
-            <p className="text-sm text-gray-400 mt-2">
+            <p className="text-sm text-espresso/45 mt-2">
               {folder.posts.length} {folder.posts.length === 1 ? 'post' : 'posts'}
             </p>
           </div>
 
-          <div className="shrink-0 flex items-center gap-3">
+          <div className="shrink-0 flex items-center gap-2 pt-2">
             {isOwner && (
               <>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="px-4 py-2 text-sm font-bold bg-uci-gold text-espresso rounded-xl hover:bg-amber-400 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm font-bold text-espresso bg-uci-gold/95 hover:bg-uci-gold shadow-button-gold transition-all"
                 >
-                  + Add Stickers
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 5v14M5 12h14" />
+                  </svg>
+                  Add Stickers
                 </button>
-                <button
-                  onClick={handleDeleteFolder}
-                  disabled={deleting}
-                  className="px-4 py-2 text-sm font-bold text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {deleting ? 'Deleting...' : 'Delete folder'}
-                </button>
+
+                <div className="relative" ref={menuRef}>
+                  <button
+                    onClick={() => setMenuOpen((o) => !o)}
+                    className="p-2 rounded-full text-espresso/60 hover:text-espresso hover:bg-warm-cream transition-colors"
+                    aria-label="More actions"
+                    aria-haspopup="menu"
+                    aria-expanded={menuOpen}
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="5" r="2" />
+                      <circle cx="12" cy="12" r="2" />
+                      <circle cx="12" cy="19" r="2" />
+                    </svg>
+                  </button>
+
+                  {menuOpen && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full mt-2 z-20 min-w-44 rounded-xl bg-white border border-warm-gray/40 shadow-lg overflow-hidden"
+                    >
+                      <button
+                        role="menuitem"
+                        onClick={() => { setMenuOpen(false); avatarInputRef.current?.click(); }}
+                        disabled={uploadingAvatar}
+                        className="w-full text-left px-4 py-2.5 text-sm text-espresso hover:bg-warm-cream/70 transition-colors flex items-center gap-2.5 disabled:opacity-50"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        {uploadingAvatar ? 'Uploading…' : 'Edit cover'}
+                      </button>
+                      <button
+                        role="menuitem"
+                        onClick={() => { setMenuOpen(false); handleDeleteFolder(); }}
+                        disabled={deleting}
+                        className="w-full text-left px-4 py-2.5 text-sm text-brick-red hover:bg-brick-red/10 transition-colors flex items-center gap-2.5 disabled:opacity-50 border-t border-warm-gray/30"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M3 7h18M9 7V4a2 2 0 012-2h2a2 2 0 012 2v3" />
+                        </svg>
+                        {deleting ? 'Deleting…' : 'Delete folder'}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </>
             )}
             <button
               onClick={() => navigate(-1)}
-              className="text-sm text-gray-400 hover:text-gray-600"
+              className="text-sm text-espresso/45 hover:text-espresso transition-colors px-2"
             >
               ← Back
             </button>
