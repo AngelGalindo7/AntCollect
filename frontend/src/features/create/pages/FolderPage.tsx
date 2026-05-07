@@ -111,7 +111,12 @@ const FolderPage: React.FC = () => {
         credentials: 'include',
       });
       if (!res.ok && res.status !== 204) throw new Error(`Delete failed: ${res.status}`);
-      navigate(-1);
+      const username = localStorage.getItem('username');
+      if (username) {
+        navigate(`/${username}`, { state: { tab: folder.folder_type } });
+      } else {
+        navigate(-1);
+      }
     } catch (err) {
       console.error(err);
       setDeleting(false);
