@@ -23,11 +23,24 @@ export interface CanvasNode {
 }
 
 export interface BackgroundConfig {
-  type: 'color' | 'gradient';
+  type: 'color' | 'gradient' | 'image';
   value: string;
   gradientEnd?: string;
   angle?: number;
+  imageUrl?: string;
+  imageOffsetX?: number;
+  imageOffsetY?: number;
+  imageScale?: number;
 }
+
+export const HOLO_VARIANTS: { value: HoloVariant; label: string; hint: string }[] = [
+  { value: 'regular', label: 'Regular',  hint: 'Classic foil' },
+  { value: 'reverse', label: 'Reverse',  hint: 'Mirror shine' },
+  { value: 'rainbow', label: 'Rainbow',  hint: 'Prismatic burst' },
+  { value: 'radiant', label: 'Radiant',  hint: 'Brushed metal' },
+  { value: 'secret',  label: 'Secret',   hint: 'Low-light gloss' },
+  { value: 'amazing', label: 'Amazing',  hint: 'Saturated glitter' },
+];
 
 export interface CanvasState {
   version: 1;
