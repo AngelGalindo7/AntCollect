@@ -10,7 +10,7 @@ from backend.models import PostImage, User, Post, PostLike, PostComment, Engagem
 from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
 from ..utils.files import delete_file, process_and_save_image
 from ..utils.posts_creation import create_post_with_images
-from ..utils.auth import authenthicate_access_token
+from ..utils.auth import authenthicate_access_token, optional_auth_token
 from ..utils.rate_limit import limiter, get_user_or_ip_key
 from ..utils.permissions import can_delete_post, is_acting_as_moderator
 from ..utils.audit import log_admin_action
@@ -155,11 +155,13 @@ def _decode_feed_cursor(cursor: str) -> tuple[int, int]:
 
 
 @router.get("/top", response_model=TopPostsResponse)
+@limiter.limit("30/minute;200/hour", key_func=get_user_or_ip_key)
 def get_top_posts(
+    request: Request,
     limit: int = 20,
     cursor: str | None = None,
     db: Session = Depends(get_db),
-    current_user: UserSearch = Depends(authenthicate_access_token),
+    current_user: UserSearch | None = Depends(optional_auth_token),
 ):
     limit = min(max(limit, 1), 50)
 
@@ -173,14 +175,17 @@ def get_top_posts(
 
     author = aliased(User)
 
-    existing_like_subquery = (
-        select(func.count(PostLike.id))
-        .where(
-            PostLike.post_id == Post.id,
-            PostLike.user_id == current_user.user_id,
+    if current_user is not None:
+        existing_like_subquery = (
+            select(func.count(PostLike.id))
+            .where(
+                PostLike.post_id == Post.id,
+                PostLike.user_id == current_user.user_id,
+            )
+            .scalar_subquery()
         )
-        .scalar_subquery()
-    )
+    else:
+        existing_like_subquery = select(literal(0)).scalar_subquery()
 
     likes_subquery = (
         select(func.coalesce(func.count(PostLike.id), 0))
@@ -201,6 +206,14 @@ def get_top_posts(
         .exists()
     )
 
+    # Authenticated users see all published posts not in a private folder.
+    # Guests see only posts explicitly marked public — no private-post bypass.
+    post_visibility = (
+        or_(Post.public == True, ~in_private_folder)
+        if current_user is not None
+        else (Post.public == True)
+    )
+
     ranking_subquery = (
         select(
             Post.id.label("id"),
@@ -209,7 +222,7 @@ def get_top_posts(
         .outerjoin(EngagementLog, Post.id == EngagementLog.post_id)
         .where(
             Post.is_published == True,
-            or_(Post.public == True, ~in_private_folder),
+            post_visibility,
         )
         .group_by(Post.id)
     )
@@ -276,7 +289,7 @@ def get_top_posts(
             "total_engagement": row["total_engagement"],
             "images": row["images"],
             "total_likes": row["total_likes"],
-            "is_liked": row["is_liked"] > 0 if row["is_liked"] is not None else False,
+            "is_liked": (row["is_liked"] > 0 if row["is_liked"] is not None else False) if current_user else False,
             "user": post_author,
         }
         posts.append(PostWithEngagement.model_validate(post_data))
