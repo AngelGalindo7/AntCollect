@@ -58,26 +58,35 @@ class ChatErrorBoundary extends React.Component<{ children: ReactNode }, Boundar
 function App(){
   return (
     <BrowserRouter>
-    <Routes>
+      <Routes>
+        {/* Standalone auth pages — no Layout */}
         <Route path="/Login" element={<LogIn />} />
-        <Route path="/CreateAccount" element={<SignUp />}/>
+        <Route path="/CreateAccount" element={<SignUp />} />
         <Route path="/setup-profile" element={<SetupProfile />} />
         <Route path="/auth/complete" element={<AuthComplete />} />
 
-      <Route element={<RequireAuth />}>
+        {/* Single Layout instance for all app routes.
+            RequireAuth is nested INSIDE Layout so auth users on public routes
+            always see the authenticated shell (SideBar etc.) */}
         <Route element={<Layout />}>
+          {/* Public — guests can browse */}
           <Route path="/" element={<HomePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/create-post" element={<CreatePost />} />
-          <Route path="/create-folder" element={<CreateFolder />} />
-          <Route path="/folders/:folderId" element={<FolderPage />} />
-          <Route path="/library" element={<LibraryPage />} />
           <Route path="/search" element={<SearchResultsPage />} />
-          <Route path="/messages/:conversationId" element={<ChatErrorBoundary><ChatPage /></ChatErrorBoundary>} />
-          <Route path="/:username" element={<UserProfile />} caseSensitive/>
+          <Route path="/folders/:folderId" element={<FolderPage />} />
+
+          {/* Protected — RequireAuth redirects guests to /Login */}
+          <Route element={<RequireAuth />}>
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/create-post" element={<CreatePost />} />
+            <Route path="/create-folder" element={<CreateFolder />} />
+            <Route path="/library" element={<LibraryPage />} />
+            <Route path="/messages/:conversationId" element={<ChatErrorBoundary><ChatPage /></ChatErrorBoundary>} />
+          </Route>
+
+          {/* Catch-all LAST — must follow specific routes to avoid shadowing /settings etc. */}
+          <Route path="/:username" element={<UserProfile />} caseSensitive />
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
     </BrowserRouter>
   )
 }
