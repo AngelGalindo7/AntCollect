@@ -1,7 +1,7 @@
 import { forwardRef, useRef } from 'react';
 import { Stage, Layer, Rect } from 'react-konva';
 import type Konva from 'konva';
-import { CanvasNode as CanvasNodeComponent } from './CanvasNode';
+import { CanvasNode as CanvasNodeComponent, type LiveBounds } from './CanvasNode';
 import type { CanvasNode, BackgroundConfig } from '../types/canvas';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../hooks/useCanvasState';
 
@@ -13,11 +13,12 @@ interface Props {
   onSelect: (id: string | null) => void;
   onNodeUpdate: (id: string, attrs: Partial<CanvasNode>) => void;
   onNodeDelete: (id: string) => void;
+  onLiveBoundsChange?: (bounds: LiveBounds | null) => void;
   scale: number;
 }
 
 export const CanvasStage = forwardRef<Konva.Stage, Props>(
-  ({ nodes, background, selectedId, keepRatio, onSelect, onNodeUpdate, onNodeDelete, scale }, ref) => {
+  ({ nodes, background, selectedId, keepRatio, onSelect, onNodeUpdate, onNodeDelete, onLiveBoundsChange, scale }, ref) => {
     const stageContainerRef = useRef<HTMLDivElement>(null);
 
     const bgFill =
@@ -30,7 +31,15 @@ export const CanvasStage = forwardRef<Konva.Stage, Props>(
           };
 
     return (
-      <div ref={stageContainerRef} className="flex items-center justify-center w-full h-full overflow-hidden bg-neutral-800">
+      <div
+        ref={stageContainerRef}
+        className="pw-artboard-shadow"
+        style={{
+          borderRadius: 4,
+          overflow: 'hidden',
+          background: background.type === 'color' ? background.value : '#f6f1e6',
+        }}
+      >
         <Stage
           ref={ref}
           width={CANVAS_WIDTH * scale}
@@ -58,6 +67,7 @@ export const CanvasStage = forwardRef<Konva.Stage, Props>(
                 onSelect={() => onSelect(node.id)}
                 onUpdate={(attrs) => onNodeUpdate(node.id, attrs)}
                 onDelete={() => onNodeDelete(node.id)}
+                onLiveBoundsChange={selectedId === node.id ? onLiveBoundsChange : undefined}
               />
             ))}
           </Layer>
