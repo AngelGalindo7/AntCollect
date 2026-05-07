@@ -6,9 +6,17 @@ import { CanvasNode as CanvasNodeComponent, type LiveBounds } from './CanvasNode
 import type { CanvasNode, BackgroundConfig } from '../types/canvas';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../hooks/useCanvasState';
 
+export interface BackgroundOverride {
+  imageUrl: string;
+  offsetX: number;
+  offsetY: number;
+  scale: number;
+}
+
 interface Props {
   nodes: CanvasNode[];
   background: BackgroundConfig;
+  backgroundOverride?: BackgroundOverride | null;
   selectedId: string | null;
   keepRatio: boolean;
   onSelect: (id: string | null) => void;
@@ -18,15 +26,14 @@ interface Props {
   scale: number;
 }
 
-function BackgroundImageLayer({ config }: { config: BackgroundConfig }) {
-  const [image] = useImage(config.imageUrl ?? '', 'anonymous');
+function BackgroundImageLayer({ imageUrl, offsetX, offsetY, scale }: { imageUrl: string; offsetX: number; offsetY: number; scale: number }) {
+  const [image] = useImage(imageUrl, 'anonymous');
   if (!image) return null;
-  const userScale = config.imageScale ?? 1;
   const cover = Math.max(CANVAS_WIDTH / image.width, CANVAS_HEIGHT / image.height);
-  const drawW = image.width * cover * userScale;
-  const drawH = image.height * cover * userScale;
-  const offX = (CANVAS_WIDTH - drawW) / 2 + (config.imageOffsetX ?? 0);
-  const offY = (CANVAS_HEIGHT - drawH) / 2 + (config.imageOffsetY ?? 0);
+  const drawW = image.width * cover * scale;
+  const drawH = image.height * cover * scale;
+  const offX = (CANVAS_WIDTH - drawW) / 2 + offsetX;
+  const offY = (CANVAS_HEIGHT - drawH) / 2 + offsetY;
   return (
     <Group clipX={0} clipY={0} clipWidth={CANVAS_WIDTH} clipHeight={CANVAS_HEIGHT} listening={false}>
       <KonvaImage image={image} x={offX} y={offY} width={drawW} height={drawH} listening={false} />
@@ -35,10 +42,15 @@ function BackgroundImageLayer({ config }: { config: BackgroundConfig }) {
 }
 
 export const CanvasStage = forwardRef<Konva.Stage, Props>(
-  ({ nodes, background, selectedId, keepRatio, onSelect, onNodeUpdate, onNodeDelete, onLiveBoundsChange, scale }, ref) => {
+  ({ nodes, background, backgroundOverride, selectedId, keepRatio, onSelect, onNodeUpdate, onNodeDelete, onLiveBoundsChange, scale }, ref) => {
     const stageContainerRef = useRef<HTMLDivElement>(null);
 
     const isImageBg = background.type === 'image' && !!background.imageUrl;
+    const bgImageUrl = backgroundOverride?.imageUrl ?? (isImageBg ? background.imageUrl! : null);
+    const bgImageOffsetX = backgroundOverride?.offsetX ?? background.imageOffsetX ?? 0;
+    const bgImageOffsetY = backgroundOverride?.offsetY ?? background.imageOffsetY ?? 0;
+    const bgImageScale = backgroundOverride?.scale ?? background.imageScale ?? 1;
+    const isImageBgRendered = !!bgImageUrl;
 
     const bgFill =
       background.type === 'gradient'
@@ -47,7 +59,7 @@ export const CanvasStage = forwardRef<Konva.Stage, Props>(
             fillLinearGradientEndPoint: { x: CANVAS_WIDTH, y: CANVAS_HEIGHT },
             fillLinearGradientColorStops: [0, background.value, 1, background.gradientEnd ?? '#ffffff'],
           }
-        : { fill: isImageBg ? '#f6f1e6' : background.value };
+        : { fill: isImageBgRendered ? '#f6f1e6' : background.value };
 
     return (
       <div
@@ -56,7 +68,7 @@ export const CanvasStage = forwardRef<Konva.Stage, Props>(
         style={{
           borderRadius: 4,
           overflow: 'hidden',
-          background: isImageBg ? '#f6f1e6' : background.type === 'color' ? background.value : '#f6f1e6',
+          background: isImageBgRendered ? '#f6f1e6' : background.type === 'color' ? background.value : '#f6f1e6',
         }}
       >
         <Stage
@@ -77,7 +89,14 @@ export const CanvasStage = forwardRef<Konva.Stage, Props>(
               {...bgFill}
               listening={false}
             />
-            {isImageBg && <BackgroundImageLayer config={background} />}
+            {bgImageUrl && (
+              <BackgroundImageLayer
+                imageUrl={bgImageUrl}
+                offsetX={bgImageOffsetX}
+                offsetY={bgImageOffsetY}
+                scale={bgImageScale}
+              />
+            )}
             {nodes.map((node) => (
               <CanvasNodeComponent
                 key={node.id}
