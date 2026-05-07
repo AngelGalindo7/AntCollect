@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WebSocketProvider } from '@/features/messaging';
+// DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+// import { WebSocketProvider } from '@/features/messaging';
 import { refreshAccessToken } from '@/shared/api/api';
 import { getSession, clearSession } from '@/shared/auth/session';
 import { Toaster } from '@/shared/feedback/Toaster';
@@ -84,13 +85,18 @@ export function AppProviders({ children }: { children: ReactNode }) {
     });
   }, [isAuthenticated]);
 
+  // Avoid TS unused-var warning for isWsReady while WebSocketProvider is decommissioned.
+  void isWsReady;
+
   return (
     <AuthContext.Provider value={isAuthenticated}>
       <QueryClientProvider client={queryClient}>
-        <WebSocketProvider isAuthenticated={isWsReady}>
+        {/* DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md */}
+        {/* <WebSocketProvider isAuthenticated={isWsReady}> ... </WebSocketProvider> */}
+        <>
           {children}
           <Toaster />
-        </WebSocketProvider>
+        </>
       </QueryClientProvider>
     </AuthContext.Provider>
   );
