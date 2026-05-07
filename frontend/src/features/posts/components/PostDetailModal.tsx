@@ -168,60 +168,46 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
           )}
         </div>
 
-        {/* Metadata row */}
-        <div className="mt-4 flex flex-col items-center gap-2 max-w-[90vw]">
-          {post.user && (
-            <button
-              type="button"
-              onClick={() => { onClose(); navigate(`/${post.user!.username}`); }}
-              className="flex items-center gap-2 text-white/80 hover:text-white transition-colors"
-            >
-              {post.user.avatar_path ? (
-                <img
-                  src={post.user.avatar_path}
-                  alt=""
-                  className="w-5 h-5 rounded-full object-cover ring-1 ring-white/20"
-                />
-              ) : (
-                <div className="w-5 h-5 rounded-full bg-white/15 flex items-center justify-center text-[10px] font-medium">
-                  {post.user.username.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <span className="text-sm font-medium">@{post.user.username}</span>
-            </button>
-          )}
-
-          {post.caption && (
-            <p className="text-center text-white/60 text-xs leading-relaxed line-clamp-3 max-w-md">
-              {post.caption}
-            </p>
-          )}
-
-          {canNav && (
-            <div className="flex gap-1.5 mt-1">
-              {images.map((_, i) => (
+        {/* Thumbnail strip */}
+        {canNav && (
+          <div className="mt-4 flex gap-2 overflow-x-auto max-w-[90vw] px-1 py-1">
+            {images.map((img, i) => {
+              const thumbSrc = img.paths?.thumbnail ?? img.paths?.original ?? post.image_paths[i];
+              return (
                 <button
                   key={i}
                   onClick={() => setActiveIdx(i)}
-                  className={`w-1.5 h-1.5 rounded-full transition-colors ${i === activeIdx ? 'bg-white' : 'bg-white/30 hover:bg-white/60'}`}
+                  className={`shrink-0 w-14 h-14 rounded-md overflow-hidden ring-2 transition-all ${i === activeIdx ? 'ring-white opacity-100' : 'ring-transparent opacity-50 hover:opacity-100'}`}
                   aria-label={`Image ${i + 1}`}
-                />
-              ))}
-            </div>
-          )}
+                >
+                  <img
+                    src={thumbSrc}
+                    alt=""
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-          {imageSrc && (
-            <a
-              href={imageSrc}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="text-xs text-white/50 hover:text-white/90 hover:underline transition-colors"
-            >
-              Open original
-            </a>
-          )}
-        </div>
+        {/* Metadata: @username · caption */}
+        {(post.user || post.caption) && (
+          <p className="mt-3 text-center text-sm text-white/70 max-w-xl line-clamp-2 px-2">
+            {post.user && (
+              <button
+                type="button"
+                onClick={() => { onClose(); navigate(`/${post.user!.username}`); }}
+                className="font-medium text-white/90 hover:text-white hover:underline"
+              >
+                @{post.user.username}
+              </button>
+            )}
+            {post.user && post.caption && <span className="mx-1.5 text-white/40">·</span>}
+            {post.caption && <span className="text-white/70">{post.caption}</span>}
+          </p>
+        )}
       </div>
     </div>,
     modalRoot,
