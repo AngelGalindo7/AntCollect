@@ -155,7 +155,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount = 0, isChatRoute =
 
   return (
     <>
-      <aside className="relative w-14 bg-campus-blue flex flex-col h-full z-20 shadow-2xl">
+      <aside className="relative w-14 bg-campus-blue flex flex-col h-full z-20 border-r border-black/20">
         <nav className="flex-1 px-2 py-3 flex flex-col gap-3 items-center">
 
           <NavLink to="/" className={getNavLinkClass}>
