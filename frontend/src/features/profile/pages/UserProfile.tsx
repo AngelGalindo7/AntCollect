@@ -9,7 +9,7 @@ import {
 } from "@/features/canvas/components/BackgroundImagePositioner";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchPublic, fetchWithAuth, API_BASE } from "@/shared/api/api";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 
 const HEADER_FRAME_WIDTH = 1800;
 const HEADER_FRAME_HEIGHT = 300;
@@ -79,10 +79,12 @@ const CameraIcon = ({ className }: { className?: string }) => (
 const UserProfile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialTab = (location.state as { tab?: TabValue } | null)?.tab ?? "showcase";
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState<TabValue>("showcase");
+  const [activeTab, setActiveTab] = useState<TabValue>(initialTab);
   const [viewMode, setViewMode] = useState<ViewMode>("posts");
   const [folders, setFolders] = useState<Folder[]>([]);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -149,9 +151,14 @@ const UserProfile: React.FC = () => {
     fetchAll();
   }, [username, refreshKey]);
 
-  // Reset to showcase tab when navigating to a different profile
+  // Reset to showcase tab when navigating to a different profile,
+  // unless an explicit tab was passed via navigation state (e.g. after deleting a folder)
   useEffect(() => {
-    setActiveTab("showcase");
+    const fromState = (location.state as { tab?: TabValue } | null)?.tab;
+    setActiveTab(fromState ?? "showcase");
+    if (fromState) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
   }, [username]);
 
   // Reset sub-filter to posts whenever the active tab changes
