@@ -227,5 +227,7 @@ jobs:
             # Restart services — force-recreate ensures the freshly pulled image is always used
             docker compose -f docker-compose.prod.yml up -d --force-recreate
 
-            # Remove images no longer referenced by any container to prevent disk exhaustion
-            docker image prune -a -f
+            # Remove images no longer referenced by any container to prevent disk exhaustion.
+            # || true: a concurrent prune (e.g. from the Alembic docker run --rm step) must
+            # not fail the pipeline — containers are already running at this point.
+            docker image prune -a -f || true
