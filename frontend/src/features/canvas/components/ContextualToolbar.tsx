@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, Copy, Crop, Wand2, Sparkles, Trash2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, Copy, Crop, Wand2, Sparkles, Lock, Unlock, Trash2 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
 interface Props {
@@ -7,6 +7,7 @@ interface Props {
   isBottom: boolean;
   bgRemoved: boolean;
   holoOn: boolean;
+  keepRatio: boolean;
   isRemovingBg: boolean;
   onLayerUp: () => void;
   onLayerDown: () => void;
@@ -14,6 +15,7 @@ interface Props {
   onCrop: () => void;
   onToggleRemoveBg: () => void;
   onToggleHolo: () => void;
+  onToggleKeepRatio: () => void;
   onDelete: () => void;
 }
 
@@ -23,6 +25,7 @@ export function ContextualToolbar({
   isBottom,
   bgRemoved,
   holoOn,
+  keepRatio,
   isRemovingBg,
   onLayerUp,
   onLayerDown,
@@ -30,6 +33,7 @@ export function ContextualToolbar({
   onCrop,
   onToggleRemoveBg,
   onToggleHolo,
+  onToggleKeepRatio,
   onDelete,
 }: Props) {
   const baseBtn: CSSProperties = {
@@ -120,6 +124,17 @@ export function ContextualToolbar({
         style={{ ...baseBtn, ...(holoOn ? activeStyle : {}) }}
       >
         <Sparkles size={16} strokeWidth={1.6} />
+      </button>
+
+      <span style={divider} />
+
+      <button
+        type="button"
+        title={keepRatio ? 'Aspect ratio locked — uniform resize' : 'Aspect ratio free — drag any of 8 handles'}
+        onClick={onToggleKeepRatio}
+        style={{ ...baseBtn, ...(keepRatio ? activeStyle : {}) }}
+      >
+        {keepRatio ? <Lock size={16} strokeWidth={1.6} /> : <Unlock size={16} strokeWidth={1.6} />}
       </button>
 
       <span style={divider} />
