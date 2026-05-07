@@ -33,8 +33,8 @@ export function HoloStickerEffect({ children, maskUrl, variant }: Props) {
       el.style.setProperty('--pointer-y', `${py}%`);
       el.style.setProperty('--bg-x', `${adjust(px, 0, 100, 37, 63)}%`);
       el.style.setProperty('--bg-y', `${adjust(py, 0, 100, 33, 67)}%`);
-      el.style.setProperty('--rotate-x', `${round(-(cx / 3.5))}deg`);
-      el.style.setProperty('--rotate-y', `${round(cy / 3.5)}deg`);
+      el.style.setProperty('--rotate-x', `${round(-(cx / 8))}deg`);
+      el.style.setProperty('--rotate-y', `${round(cy / 8)}deg`);
       el.style.setProperty('--card-opacity', '1');
       rafId.current = null;
     });
