@@ -2,6 +2,7 @@ package com.petrcollect.messaging.conversation;
 
 import com.petrcollect.messaging.util.TestJwtUtil;
 import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +29,8 @@ class ConversationControllerTest {
     @Value("${app.jwt.secret}")
     private String jwtSecret;
 
+    // DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+    @Disabled("ConversationController endpoints unregistered while messaging is decommissioned")
     @Test
     void listConversations_withValidCookie_returns200() throws Exception {
         String token = TestJwtUtil.generateToken(1001L, jwtSecret);
@@ -46,6 +49,8 @@ class ConversationControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    // DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+    @Disabled("ConversationController endpoints unregistered while messaging is decommissioned")
     @Test
     void createConversation_withValidCookie_returns201() throws Exception {
         // Randomised IDs — conversation_participant.user_id has no DB-enforced FK,

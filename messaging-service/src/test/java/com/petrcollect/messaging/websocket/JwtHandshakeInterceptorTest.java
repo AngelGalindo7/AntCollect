@@ -3,6 +3,7 @@ package com.petrcollect.messaging.websocket;
 import com.petrcollect.messaging.util.TestJwtUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -43,6 +44,8 @@ class JwtHandshakeInterceptorTest {
         stompClient.stop();
     }
 
+    // DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+    @Disabled("WebSocket endpoint /ws unregistered while messaging is decommissioned")
     @Test
     void connect_withValidCookie_sessionEstablished() throws Exception {
         String token = TestJwtUtil.generateToken(2001L, jwtSecret);
