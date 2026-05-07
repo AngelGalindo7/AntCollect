@@ -10,6 +10,9 @@ interface UIState {
   isCanvasEditorOpen: boolean;
   openCanvasEditor: () => void;
   closeCanvasEditor: () => void;
+  isAuthWallOpen: boolean;
+  openAuthWall: () => void;
+  closeAuthWall: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -22,4 +25,7 @@ export const useUIStore = create<UIState>((set) => ({
   isCanvasEditorOpen: false,
   openCanvasEditor: () => set({ isCanvasEditorOpen: true, isCreateMenuOpen: false }),
   closeCanvasEditor: () => set({ isCanvasEditorOpen: false }),
+  isAuthWallOpen: false,
+  openAuthWall: () => set({ isAuthWallOpen: true }),
+  closeAuthWall: () => set({ isAuthWallOpen: false }),
 }));
