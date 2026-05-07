@@ -43,7 +43,7 @@ export function PanelPreview({ panel }: Props) {
                   transform: `rotate(${node.rotation}deg)`,
                 }}
               >
-                <HoloStickerEffect maskUrl={node.image_url}>
+                <HoloStickerEffect maskUrl={node.image_url} variant={node.holoVariant}>
                   <img
                     src={node.image_url}
                     alt=""
