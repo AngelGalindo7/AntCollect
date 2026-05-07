@@ -5,11 +5,11 @@ from ..utils.rate_limit import limiter, get_real_ip, get_user_or_ip_key
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select, func
+from sqlalchemy import select, func, literal
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset
 from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, BackgroundUpdateResponse, ChangePasswordRequest
-from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token
+from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token, optional_auth_token
 from ..utils.files import process_and_save_image, delete_file
 from typing import List
 
@@ -357,31 +357,30 @@ def _search_posts(query: str, limit: int, db: Session) -> List[PostWithEngagemen
         results.append(PostWithEngagement.model_validate(row_dict))
     
     return results
-#TODO Filter out private,non published posts in the query to avoid fetching invalid data
 @router.post("/get_user_", response_model = UserProfileResponse)
+@limiter.limit("30/minute;200/hour", key_func=get_user_or_ip_key)
 def retrieve_user(
+    request: Request,
     target_username: GetUserByUsernameRequest,
     db: Session = Depends(get_db),
-    user: UserSearch = Depends(authenthicate_access_token)
+    user: UserSearch | None = Depends(optional_auth_token),
 ):
-    
     target_user = db.execute(
         select(User).where(User.username == target_username.username)
     ).scalar_one_or_none()
-    
+
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
-    
 
+    if user is not None:
+        existing_like_subquery = (
+            select(func.count(PostLike.id))
+            .where(PostLike.post_id == Post.id, PostLike.user_id == user.user_id)
+            .scalar_subquery()
+        )
+    else:
+        existing_like_subquery = select(literal(0)).scalar_subquery()
 
-    existing_like_subquery = (
-    select(func.count(PostLike.id))
-    .where(
-        PostLike.post_id == Post.id,
-        PostLike.user_id == user.user_id  # current user from auth token
-    )
-    .scalar_subquery()
-) 
     likes_subquery = (
         select(func.count(PostLike.id))
         .where(PostLike.post_id == Post.id)
@@ -400,10 +399,6 @@ def retrieve_user(
                 MediaAsset.json_metadata,
                 order_by=PostImage.order_index
             ).label("images"),
-            #func.array_agg(
-            #    PostImage.json_metadata,
-            #    order_by=PostImage.order_index
-            #).label("images"),
             likes_subquery.label("total_likes"),
             existing_like_subquery.label("is_liked")
         )
@@ -413,18 +408,16 @@ def retrieve_user(
         .order_by(Post.updated_at.desc())
     )
 
+    is_owner = (user is not None) and (user.user_id == target_user.id)
 
-    is_owner = (user.user_id == target_user.id)
-    
     if is_owner:
-        # Owner sees everything (public and private)
         posts_query = posts_query.where(Post.user_id == user.user_id)
     else:
         posts_query = posts_query.where(
-        Post.user_id == target_user.id,
-        Post.is_published == True,
-        Post.public == True
-    )
+            Post.user_id == target_user.id,
+            Post.is_published == True,
+            Post.public == True,
+        )
 
     results = db.execute(posts_query).all()
     post_user = {
