@@ -39,6 +39,16 @@ export function useBackgroundPositioning({
 
   const frameElRef = useRef<HTMLElement | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; ox: number; oy: number; pxToFrame: number } | null>(null);
+  const wasEnabledRef = useRef(enabled);
+
+  useEffect(() => {
+    if (!wasEnabledRef.current && enabled) {
+      setOffsetX(initial?.offsetX ?? 0);
+      setOffsetY(initial?.offsetY ?? 0);
+      setScale(initial?.scale ?? 1);
+    }
+    wasEnabledRef.current = enabled;
+  }, [enabled, initial?.offsetX, initial?.offsetY, initial?.scale]);
 
   useEffect(() => {
     let cancelled = false;

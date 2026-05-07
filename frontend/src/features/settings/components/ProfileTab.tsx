@@ -1,15 +1,13 @@
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 import {
-  BackgroundImagePositioner,
-  type BackgroundImagePosition,
-} from '@/features/canvas/components/BackgroundImagePositioner';
-import {
   HEADER_FRAME_WIDTH,
   HEADER_FRAME_HEIGHT,
+  type BackgroundImagePosition,
 } from '@/shared/utils/profileBackground';
 import { PositionedBackgroundImage } from '@/shared/components/PositionedBackgroundImage';
+import { useBackgroundPositioning } from '@/shared/hooks/useBackgroundPositioning';
 
 interface UserMe {
   id: number;
@@ -41,8 +39,7 @@ export default function ProfileTab() {
   const [bio, setBio] = useState('');
   const [usernameError, setUsernameError] = useState('');
 
-  const [bgPositionerOpen, setBgPositionerOpen] = useState(false);
-  const [bgPositionerMode, setBgPositionerMode] = useState<'upload' | 'reposition'>('upload');
+  const [bgEditMode, setBgEditMode] = useState<'upload' | 'reposition' | null>(null);
   const [pendingBgFile, setPendingBgFile] = useState<File | null>(null);
   const [pendingBgUrl, setPendingBgUrl] = useState<string | null>(null);
   const [bgError, setBgError] = useState<string | null>(null);
@@ -141,37 +138,65 @@ export default function ProfileTab() {
     if (pendingBgUrl && pendingBgUrl.startsWith('blob:')) URL.revokeObjectURL(pendingBgUrl);
     setPendingBgFile(file);
     setPendingBgUrl(URL.createObjectURL(file));
-    setBgPositionerMode('upload');
-    setBgPositionerOpen(true);
+    setBgEditMode('upload');
   };
 
   const handleBackgroundReposition = () => {
     if (!user?.background_path) return;
     setBgError(null);
     setPendingBgFile(null);
-    setPendingBgUrl(user.background_path);
-    setBgPositionerMode('reposition');
-    setBgPositionerOpen(true);
+    setPendingBgUrl(null);
+    setBgEditMode('reposition');
   };
 
   const handleBackgroundPositionApply = (pos: BackgroundImagePosition) => {
-    setBgPositionerOpen(false);
-    if (bgPositionerMode === 'upload' && pendingBgFile) {
+    if (bgEditMode === 'upload' && pendingBgFile) {
       backgroundUploadMutation.mutate({ file: pendingBgFile, pos });
-    } else if (bgPositionerMode === 'reposition') {
+    } else if (bgEditMode === 'reposition') {
       backgroundPositionMutation.mutate(pos);
     }
     if (pendingBgUrl && pendingBgUrl.startsWith('blob:')) URL.revokeObjectURL(pendingBgUrl);
     setPendingBgFile(null);
     setPendingBgUrl(null);
+    setBgEditMode(null);
   };
 
   const handleBackgroundPositionCancel = () => {
-    setBgPositionerOpen(false);
     if (pendingBgUrl && pendingBgUrl.startsWith('blob:')) URL.revokeObjectURL(pendingBgUrl);
     setPendingBgFile(null);
     setPendingBgUrl(null);
+    setBgEditMode(null);
   };
+
+  useEffect(() => {
+    return () => {
+      if (pendingBgUrl && pendingBgUrl.startsWith('blob:')) URL.revokeObjectURL(pendingBgUrl);
+    };
+  }, [pendingBgUrl]);
+
+  const editImageUrl =
+    bgEditMode === 'upload' ? pendingBgUrl ?? '' : bgEditMode === 'reposition' ? user?.background_path ?? '' : '';
+  const editInitial =
+    bgEditMode === 'reposition' && user
+      ? {
+          offsetX: user.background_offset_x,
+          offsetY: user.background_offset_y,
+          scale: user.background_scale,
+        }
+      : undefined;
+
+  const {
+    attachFrameRef: attachBgFrameRef,
+    naturalSize: editNaturalSize,
+    position: editPosition,
+    isDragging: bgIsDragging,
+  } = useBackgroundPositioning({
+    imageUrl: editImageUrl,
+    frameWidth: HEADER_FRAME_WIDTH,
+    frameHeight: HEADER_FRAME_HEIGHT,
+    enabled: bgEditMode !== null,
+    initial: editInitial,
+  });
 
   if (isLoading) return <p className="text-sm text-gray-500">Loading…</p>;
   if (!user) return null;
@@ -216,8 +241,25 @@ export default function ProfileTab() {
       {/* Background image */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">Profile Background</label>
-        <div className="relative w-full aspect-[6/1] rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-          {user.background_path ? (
+        <div
+          ref={bgEditMode ? attachBgFrameRef : undefined}
+          className="relative w-full aspect-[6/1] rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
+          style={{
+            cursor: bgEditMode ? (bgIsDragging ? 'grabbing' : 'grab') : 'default',
+            touchAction: bgEditMode ? 'none' : 'auto',
+            userSelect: bgEditMode ? 'none' : 'auto',
+          }}
+        >
+          {bgEditMode && editImageUrl ? (
+            editNaturalSize ? (
+              <PositionedBackgroundImage
+                src={editImageUrl}
+                offsetX={editPosition.offsetX}
+                offsetY={editPosition.offsetY}
+                scale={editPosition.scale}
+              />
+            ) : null
+          ) : user.background_path ? (
             <PositionedBackgroundImage
               src={user.background_path}
               offsetX={user.background_offset_x}
@@ -229,27 +271,49 @@ export default function ProfileTab() {
               No background set
             </div>
           )}
-          <div className="absolute bottom-2 right-2 z-10 flex gap-2">
-            {user.background_path && (
+          {!bgEditMode && (
+            <div className="absolute bottom-2 right-2 z-10 flex gap-2">
+              {user.background_path && (
+                <button
+                  onClick={handleBackgroundReposition}
+                  className="bg-white/90 hover:bg-white text-sm text-gray-700 font-medium px-3 py-1 rounded-md border border-gray-200 transition-colors"
+                >
+                  {backgroundPositionMutation.isPending ? 'Saving…' : 'Reposition'}
+                </button>
+              )}
               <button
-                onClick={handleBackgroundReposition}
+                onClick={() => bgFileInputRef.current?.click()}
                 className="bg-white/90 hover:bg-white text-sm text-gray-700 font-medium px-3 py-1 rounded-md border border-gray-200 transition-colors"
               >
-                {backgroundPositionMutation.isPending ? 'Saving…' : 'Reposition'}
+                {backgroundUploadMutation.isPending
+                  ? 'Uploading…'
+                  : user.background_path
+                  ? 'Change'
+                  : 'Upload'}
               </button>
-            )}
-            <button
-              onClick={() => bgFileInputRef.current?.click()}
-              className="bg-white/90 hover:bg-white text-sm text-gray-700 font-medium px-3 py-1 rounded-md border border-gray-200 transition-colors"
-            >
-              {backgroundUploadMutation.isPending
-                ? 'Uploading…'
-                : user.background_path
-                ? 'Change'
-                : 'Upload'}
-            </button>
-          </div>
+            </div>
+          )}
         </div>
+        {bgEditMode && (
+          <div className="mt-2 flex items-center justify-between">
+            <span className="text-xs text-gray-500">Drag to reposition · scroll to zoom</span>
+            <div className="flex gap-2">
+              <button
+                onClick={handleBackgroundPositionCancel}
+                className="text-sm text-gray-600 hover:text-gray-800 font-medium px-3 py-1 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleBackgroundPositionApply(editPosition)}
+                disabled={!editNaturalSize}
+                className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-medium px-3 py-1 rounded-md transition-colors"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        )}
         <input
           ref={bgFileInputRef}
           type="file"
@@ -299,25 +363,6 @@ export default function ProfileTab() {
         {profileMutation.isPending ? 'Saving…' : 'Save changes'}
       </button>
 
-      {bgPositionerOpen && pendingBgUrl && (
-        <BackgroundImagePositioner
-          imageUrl={pendingBgUrl}
-          frameWidth={HEADER_FRAME_WIDTH}
-          frameHeight={HEADER_FRAME_HEIGHT}
-          initial={
-            bgPositionerMode === 'reposition'
-              ? {
-                  offsetX: user.background_offset_x,
-                  offsetY: user.background_offset_y,
-                  scale: user.background_scale,
-                }
-              : undefined
-          }
-          title={bgPositionerMode === 'reposition' ? 'Reposition background' : 'Position profile background'}
-          onCancel={handleBackgroundPositionCancel}
-          onApply={handleBackgroundPositionApply}
-        />
-      )}
     </div>
   );
 }
