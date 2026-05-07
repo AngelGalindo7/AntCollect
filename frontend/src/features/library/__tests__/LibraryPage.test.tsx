@@ -20,7 +20,7 @@ function renderLibraryPage() {
 describe('LibraryPage', () => {
   it('renders title and add button', () => {
     renderLibraryPage()
-    expect(screen.getByText('Petr')).toBeTruthy()
+    expect(screen.getByText('Petr Stickers.')).toBeTruthy()
     expect(screen.getByRole('button', { name: /new sticker/i })).toBeTruthy()
   })
 
