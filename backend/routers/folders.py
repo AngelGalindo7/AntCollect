@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, APIRouter, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select, func
+from sqlalchemy import select, func, literal
 from ..database import get_db
 from backend.models import User, Post, PostLike, PostImage, MediaAsset, Folder, FolderPost
 from ..schemas import (
@@ -12,7 +12,7 @@ from ..schemas import (
     FolderWithPostsResponse,
     PostBase,
 )
-from ..utils.auth import authenthicate_access_token
+from ..utils.auth import authenthicate_access_token, optional_auth_token
 from ..utils.files import process_and_save_image, delete_file
 from ..utils.posts_creation import create_post_with_images
 from ..utils.rate_limit import limiter, get_user_or_ip_key
@@ -126,16 +126,18 @@ def create_folder(
 
 # Static route MUST come before /{folder_id} to avoid shadowing.
 @router.get("/user/{username}", response_model=List[FolderResponse])
+@limiter.limit("30/minute;200/hour", key_func=get_user_or_ip_key)
 def list_user_folders(
+    request: Request,
     username: str,
     db: Session = Depends(get_db),
-    user: UserSearch = Depends(authenthicate_access_token),
+    user: UserSearch | None = Depends(optional_auth_token),
 ):
     target_user = db.query(User).filter(User.username == username).first()
     if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
+        return []  # Don't leak user existence via 404
 
-    is_owner = user.user_id == target_user.id
+    is_owner = (user is not None) and (user.user_id == target_user.id)
 
     post_count_subquery = (
         select(func.count(FolderPost.id))
@@ -171,16 +173,18 @@ def list_user_folders(
 
 
 @router.get("/{folder_id}", response_model=FolderWithPostsResponse)
+@limiter.limit("30/minute;200/hour", key_func=get_user_or_ip_key)
 def get_folder(
+    request: Request,
     folder_id: int,
     db: Session = Depends(get_db),
-    user: UserSearch = Depends(authenthicate_access_token),
+    user: UserSearch | None = Depends(optional_auth_token),
 ):
     folder = db.query(Folder).filter(Folder.id == folder_id).first()
     if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
 
-    is_owner = user.user_id == folder.user_id
+    is_owner = (user is not None) and (user.user_id == folder.user_id)
 
     if not folder.is_public and not is_owner:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -190,11 +194,14 @@ def get_folder(
         .where(PostLike.post_id == Post.id)
         .scalar_subquery()
     )
-    existing_like_subquery = (
-        select(func.count(PostLike.id))
-        .where(PostLike.post_id == Post.id, PostLike.user_id == user.user_id)
-        .scalar_subquery()
-    )
+    if user is not None:
+        existing_like_subquery = (
+            select(func.count(PostLike.id))
+            .where(PostLike.post_id == Post.id, PostLike.user_id == user.user_id)
+            .scalar_subquery()
+        )
+    else:
+        existing_like_subquery = select(literal(0)).scalar_subquery()
 
     posts_query = (
         select(
