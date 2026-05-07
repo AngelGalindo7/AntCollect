@@ -22,8 +22,16 @@ test('login with wrong password shows an error message', async ({ page }) => {
   await expect(page.locator('p.text-red-500')).toBeVisible();
 });
 
-test('unauthenticated visit to / redirects to /Login', async ({ page }) => {
+test('unauthenticated visit to / shows public feed without redirect', async ({ page }) => {
   await page.goto('/');
-  // fetchWithAuth fires → 401 → refresh fails → window.location.href = "/Login"
+  // Guests can browse the feed — no redirect to /Login.
+  await expect(page).toHaveURL('/');
+  // GuestNav is visible with Sign In and Create Account links.
+  await expect(page.getByRole('link', { name: 'Sign In' })).toBeVisible({ timeout: 10_000 });
+});
+
+test('unauthenticated visit to /settings redirects to /Login', async ({ page }) => {
+  await page.goto('/settings');
+  // RequireAuth guard triggers → redirects unauthenticated users to /Login.
   await expect(page).toHaveURL(/\/Login/, { timeout: 10_000 });
 });
