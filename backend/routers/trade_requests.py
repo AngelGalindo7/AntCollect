@@ -33,29 +33,31 @@ if not _INTERNAL_SECRET:
 
 def _notify_trade_request(trade: TradeRequestResponse) -> None:
     """Fire-and-forget HTTP call to the messaging service to push a STOMP trade-event frame."""
-    try:
-        with httpx.Client(timeout=5.0) as client:
-            client.post(
-                f"{_MESSAGING_INTERNAL_URL}/internal/trade-notify",
-                json={
-                    "recipient_id": trade.recipient_id,
-                    "id": trade.id,
-                    "requester_id": trade.requester_id,
-                    "requester_username": trade.requester_username,
-                    "requester_avatar": trade.requester_avatar,
-                    "target_post_id": trade.target_post_id,
-                    "post_caption": trade.post_caption,
-                    "post_thumbnail": trade.post_thumbnail,
-                    "request_type": trade.request_type,
-                    "offered_folder_id": trade.offered_folder_id,
-                    "offered_folder_name": trade.offered_folder_name,
-                    "status": trade.status,
-                    "created_at": trade.created_at.isoformat(),
-                },
-                headers={"X-Internal-Secret": _INTERNAL_SECRET},
-            )
-    except Exception:
-        logger.warning("Trade notification to messaging service failed", exc_info=True)
+    # DECOMMISSIONED 2026-05-06: trading + messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
+    return
+    # try:
+    #     with httpx.Client(timeout=5.0) as client:
+    #         client.post(
+    #             f"{_MESSAGING_INTERNAL_URL}/internal/trade-notify",
+    #             json={
+    #                 "recipient_id": trade.recipient_id,
+    #                 "id": trade.id,
+    #                 "requester_id": trade.requester_id,
+    #                 "requester_username": trade.requester_username,
+    #                 "requester_avatar": trade.requester_avatar,
+    #                 "target_post_id": trade.target_post_id,
+    #                 "post_caption": trade.post_caption,
+    #                 "post_thumbnail": trade.post_thumbnail,
+    #                 "request_type": trade.request_type,
+    #                 "offered_folder_id": trade.offered_folder_id,
+    #                 "offered_folder_name": trade.offered_folder_name,
+    #                 "status": trade.status,
+    #                 "created_at": trade.created_at.isoformat(),
+    #             },
+    #             headers={"X-Internal-Secret": _INTERNAL_SECRET},
+    #         )
+    # except Exception:
+    #     logger.warning("Trade notification to messaging service failed", exc_info=True)
 
 
 router = APIRouter(
