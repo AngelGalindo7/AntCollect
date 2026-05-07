@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Lock, Unlock, Trash2, Pencil } from 'lucide-react';
+import { Lock, Unlock, Trash2, Pencil, LogOut } from 'lucide-react';
 import type { Panel, WorkspaceBounds, Rect, ResizeMode } from '../types/workspace';
 import { useDragResize } from '../hooks/useDragResize';
 
 interface Props {
   panel: Panel;
   isOwner: boolean;
-  isEditing: boolean;
   isWorkspaceEditMode: boolean;
   bounds: WorkspaceBounds;
   others: Rect[];
@@ -15,6 +14,7 @@ interface Props {
   onFocus: (id: number) => void;
   onBringToFront: (id: number) => void;
   onDelete: (id: number) => void;
+  onRemoveFromWorkspace: (id: number) => void;
   onLock: (id: number, locked: boolean) => void;
   onEnterEdit: (id: number) => void;
   children: React.ReactNode;
@@ -28,19 +28,19 @@ const RESIZE_MODES: { mode: ResizeMode; cursor: string; style: React.CSSProperti
 ];
 
 export function PanelFrame({
-  panel, isOwner, isEditing, isWorkspaceEditMode, bounds, others,
+  panel, isOwner, isWorkspaceEditMode, bounds, others,
   onUpdateRect, onCommitRect, onFocus, onBringToFront,
-  onDelete, onLock, onEnterEdit, children,
+  onDelete, onRemoveFromWorkspace, onLock, onEnterEdit, children,
 }: Props) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const isDraggable = isOwner && isWorkspaceEditMode && !panel.locked && !isEditing;
-  const showControls = isOwner && isWorkspaceEditMode && isHovered && !isEditing;
+  const isDraggable = isOwner && isWorkspaceEditMode && !panel.locked;
+  const showControls = isOwner && isWorkspaceEditMode && isHovered;
 
   const { dragHandleProps, resizeHandleProps } = useDragResize({
     panelId: panel.id,
     rect: { x: panel.x, y: panel.y, w: panel.w, h: panel.h },
-    locked: panel.locked || !isWorkspaceEditMode || isEditing,
+    locked: panel.locked || !isWorkspaceEditMode,
     others,
     bounds,
     uniform: true,
@@ -66,26 +66,29 @@ export function PanelFrame({
         onBringToFront(panel.id);
       }}
     >
-      {/* Canvas content — full height, clipped with border radius */}
+      {/* Canvas content */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          borderRadius: 10,
+          borderRadius: 12,
           overflow: 'hidden',
-          pointerEvents: isEditing ? 'auto' : 'none',
+          boxShadow: isWorkspaceEditMode
+            ? '0 0 0 2px rgba(74,55,40,0.15), 0 4px 16px rgba(0,0,0,0.12)'
+            : '0 2px 12px rgba(0,0,0,0.08)',
+          transition: 'box-shadow 200ms',
         }}
       >
         {children}
       </div>
 
-      {/* Drag overlay — sits above canvas, blocked by control buttons */}
+      {/* Drag overlay */}
       {isDraggable && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            borderRadius: 10,
+            borderRadius: 12,
             zIndex: 2,
             cursor: 'grab',
           }}
@@ -96,7 +99,7 @@ export function PanelFrame({
         />
       )}
 
-      {/* Hover controls — Edit pill + Lock + Delete */}
+      {/* Hover controls */}
       {showControls && (
         <div
           data-panel-ctrl
@@ -126,8 +129,20 @@ export function PanelFrame({
             {panel.locked ? <Unlock size={12} /> : <Lock size={12} />}
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDelete(panel.id); }}
-            title="Delete canvas"
+            onClick={(e) => { e.stopPropagation(); onRemoveFromWorkspace(panel.id); }}
+            title="Remove from workspace (keeps canvas in library)"
+            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm text-neutral-500 shadow-md hover:bg-white transition-colors"
+          >
+            <LogOut size={12} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm('Delete this canvas permanently? This cannot be undone.')) {
+                onDelete(panel.id);
+              }
+            }}
+            title="Delete permanently"
             className="flex items-center justify-center w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm text-red-400 shadow-md hover:bg-white transition-colors"
           >
             <Trash2 size={12} />
@@ -157,28 +172,8 @@ export function PanelFrame({
         </div>
       )}
 
-      {/* Size badge on hover */}
-      {isHovered && isWorkspaceEditMode && !isEditing && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 8,
-            left: 8,
-            zIndex: 5,
-            background: 'rgba(0,0,0,0.35)',
-            borderRadius: 20,
-            padding: '2px 8px',
-            pointerEvents: 'none',
-          }}
-        >
-          <span style={{ fontSize: 10, color: '#fff' }}>
-            {Math.round(panel.w)}×{Math.round(panel.h)}
-          </span>
-        </div>
-      )}
-
       {/* Resize handles */}
-      {isOwner && isWorkspaceEditMode && !panel.locked && !isEditing &&
+      {isOwner && isWorkspaceEditMode && !panel.locked &&
         RESIZE_MODES.map(({ mode, cursor, style }) => (
           <div
             key={mode}
