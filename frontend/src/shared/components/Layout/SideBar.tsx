@@ -150,10 +150,10 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount: _unreadCount = 0,
 
   const getNavLinkClass = ({ isActive }: { isActive: boolean }) =>
     `w-9 h-9 mx-auto flex items-center justify-center rounded-lg transition-all duration-200 ${
-      isActive ? 'bg-white/12 text-white' : 'text-white/70 hover:text-white'
+      isActive ? 'bg-white/15 text-campus-gold' : 'text-white hover:bg-white/10'
     }`;
 
-  const iconButtonClass = 'w-9 h-9 mx-auto flex items-center justify-center rounded-lg text-white/70 hover:text-white transition-all duration-200';
+  const iconButtonClass = 'w-9 h-9 mx-auto flex items-center justify-center rounded-lg text-white hover:bg-white/10 transition-all duration-200';
 
   // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
   // const messagesActive = isChatRoute || messagesOpen;
