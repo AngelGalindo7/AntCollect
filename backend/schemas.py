@@ -119,6 +119,9 @@ class UserProfileResponse(BaseModel):
     bio: Optional[str] = None
     avatar_path: Optional[str] = None
     background_path: Optional[str] = None
+    background_offset_x: float = 0.0
+    background_offset_y: float = 0.0
+    background_scale: float = 1.0
     sticker_count: int
     is_owner: bool
     posts: List[PostBase]
@@ -147,6 +150,9 @@ class UserMeResponse(BaseModel):
     bio: Optional[str] = None
     avatar_path: Optional[str] = None
     background_path: Optional[str] = None
+    background_offset_x: float = 0.0
+    background_offset_y: float = 0.0
+    background_scale: float = 1.0
 
 class UpdateProfileRequest(BaseModel):
     username: Optional[str] = Field(default=None, min_length=3, max_length=50)
@@ -158,6 +164,21 @@ class AvatarUpdateResponse(BaseModel):
 
 class BackgroundUpdateResponse(BaseModel):
     background_path: str
+    background_offset_x: float
+    background_offset_y: float
+    background_scale: float
+
+
+class BackgroundPositionRequest(BaseModel):
+    offset_x: float = Field(default=0.0)
+    offset_y: float = Field(default=0.0)
+    scale: float = Field(default=1.0, ge=1.0, le=3.0)
+
+
+class BackgroundPositionResponse(BaseModel):
+    background_offset_x: float
+    background_offset_y: float
+    background_scale: float
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
