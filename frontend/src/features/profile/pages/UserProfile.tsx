@@ -3,9 +3,56 @@ import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import { Workspace } from "@/features/workspace/components/Workspace";
 import { WorkspaceViewer } from "@/features/workspace/components/WorkspaceViewer";
+import {
+  BackgroundImagePositioner,
+  type BackgroundImagePosition,
+} from "@/features/canvas/components/BackgroundImagePositioner";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchPublic, fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useParams, useNavigate } from "react-router-dom";
+
+const HEADER_FRAME_WIDTH = 1800;
+const HEADER_FRAME_HEIGHT = 300;
+
+function loadHTMLImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+async function bakePositionedImage(
+  src: string,
+  frameWidth: number,
+  frameHeight: number,
+  position: BackgroundImagePosition,
+): Promise<Blob> {
+  const img = await loadHTMLImage(src);
+  const cover = Math.max(frameWidth / img.naturalWidth, frameHeight / img.naturalHeight);
+  const drawW = img.naturalWidth * cover * position.scale;
+  const drawH = img.naturalHeight * cover * position.scale;
+  const offX = (frameWidth - drawW) / 2 + position.offsetX;
+  const offY = (frameHeight - drawH) / 2 + position.offsetY;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = frameWidth;
+  canvas.height = frameHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas context unavailable");
+  ctx.fillStyle = "#f6f1e6";
+  ctx.fillRect(0, 0, frameWidth, frameHeight);
+  ctx.drawImage(img, offX, offY, drawW, drawH);
+
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("Blob conversion failed"))),
+      "image/jpeg",
+      0.92,
+    );
+  });
+}
 
 type TabValue = "showcase" | "collection" | "looking_for" | "trading";
 type ViewMode = "posts" | "folders";
@@ -46,6 +93,9 @@ const UserProfile: React.FC = () => {
 
   // Background upload state
   const [bgUploading, setBgUploading] = useState(false);
+  const [bgError, setBgError] = useState<string | null>(null);
+  const [bgPositionerOpen, setBgPositionerOpen] = useState(false);
+  const [pendingBgUrl, setPendingBgUrl] = useState<string | null>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
 
   // Sticker inline-edit state
@@ -133,15 +183,31 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const handleBackgroundFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBackgroundFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
+    setBgError(null);
+    if (pendingBgUrl) URL.revokeObjectURL(pendingBgUrl);
+    const objectUrl = URL.createObjectURL(file);
+    setPendingBgUrl(objectUrl);
+    setBgPositionerOpen(true);
+    e.target.value = "";
+  };
 
-    const formData = new FormData();
-    formData.append("file", file);
-
+  const handleBackgroundPositionApply = async (pos: BackgroundImagePosition) => {
+    if (!pendingBgUrl) return;
+    setBgPositionerOpen(false);
     setBgUploading(true);
+    setBgError(null);
     try {
+      const blob = await bakePositionedImage(
+        pendingBgUrl,
+        HEADER_FRAME_WIDTH,
+        HEADER_FRAME_HEIGHT,
+        pos,
+      );
+      const formData = new FormData();
+      formData.append("file", blob, "background.jpg");
       const res = await fetchWithAuth(`${API_BASE}/users/me/background`, {
         method: "POST",
         credentials: "include",
@@ -151,9 +217,19 @@ const UserProfile: React.FC = () => {
       setRefreshKey((k) => k + 1);
     } catch (err) {
       console.error(err);
+      setBgError("Background upload failed. Try again.");
     } finally {
       setBgUploading(false);
-      e.target.value = "";
+      URL.revokeObjectURL(pendingBgUrl);
+      setPendingBgUrl(null);
+    }
+  };
+
+  const handleBackgroundPositionCancel = () => {
+    setBgPositionerOpen(false);
+    if (pendingBgUrl) {
+      URL.revokeObjectURL(pendingBgUrl);
+      setPendingBgUrl(null);
     }
   };
 
@@ -256,6 +332,11 @@ const UserProfile: React.FC = () => {
               className="hidden"
               onChange={handleBackgroundFileChange}
             />
+            {bgError && (
+              <div className="absolute top-14 right-3 z-10 bg-white/90 text-red-600 text-xs px-2 py-1 rounded-md">
+                {bgError}
+              </div>
+            )}
           </>
         )}
 
@@ -431,6 +512,17 @@ const UserProfile: React.FC = () => {
           }}
           postOwnerId={profile.user_id}
           folderType={tabFolderType}
+        />
+      )}
+
+      {bgPositionerOpen && pendingBgUrl && (
+        <BackgroundImagePositioner
+          imageUrl={pendingBgUrl}
+          frameWidth={HEADER_FRAME_WIDTH}
+          frameHeight={HEADER_FRAME_HEIGHT}
+          title="Position profile background"
+          onCancel={handleBackgroundPositionCancel}
+          onApply={handleBackgroundPositionApply}
         />
       )}
     </div>
