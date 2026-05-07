@@ -2,11 +2,12 @@ import { useRef, useState, type ChangeEvent, type CSSProperties } from 'react';
 import { ImagePlus, Trash2 } from 'lucide-react';
 import type { BackgroundConfig, CanvasNode, HoloVariant } from '../types/canvas';
 import { HOLO_VARIANTS } from '../types/canvas';
-import { BackgroundImagePositioner, type BackgroundImagePosition } from './BackgroundImagePositioner';
 
 interface RightPanelProps {
   background: BackgroundConfig;
   onChangeBackground: (bg: BackgroundConfig) => void;
+  onStartBackgroundEdit: (newImageUrl?: string) => void;
+  isEditingBackground: boolean;
   selectedId: string | null;
   nodes: CanvasNode[];
   isRemovingBg: boolean;
@@ -97,6 +98,8 @@ function ToggleRow({
 export function StickerControls({
   background,
   onChangeBackground,
+  onStartBackgroundEdit,
+  isEditingBackground,
   selectedId,
   nodes,
   isRemovingBg,
@@ -112,8 +115,6 @@ export function StickerControls({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [positionerOpen, setPositionerOpen] = useState(false);
-  const [pendingImageUrl, setPendingImageUrl] = useState<string | null>(null);
 
   const hasBgImage = background.type === 'image' && !!background.imageUrl;
 
@@ -124,8 +125,7 @@ export function StickerControls({
     setUploading(true);
     try {
       const url = await onUploadAsset(file);
-      setPendingImageUrl(url);
-      setPositionerOpen(true);
+      onStartBackgroundEdit(url);
     } catch {
       setUploadError('Upload failed. Try again.');
     } finally {
@@ -134,43 +134,14 @@ export function StickerControls({
     }
   };
 
-  const handleApplyPosition = (pos: BackgroundImagePosition) => {
-    const sourceUrl = pendingImageUrl ?? background.imageUrl;
-    if (!sourceUrl) {
-      setPositionerOpen(false);
-      setPendingImageUrl(null);
-      return;
-    }
-    onChangeBackground({
-      type: 'image',
-      value: '#f6f1e6',
-      imageUrl: sourceUrl,
-      imageOffsetX: pos.offsetX,
-      imageOffsetY: pos.offsetY,
-      imageScale: pos.scale,
-    });
-    setPositionerOpen(false);
-    setPendingImageUrl(null);
-  };
-
   const handleEditPosition = () => {
     if (!background.imageUrl) return;
-    setPendingImageUrl(null);
-    setPositionerOpen(true);
+    onStartBackgroundEdit();
   };
 
   const handleRemoveBackgroundImage = () => {
     onChangeBackground({ type: 'color', value: '#f6f1e6' });
   };
-
-  const positionerImageUrl = pendingImageUrl ?? background.imageUrl ?? '';
-  const positionerInitial = pendingImageUrl
-    ? undefined
-    : {
-        offsetX: background.imageOffsetX ?? 0,
-        offsetY: background.imageOffsetY ?? 0,
-        scale: background.imageScale ?? 1,
-      };
 
   return (
     <div
@@ -194,6 +165,7 @@ export function StickerControls({
             <button
               type="button"
               onClick={handleEditPosition}
+              disabled={isEditingBackground}
               style={{
                 position: 'relative',
                 width: '100%',
@@ -202,10 +174,11 @@ export function StickerControls({
                 border: '1px solid var(--pw-line)',
                 borderRadius: 8,
                 overflow: 'hidden',
-                cursor: 'pointer',
+                cursor: isEditingBackground ? 'default' : 'pointer',
                 padding: 0,
+                opacity: isEditingBackground ? 0.6 : 1,
               }}
-              title="Reposition background image"
+              title={isEditingBackground ? 'Editing in canvas' : 'Reposition background image'}
             >
               <img
                 src={background.imageUrl}
@@ -225,6 +198,7 @@ export function StickerControls({
               <button
                 type="button"
                 onClick={handleEditPosition}
+                disabled={isEditingBackground}
                 style={{
                   flex: 1,
                   height: 30,
@@ -234,14 +208,15 @@ export function StickerControls({
                   background: 'var(--pw-surface2)',
                   border: '1px solid var(--pw-line)',
                   borderRadius: 7,
+                  opacity: isEditingBackground ? 0.5 : 1,
                 }}
               >
-                Reposition
+                {isEditingBackground ? 'Editing…' : 'Reposition'}
               </button>
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
+                disabled={uploading || isEditingBackground}
                 style={{
                   flex: 1,
                   height: 30,
@@ -251,7 +226,7 @@ export function StickerControls({
                   background: 'var(--pw-surface2)',
                   border: '1px solid var(--pw-line)',
                   borderRadius: 7,
-                  opacity: uploading ? 0.5 : 1,
+                  opacity: uploading || isEditingBackground ? 0.5 : 1,
                 }}
               >
                 {uploading ? 'Uploading…' : 'Replace'}
@@ -259,6 +234,7 @@ export function StickerControls({
               <button
                 type="button"
                 onClick={handleRemoveBackgroundImage}
+                disabled={isEditingBackground}
                 title="Remove background image"
                 style={{
                   width: 30,
@@ -270,6 +246,7 @@ export function StickerControls({
                   background: 'transparent',
                   border: '1px solid var(--pw-line)',
                   borderRadius: 7,
+                  opacity: isEditingBackground ? 0.5 : 1,
                 }}
               >
                 <Trash2 size={14} strokeWidth={1.6} />
@@ -280,7 +257,7 @@ export function StickerControls({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+            disabled={uploading || isEditingBackground}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -294,7 +271,7 @@ export function StickerControls({
               color: 'var(--pw-ink)',
               fontSize: 12.5,
               fontWeight: 500,
-              opacity: uploading ? 0.6 : 1,
+              opacity: uploading || isEditingBackground ? 0.6 : 1,
               transition: 'background 120ms ease',
             }}
           >
@@ -420,19 +397,6 @@ export function StickerControls({
         </div>
       )}
 
-      {positionerOpen && positionerImageUrl && (
-        <BackgroundImagePositioner
-          imageUrl={positionerImageUrl}
-          frameWidth={frameWidth}
-          frameHeight={frameHeight}
-          initial={positionerInitial}
-          onCancel={() => {
-            setPositionerOpen(false);
-            setPendingImageUrl(null);
-          }}
-          onApply={handleApplyPosition}
-        />
-      )}
     </div>
   );
 }

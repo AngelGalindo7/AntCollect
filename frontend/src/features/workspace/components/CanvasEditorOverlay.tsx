@@ -11,6 +11,7 @@ import { useCanvasState, CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/h
 import type { CanvasState } from '@/features/canvas/types/canvas';
 import type { LiveBounds } from '@/features/canvas/components/CanvasNode';
 import { removeBackground } from '@/features/canvas/api/canvasApi';
+import { useBackgroundPositioning } from '@/shared/hooks/useBackgroundPositioning';
 import { savePanelCanvas, updatePanelMeta, uploadPanelPreview, uploadWorkspaceAsset } from '../api/workspaceApi';
 import type { Panel } from '../types/workspace';
 import type { Post } from '@/shared/types/Types';
@@ -49,6 +50,59 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
   const [title, setTitle] = useState(panel.title ?? '');
   const stageRef = useRef<Konva.Stage | null>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
+
+  const [bgEditUrl, setBgEditUrl] = useState<string | null>(null);
+
+  const handleStartBackgroundEdit = (newImageUrl?: string) => {
+    if (newImageUrl) {
+      setBgEditUrl(newImageUrl);
+      setSelectedId(null);
+      return;
+    }
+    if (background.type === 'image' && background.imageUrl) {
+      setBgEditUrl(background.imageUrl);
+      setSelectedId(null);
+    }
+  };
+
+  const isExistingImageBg = background.type === 'image' && background.imageUrl === bgEditUrl;
+  const bgEditInitial = isExistingImageBg
+    ? {
+        offsetX: background.imageOffsetX ?? 0,
+        offsetY: background.imageOffsetY ?? 0,
+        scale: background.imageScale ?? 1,
+      }
+    : undefined;
+
+  const {
+    attachFrameRef: attachBgFrameRef,
+    naturalSize: bgEditNaturalSize,
+    position: bgEditPosition,
+    isDragging: bgIsDragging,
+  } = useBackgroundPositioning({
+    imageUrl: bgEditUrl ?? '',
+    frameWidth: CANVAS_WIDTH,
+    frameHeight: CANVAS_HEIGHT,
+    enabled: bgEditUrl !== null,
+    initial: bgEditInitial,
+  });
+
+  const handleBackgroundEditApply = () => {
+    if (!bgEditUrl) return;
+    changeBackground({
+      type: 'image',
+      value: '#f6f1e6',
+      imageUrl: bgEditUrl,
+      imageOffsetX: bgEditPosition.offsetX,
+      imageOffsetY: bgEditPosition.offsetY,
+      imageScale: bgEditPosition.scale,
+    });
+    setBgEditUrl(null);
+  };
+
+  const handleBackgroundEditCancel = () => {
+    setBgEditUrl(null);
+  };
 
   const trimmedTitle = title.trim();
   const initialTitle = (panel.title ?? '').trim();
@@ -361,6 +415,16 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
                 ref={stageRef}
                 nodes={nodes}
                 background={background}
+                backgroundOverride={
+                  bgEditUrl
+                    ? {
+                        imageUrl: bgEditUrl,
+                        offsetX: bgEditPosition.offsetX,
+                        offsetY: bgEditPosition.offsetY,
+                        scale: bgEditPosition.scale,
+                      }
+                    : null
+                }
                 selectedId={selectedId}
                 keepRatio={keepRatio}
                 onSelect={setSelectedId}
@@ -369,6 +433,22 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
                 onLiveBoundsChange={setLiveBounds}
                 scale={scale}
               />
+
+              {bgEditUrl && (
+                <div
+                  ref={attachBgFrameRef}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    cursor: bgIsDragging ? 'grabbing' : 'grab',
+                    touchAction: 'none',
+                    userSelect: 'none',
+                    background: bgEditNaturalSize ? 'rgba(0,0,0,0)' : 'rgba(28,26,22,0.04)',
+                    zIndex: 5,
+                  }}
+                  title="Drag to reposition · scroll to zoom"
+                />
+              )}
 
               {/* watermark — HTML overlay, not part of saved PNG */}
               <span
@@ -386,7 +466,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
               </span>
 
               {/* Selection overlays — dimension chip + contextual toolbar */}
-              {selectedNode && overlayBox && (
+              {!bgEditUrl && selectedNode && overlayBox && (
                 <>
                   <div
                     className="pw-mono"
@@ -430,11 +510,78 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
               )}
             </div>
           </div>
+
+          {bgEditUrl && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 16,
+                display: 'flex',
+                justifyContent: 'center',
+                pointerEvents: 'none',
+                zIndex: 10,
+              }}
+            >
+              <div
+                style={{
+                  pointerEvents: 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '8px 12px',
+                  background: 'var(--pw-paper)',
+                  border: '1px solid var(--pw-line)',
+                  borderRadius: 10,
+                  boxShadow: '0 8px 24px rgba(0,0,0,.12)',
+                }}
+              >
+                <span style={{ fontSize: 12, color: 'var(--pw-ink3)' }}>
+                  Drag to reposition · scroll to zoom
+                </span>
+                <button
+                  type="button"
+                  onClick={handleBackgroundEditCancel}
+                  style={{
+                    height: 30,
+                    padding: '0 12px',
+                    background: 'transparent',
+                    color: 'var(--pw-ink2)',
+                    fontSize: 12.5,
+                    fontWeight: 500,
+                    borderRadius: 7,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBackgroundEditApply}
+                  disabled={!bgEditNaturalSize}
+                  style={{
+                    height: 30,
+                    padding: '0 16px',
+                    background: 'var(--pw-ink)',
+                    color: 'var(--pw-paper)',
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    borderRadius: 7,
+                    opacity: bgEditNaturalSize ? 1 : 0.5,
+                  }}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <StickerControls
           background={background}
           onChangeBackground={changeBackground}
+          onStartBackgroundEdit={handleStartBackgroundEdit}
+          isEditingBackground={bgEditUrl !== null}
           selectedId={selectedId}
           nodes={nodes}
           isRemovingBg={isRemovingBg}
