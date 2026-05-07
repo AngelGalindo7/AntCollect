@@ -96,6 +96,7 @@ jobs:
               -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${MESSAGING_DB_USER}') THEN CREATE ROLE ${MESSAGING_DB_USER} WITH LOGIN PASSWORD '${MESSAGING_DB_PASSWORD}'; END IF; END \$\$;" \
               -c "CREATE SCHEMA IF NOT EXISTS ${MESSAGING_DB_SCHEMA};" \
               -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" \
+              -c "CREATE EXTENSION IF NOT EXISTS vector;" \
               -c "GRANT ALL PRIVILEGES ON SCHEMA ${MESSAGING_DB_SCHEMA} TO ${MESSAGING_DB_USER};" \
               -c "ALTER ROLE ${MESSAGING_DB_USER} SET search_path TO ${MESSAGING_DB_SCHEMA}, public;" \
               -c "GRANT USAGE ON SCHEMA public TO ${MESSAGING_DB_USER};"
