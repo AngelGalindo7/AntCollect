@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 
 export interface MasonryItemDims {
   aspectRatio: number;
@@ -23,7 +23,7 @@ export interface MasonryPosition {
 }
 
 export interface MasonryLayout {
-  containerRef: React.RefObject<HTMLDivElement | null>;
+  containerRef: (node: HTMLDivElement | null) => void;
   positions: MasonryPosition[];
   containerHeight: number;
   columnWidth: number;
@@ -42,21 +42,27 @@ export function useMasonryLayout(
   items: MasonryItemDims[],
   config: MasonryConfig,
 ): MasonryLayout {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
 
+  // Callback ref fires whenever the element mounts or unmounts, so the effect
+  // below correctly re-runs even when PostGridLayout transitions from its
+  // empty-state early-return (no element attached) to a real masonry container.
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    setContainerEl(node);
+  }, []);
+
   useLayoutEffect(() => {
-    const node = containerRef.current;
-    if (!node) return;
-    setContainerWidth(node.getBoundingClientRect().width);
+    if (!containerEl) return;
+    setContainerWidth(containerEl.getBoundingClientRect().width);
 
     const ro = new ResizeObserver((entries) => {
       const w = entries[0]?.contentRect.width ?? 0;
       setContainerWidth(w);
     });
-    ro.observe(node);
+    ro.observe(containerEl);
     return () => ro.disconnect();
-  }, []);
+  }, [containerEl]);
 
   const cols = useMemo(
     () => pickColumnCount(containerWidth, config.breakpoints),
