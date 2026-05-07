@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { http, HttpResponse } from 'msw'
@@ -16,7 +16,7 @@ const BASE_POST: Post = {
   type: 'collection',
   updated_at: '2026-01-01T00:00:00Z',
   is_liked: false,
-  user: { user_id: 1, username: 'alice', avatar_path: null },
+  user: { user_id: 99, username: 'alice', avatar_path: null },
 }
 
 function renderCard(overrides: Partial<typeof BASE_POST> = {}, extraProps: Record<string, unknown> = {}) {
@@ -31,6 +31,17 @@ function renderCard(overrides: Partial<typeof BASE_POST> = {}, extraProps: Recor
       />
     </MemoryRouter>
   )
+}
+
+function setSession(userId = '1') {
+  localStorage.setItem('userId', userId)
+  localStorage.setItem('username', 'testuser')
+  localStorage.setItem('email', 'test@example.com')
+  localStorage.setItem('role', 'user')
+}
+
+function clearSession() {
+  ;['userId', 'username', 'email', 'role'].forEach((k) => localStorage.removeItem(k))
 }
 
 describe('PostCard', () => {
@@ -59,6 +70,7 @@ describe('PostCard', () => {
   })
 
   it('does not call onClick when the like button is clicked', async () => {
+    setSession()
     server.use(
       http.post('http://localhost:8000/posts/like_image', () =>
         HttpResponse.json({ message: 'Liked' })
@@ -68,28 +80,46 @@ describe('PostCard', () => {
     renderCard({}, { onClick })
     fireEvent.click(screen.getByRole('button', { name: /like post/i }))
     expect(onClick).not.toHaveBeenCalled()
+    clearSession()
   })
 
-  it('calls onLikeToggle after a successful like', async () => {
-    server.use(
-      http.post('http://localhost:8000/posts/like_image', () =>
-        HttpResponse.json({ message: 'Liked' })
+  describe('authenticated user', () => {
+    beforeEach(() => setSession())
+    afterEach(() => clearSession())
+
+    it('calls onLikeToggle after a successful like', async () => {
+      server.use(
+        http.post('http://localhost:8000/posts/like_image', () =>
+          HttpResponse.json({ message: 'Liked' })
+        )
       )
-    )
-    const onLikeToggle = vi.fn()
-    renderCard({}, { onLikeToggle })
-    fireEvent.click(screen.getByRole('button', { name: /like post/i }))
-    await waitFor(() => expect(onLikeToggle).toHaveBeenCalledWith(1, true))
+      const onLikeToggle = vi.fn()
+      renderCard({}, { onLikeToggle })
+      fireEvent.click(screen.getByRole('button', { name: /like post/i }))
+      await waitFor(() => expect(onLikeToggle).toHaveBeenCalledWith(1, true))
+    })
+
+    it('rolls back the like count when the API returns an error', async () => {
+      server.use(
+        http.post('http://localhost:8000/posts/like_image', () =>
+          HttpResponse.json({ message: 'Error' }, { status: 500 })
+        )
+      )
+      renderCard({ total_likes: 5, is_liked: false })
+      fireEvent.click(screen.getByRole('button', { name: /like post/i }))
+      await waitFor(() => expect(screen.getByText('5')).toBeTruthy())
+    })
   })
 
-  it('rolls back the like count when the API returns an error', async () => {
-    server.use(
-      http.post('http://localhost:8000/posts/like_image', () =>
-        HttpResponse.json({ message: 'Error' }, { status: 500 })
-      )
-    )
-    renderCard({ total_likes: 5, is_liked: false })
-    fireEvent.click(screen.getByRole('button', { name: /like post/i }))
-    await waitFor(() => expect(screen.getByText('5')).toBeTruthy())
+  describe('guest user (no session)', () => {
+    beforeEach(() => clearSession())
+
+    it('opens the auth wall instead of liking when no session', async () => {
+      const onLikeToggle = vi.fn()
+      renderCard({}, { onLikeToggle })
+      fireEvent.click(screen.getByRole('button', { name: /like post/i }))
+      // guard() short-circuits — onLikeToggle is never called
+      await waitFor(() => expect(onLikeToggle).not.toHaveBeenCalled())
+    })
   })
 })
