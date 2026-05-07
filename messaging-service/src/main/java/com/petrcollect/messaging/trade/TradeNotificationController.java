@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
 
-@RestController
-@RequestMapping("/internal")
+// DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+//@RestController
+// DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+//@RequestMapping("/internal")
 public class TradeNotificationController {
 
     private static final Logger log = LoggerFactory.getLogger(TradeNotificationController.class);
