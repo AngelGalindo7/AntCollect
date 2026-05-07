@@ -5,6 +5,7 @@ import type { Post } from '@/shared/types/Types';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 import { getSession } from '@/shared/auth/session';
 import { canModeratePosts } from '@/shared/auth/permissions';
+import { useGuestGate } from '@/shared/hooks/useGuestGate';
 
 interface PostCardProps {
   post: Post;
@@ -20,6 +21,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
   const [likeCount, setLikeCount] = useState(post.total_likes || 0);
   const [reportModalOpen, setReportModalOpen] = useState(false);
 
+  const { guard } = useGuestGate();
   const session = getSession();
   const isOwner = post.user?.user_id !== undefined && String(post.user.user_id) === session?.userId;
   const canModerate = !isOwner && canModeratePosts(session);
@@ -38,7 +40,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
 
   const handleReportClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setReportModalOpen(true);
+    guard(() => setReportModalOpen(true));
   };
 
   const deletePost = async () => {
@@ -70,8 +72,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
     await deletePost();
   };
 
-  const handleLikeClick = async (e: React.MouseEvent) => {
+  const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    guard(() => performLike());
+  };
+
+  const performLike = async () => {
     const previousLikedState = isLiked;
     const previousLikeCount = likeCount;
     const newLikedState = !isLiked;
