@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Panel } from '../types/workspace';
 import { getPublicWorkspace } from '../api/workspaceApi';
+import { PanelPreview } from './PanelPreview';
 
 interface Props {
   username: string;
@@ -71,25 +72,22 @@ export function WorkspaceViewer({ username }: Props) {
       ref={containerRef}
       style={{ position: 'relative', width: '100%', height: scaledH, overflow: 'hidden' }}
     >
-      {panels
-        .filter((p) => p.preview_path)
-        .map((p) => (
-          <img
-            key={p.id}
-            src={p.preview_path!}
-            draggable={false}
-            alt={p.title ?? ''}
-            style={{
-              position: 'absolute',
-              left: p.x * scale,
-              top: p.y * scale,
-              width: p.w * scale,
-              height: p.h * scale,
-              objectFit: 'cover',
-              borderRadius: 8,
-            }}
-          />
-        ))}
+      {panels.map((p) => (
+        <div
+          key={p.id}
+          style={{
+            position: 'absolute',
+            left: p.x * scale,
+            top: p.y * scale,
+            width: p.w * scale,
+            height: p.h * scale,
+            borderRadius: 8,
+            overflow: 'hidden',
+          }}
+        >
+          <PanelPreview panel={p} />
+        </div>
+      ))}
     </div>
   );
 }
