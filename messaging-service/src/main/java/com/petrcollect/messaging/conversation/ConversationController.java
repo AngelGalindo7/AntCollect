@@ -9,8 +9,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController
-@RequestMapping("/conversations")
+// DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+//@RestController
+// DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+//@RequestMapping("/conversations")
 public class ConversationController {
 
     private final ConversationService conversationService;
