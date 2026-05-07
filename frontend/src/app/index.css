@@ -12,14 +12,14 @@
   --color-uci-blue:  #0064A4;
   --color-uci-navy:  #0F2D5C;
   --color-uci-gold:  #FFD200;
-  --color-uci-cream: #FFF8E5;
+  --color-uci-cream: #F4EFE6;
 
   /* ── Brand aliases (keep old names working across the app) ── */
   --color-petr-blue:   #0064A4;
   --color-campus-blue: #0064A4;
   --color-campus-gold: #FFD200;
   --color-action-gold: #FFD200;
-  --color-warm-cream:  #FFF8E5;
+  --color-warm-cream:  #F4EFE6;
 
   /* ── Neutrals (unchanged — don't remap these) ─────── */
   --color-soft-white: #FAF8F4;
