@@ -3,14 +3,6 @@ import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import { Workspace } from "@/features/workspace/components/Workspace";
 import { WorkspaceViewer } from "@/features/workspace/components/WorkspaceViewer";
-import {
-  BackgroundImagePositioner,
-  type BackgroundImagePosition,
-} from "@/features/canvas/components/BackgroundImagePositioner";
-import {
-  HEADER_FRAME_WIDTH,
-  HEADER_FRAME_HEIGHT,
-} from "@/shared/utils/profileBackground";
 import { PositionedBackgroundImage } from "@/shared/components/PositionedBackgroundImage";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchPublic, fetchWithAuth, API_BASE } from "@/shared/api/api";
@@ -54,15 +46,6 @@ const UserProfile: React.FC = () => {
   // Avatar upload state
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Background upload state
-  const [bgUploading, setBgUploading] = useState(false);
-  const [bgError, setBgError] = useState<string | null>(null);
-  const [bgPositionerOpen, setBgPositionerOpen] = useState(false);
-  const [bgPositionerMode, setBgPositionerMode] = useState<"upload" | "reposition">("upload");
-  const [pendingBgFile, setPendingBgFile] = useState<File | null>(null);
-  const [pendingBgUrl, setPendingBgUrl] = useState<string | null>(null);
-  const bgFileInputRef = useRef<HTMLInputElement>(null);
 
   // Sticker inline-edit state
   const [editingStickers, setEditingStickers] = useState(false);
@@ -154,76 +137,6 @@ const UserProfile: React.FC = () => {
     }
   };
 
-  const handleBackgroundFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !profile) return;
-    setBgError(null);
-    if (pendingBgUrl) URL.revokeObjectURL(pendingBgUrl);
-    setPendingBgFile(file);
-    setPendingBgUrl(URL.createObjectURL(file));
-    setBgPositionerMode("upload");
-    setBgPositionerOpen(true);
-  };
-
-  const handleBackgroundReposition = () => {
-    if (!profile?.background_path) return;
-    setBgError(null);
-    setPendingBgFile(null);
-    setPendingBgUrl(profile.background_path);
-    setBgPositionerMode("reposition");
-    setBgPositionerOpen(true);
-  };
-
-  const handleBackgroundPositionApply = async (pos: BackgroundImagePosition) => {
-    setBgPositionerOpen(false);
-    setBgUploading(true);
-    setBgError(null);
-    try {
-      if (bgPositionerMode === "upload" && pendingBgFile) {
-        const formData = new FormData();
-        formData.append("file", pendingBgFile);
-        formData.append("offset_x", String(pos.offsetX));
-        formData.append("offset_y", String(pos.offsetY));
-        formData.append("scale", String(pos.scale));
-        const res = await fetchWithAuth(`${API_BASE}/users/me/background`, {
-          method: "POST",
-          credentials: "include",
-          body: formData,
-        });
-        if (!res.ok) throw new Error("Background upload failed");
-      } else if (bgPositionerMode === "reposition") {
-        const res = await fetchWithAuth(`${API_BASE}/users/me/background-position`, {
-          method: "PATCH",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            offset_x: pos.offsetX,
-            offset_y: pos.offsetY,
-            scale: pos.scale,
-          }),
-        });
-        if (!res.ok) throw new Error("Reposition failed");
-      }
-      setRefreshKey((k) => k + 1);
-    } catch (err) {
-      console.error(err);
-      setBgError("Background save failed. Try again.");
-    } finally {
-      setBgUploading(false);
-      if (bgPositionerMode === "upload" && pendingBgUrl) URL.revokeObjectURL(pendingBgUrl);
-      setPendingBgFile(null);
-      setPendingBgUrl(null);
-    }
-  };
-
-  const handleBackgroundPositionCancel = () => {
-    setBgPositionerOpen(false);
-    if (bgPositionerMode === "upload" && pendingBgUrl) URL.revokeObjectURL(pendingBgUrl);
-    setPendingBgFile(null);
-    setPendingBgUrl(null);
-  };
-
   const handleStickerCommit = async (newValue: number) => {
     if (!profile || newValue === profile.sticker_count) {
       setEditingStickers(false);
@@ -303,42 +216,6 @@ const UserProfile: React.FC = () => {
             offsetY={profile.background_offset_y}
             scale={profile.background_scale}
           />
-        )}
-
-        {profile.is_owner && (
-          <>
-            <div className="absolute top-3 right-3 z-20 flex gap-2">
-              {profile.background_path && (
-                <button
-                  type="button"
-                  onClick={handleBackgroundReposition}
-                  className={`bg-white/80 hover:bg-white text-espresso text-xs font-medium px-3 py-1.5 rounded-full transition-colors${bgUploading ? " opacity-50 pointer-events-none" : ""}`}
-                >
-                  Reposition
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => bgFileInputRef.current?.click()}
-                className={`bg-white/80 hover:bg-white rounded-full p-2 transition-colors${bgUploading ? " opacity-50 pointer-events-none" : ""}`}
-                aria-label="Upload background image"
-              >
-                <CameraIcon className="w-5 h-5 text-espresso" />
-              </button>
-            </div>
-            <input
-              ref={bgFileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleBackgroundFileChange}
-            />
-            {bgError && (
-              <div className="absolute top-14 right-3 z-20 bg-white/90 text-red-600 text-xs px-2 py-1 rounded-md">
-                {bgError}
-              </div>
-            )}
-          </>
         )}
 
         <div className="absolute inset-0 z-10 flex items-start gap-6 px-4 py-8 max-w-6xl mx-auto">
@@ -516,25 +393,6 @@ const UserProfile: React.FC = () => {
         />
       )}
 
-      {bgPositionerOpen && pendingBgUrl && (
-        <BackgroundImagePositioner
-          imageUrl={pendingBgUrl}
-          frameWidth={HEADER_FRAME_WIDTH}
-          frameHeight={HEADER_FRAME_HEIGHT}
-          initial={
-            bgPositionerMode === "reposition"
-              ? {
-                  offsetX: profile.background_offset_x,
-                  offsetY: profile.background_offset_y,
-                  scale: profile.background_scale,
-                }
-              : undefined
-          }
-          title={bgPositionerMode === "reposition" ? "Reposition background" : "Position profile background"}
-          onCancel={handleBackgroundPositionCancel}
-          onApply={handleBackgroundPositionApply}
-        />
-      )}
     </div>
   );
 };
