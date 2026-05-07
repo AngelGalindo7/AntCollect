@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func, literal
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, BackgroundUpdateResponse, ChangePasswordRequest
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, BackgroundUpdateResponse, BackgroundPositionRequest, BackgroundPositionResponse, ChangePasswordRequest
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token, optional_auth_token
 from ..utils.files import process_and_save_image, delete_file
 from typing import List
@@ -90,6 +90,9 @@ def update_avatar(
 def update_background(
     request: Request,
     file: UploadFile = File(...),
+    offset_x: float = Form(0.0),
+    offset_y: float = Form(0.0),
+    scale: float = Form(1.0),
     db: Session = Depends(get_db),
     user: UserSearch = Depends(authenthicate_access_token)
 ):
@@ -97,17 +100,53 @@ def update_background(
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    if not (1.0 <= scale <= 3.0):
+        raise HTTPException(status_code=422, detail="scale must be between 1 and 3")
+
     old_background_path = db_user.background_path
     result = process_and_save_image(file, user.user_id)
     new_background_path = result["paths"]["original"]
 
     db_user.background_path = new_background_path
+    db_user.background_offset_x = offset_x
+    db_user.background_offset_y = offset_y
+    db_user.background_scale = scale
     db.commit()
 
     if old_background_path and old_background_path != new_background_path:
         delete_file(old_background_path)
 
-    return BackgroundUpdateResponse(background_path=new_background_path)
+    return BackgroundUpdateResponse(
+        background_path=new_background_path,
+        background_offset_x=db_user.background_offset_x,
+        background_offset_y=db_user.background_offset_y,
+        background_scale=db_user.background_scale,
+    )
+
+
+@router.patch("/me/background-position", response_model=BackgroundPositionResponse)
+def update_background_position(
+    payload: BackgroundPositionRequest,
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token),
+):
+    db_user = db.query(User).filter(User.id == user.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not db_user.background_path:
+        raise HTTPException(status_code=400, detail="No background image to reposition")
+
+    db_user.background_offset_x = payload.offset_x
+    db_user.background_offset_y = payload.offset_y
+    db_user.background_scale = payload.scale
+    db.commit()
+
+    return BackgroundPositionResponse(
+        background_offset_x=db_user.background_offset_x,
+        background_offset_y=db_user.background_offset_y,
+        background_scale=db_user.background_scale,
+    )
 
 
 @router.post("/me/password")
