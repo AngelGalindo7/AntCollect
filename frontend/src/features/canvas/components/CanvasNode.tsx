@@ -3,7 +3,6 @@ import { Image as KonvaImage, Transformer, Rect } from 'react-konva';
 import useImage from 'use-image';
 import type Konva from 'konva';
 import type { CanvasNode as CanvasNodeType } from '../types/canvas';
-import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../hooks/useCanvasState';
 
 export interface LiveBounds {
   x: number;
@@ -17,13 +16,15 @@ interface Props {
   node: CanvasNodeType;
   isSelected: boolean;
   keepRatio: boolean;
+  boundsW: number;
+  boundsH: number;
   onSelect: () => void;
   onUpdate: (attrs: Partial<CanvasNodeType>) => void;
   onDelete: () => void;
   onLiveBoundsChange?: (bounds: LiveBounds | null) => void;
 }
 
-export function CanvasNode({ node, isSelected, keepRatio, onSelect, onUpdate, onDelete, onLiveBoundsChange }: Props) {
+export function CanvasNode({ node, isSelected, keepRatio, boundsW, boundsH, onSelect, onUpdate, onDelete, onLiveBoundsChange }: Props) {
   const [image, status] = useImage(node.image_url, 'anonymous');
   const imageRef = useRef<Konva.Image>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -118,8 +119,8 @@ export function CanvasNode({ node, isSelected, keepRatio, onSelect, onUpdate, on
           shadowOffsetX={0}
           shadowOffsetY={4}
           dragBoundFunc={(pos) => ({
-            x: Math.max(0, Math.min(pos.x, CANVAS_WIDTH - node.width)),
-            y: Math.max(0, Math.min(pos.y, CANVAS_HEIGHT - node.height)),
+            x: Math.max(0, Math.min(pos.x, boundsW - node.width)),
+            y: Math.max(0, Math.min(pos.y, boundsH - node.height)),
           })}
         />
       )}

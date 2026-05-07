@@ -4,7 +4,6 @@ import useImage from 'use-image';
 import type Konva from 'konva';
 import { CanvasNode as CanvasNodeComponent, type LiveBounds } from './CanvasNode';
 import type { CanvasNode, BackgroundConfig } from '../types/canvas';
-import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../hooks/useCanvasState';
 
 export interface BackgroundOverride {
   imageUrl: string;
@@ -24,25 +23,27 @@ interface Props {
   onNodeDelete: (id: string) => void;
   onLiveBoundsChange?: (bounds: LiveBounds | null) => void;
   scale: number;
+  width: number;
+  height: number;
 }
 
-function BackgroundImageLayer({ imageUrl, offsetX, offsetY, scale }: { imageUrl: string; offsetX: number; offsetY: number; scale: number }) {
+function BackgroundImageLayer({ imageUrl, offsetX, offsetY, scale, frameW, frameH }: { imageUrl: string; offsetX: number; offsetY: number; scale: number; frameW: number; frameH: number }) {
   const [image] = useImage(imageUrl, 'anonymous');
   if (!image) return null;
-  const cover = Math.max(CANVAS_WIDTH / image.width, CANVAS_HEIGHT / image.height);
+  const cover = Math.max(frameW / image.width, frameH / image.height);
   const drawW = image.width * cover * scale;
   const drawH = image.height * cover * scale;
-  const offX = (CANVAS_WIDTH - drawW) / 2 + offsetX;
-  const offY = (CANVAS_HEIGHT - drawH) / 2 + offsetY;
+  const offX = (frameW - drawW) / 2 + offsetX;
+  const offY = (frameH - drawH) / 2 + offsetY;
   return (
-    <Group clipX={0} clipY={0} clipWidth={CANVAS_WIDTH} clipHeight={CANVAS_HEIGHT} listening={false}>
+    <Group clipX={0} clipY={0} clipWidth={frameW} clipHeight={frameH} listening={false}>
       <KonvaImage image={image} x={offX} y={offY} width={drawW} height={drawH} listening={false} />
     </Group>
   );
 }
 
 export const CanvasStage = forwardRef<Konva.Stage, Props>(
-  ({ nodes, background, backgroundOverride, selectedId, keepRatio, onSelect, onNodeUpdate, onNodeDelete, onLiveBoundsChange, scale }, ref) => {
+  ({ nodes, background, backgroundOverride, selectedId, keepRatio, onSelect, onNodeUpdate, onNodeDelete, onLiveBoundsChange, scale, width, height }, ref) => {
     const stageContainerRef = useRef<HTMLDivElement>(null);
 
     const isImageBg = background.type === 'image' && !!background.imageUrl;
@@ -56,7 +57,7 @@ export const CanvasStage = forwardRef<Konva.Stage, Props>(
       background.type === 'gradient'
         ? {
             fillLinearGradientStartPoint: { x: 0, y: 0 },
-            fillLinearGradientEndPoint: { x: CANVAS_WIDTH, y: CANVAS_HEIGHT },
+            fillLinearGradientEndPoint: { x: width, y: height },
             fillLinearGradientColorStops: [0, background.value, 1, background.gradientEnd ?? '#ffffff'],
           }
         : { fill: isImageBgRendered ? '#f6f1e6' : background.value };
@@ -73,8 +74,8 @@ export const CanvasStage = forwardRef<Konva.Stage, Props>(
       >
         <Stage
           ref={ref}
-          width={CANVAS_WIDTH * scale}
-          height={CANVAS_HEIGHT * scale}
+          width={width * scale}
+          height={height * scale}
           scaleX={scale}
           scaleY={scale}
           onMouseDown={(e) => { if (e.target === e.target.getStage()) onSelect(null); }}
@@ -84,8 +85,8 @@ export const CanvasStage = forwardRef<Konva.Stage, Props>(
             <Rect
               x={0}
               y={0}
-              width={CANVAS_WIDTH}
-              height={CANVAS_HEIGHT}
+              width={width}
+              height={height}
               {...bgFill}
               listening={false}
             />
@@ -95,6 +96,8 @@ export const CanvasStage = forwardRef<Konva.Stage, Props>(
                 offsetX={bgImageOffsetX}
                 offsetY={bgImageOffsetY}
                 scale={bgImageScale}
+                frameW={width}
+                frameH={height}
               />
             )}
             {nodes.map((node) => (
@@ -103,6 +106,8 @@ export const CanvasStage = forwardRef<Konva.Stage, Props>(
                 node={node}
                 isSelected={selectedId === node.id}
                 keepRatio={keepRatio}
+                boundsW={width}
+                boundsH={height}
                 onSelect={() => onSelect(node.id)}
                 onUpdate={(attrs) => onNodeUpdate(node.id, attrs)}
                 onDelete={() => onNodeDelete(node.id)}

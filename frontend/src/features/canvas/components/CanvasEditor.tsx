@@ -4,7 +4,7 @@ import type Konva from 'konva';
 import { CanvasStage } from './CanvasStage';
 import { CanvasPicker } from './CanvasPicker';
 import { CanvasToolbar } from './CanvasToolbar';
-import { useCanvasState, CANVAS_WIDTH, CANVAS_HEIGHT } from '../hooks/useCanvasState';
+import { useCanvasState } from '../hooks/useCanvasState';
 import { saveCanvas, uploadCanvasPreview } from '../api/canvasApi';
 import type { CanvasState } from '../types/canvas';
 import type { Post } from '../../../shared/types/Types';
@@ -26,7 +26,7 @@ function dataURLtoBlob(dataUrl: string): Blob {
 }
 
 export function CanvasEditor({ initialState, posts, onClose, onSaveSuccess }: Props) {
-  const { nodes, background, isDirty, addNode, updateNode, removeNode, changeBackground, markClean, getCanvasJson } =
+  const { nodes, background, width, height, isDirty, addNode, updateNode, removeNode, changeBackground, markClean, getCanvasJson } =
     useCanvasState(initialState);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -41,12 +41,12 @@ export function CanvasEditor({ initialState, posts, onClose, onSaveSuccess }: Pr
       // 256 = picker sidebar, 20 = horizontal padding, 48 = toolbar height, 20 = bottom padding
       const availW = window.innerWidth - 256 - 20;
       const availH = window.innerHeight - 48 - 20;
-      setScale(Math.min(1, availW / CANVAS_WIDTH, availH / CANVAS_HEIGHT));
+      setScale(Math.min(1, availW / width, availH / height));
     };
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
-  }, []);
+  }, [width, height]);
 
   // Lock body scroll
   useEffect(() => {
@@ -118,6 +118,8 @@ export function CanvasEditor({ initialState, posts, onClose, onSaveSuccess }: Pr
             onNodeUpdate={updateNode}
             onNodeDelete={removeNode}
             scale={scale}
+            width={width}
+            height={height}
           />
           {saveError && (
             <p className="mt-2 text-red-400 text-xs">{saveError}</p>
