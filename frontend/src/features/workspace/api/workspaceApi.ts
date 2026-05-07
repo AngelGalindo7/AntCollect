@@ -90,6 +90,18 @@ export async function deletePanel(id: number): Promise<void> {
   if (!res.ok) throw new Error('Failed to delete panel');
 }
 
+export async function uploadWorkspaceAsset(file: File): Promise<string> {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetchWithAuth(`${API_BASE}/workspace/me/assets`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) throw new Error('Failed to upload asset');
+  const data: { asset_url: string } = await res.json();
+  return data.asset_url;
+}
+
 export async function getPublicWorkspace(username: string): Promise<WorkspaceData> {
   const res = await fetch(`${API_BASE}/workspace/${username}`);
   if (!res.ok) throw new Error('Failed to load public workspace');

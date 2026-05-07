@@ -11,7 +11,15 @@ interface LibrarySticker {
   thumbnail: string | null;
 }
 
-export function StickerPicker({ posts, onNodeAdd }: { posts: Post[]; onNodeAdd: (url: string, source: NodeSource) => void }) {
+export function StickerPicker({
+  posts,
+  onNodeAdd,
+  onUploadAsset,
+}: {
+  posts: Post[];
+  onNodeAdd: (url: string, source: NodeSource) => void;
+  onUploadAsset?: (file: File) => Promise<string>;
+}) {
   const [tab, setTab] = useState<'library' | 'posts' | 'upload'>('library');
   const [search, setSearch] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -35,7 +43,8 @@ export function StickerPicker({ posts, onNodeAdd }: { posts: Post[]; onNodeAdd: 
     if (!file) return;
     setUploading(true);
     try {
-      const url = await uploadCanvasAsset(file);
+      const upload = onUploadAsset ?? uploadCanvasAsset;
+      const url = await upload(file);
       onNodeAdd(url, 'upload');
     } catch {
       // silent — user can retry
