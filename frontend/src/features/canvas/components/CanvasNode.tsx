@@ -5,6 +5,14 @@ import type Konva from 'konva';
 import type { CanvasNode as CanvasNodeType } from '../types/canvas';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '../hooks/useCanvasState';
 
+export interface LiveBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+}
+
 interface Props {
   node: CanvasNodeType;
   isSelected: boolean;
@@ -12,9 +20,10 @@ interface Props {
   onSelect: () => void;
   onUpdate: (attrs: Partial<CanvasNodeType>) => void;
   onDelete: () => void;
+  onLiveBoundsChange?: (bounds: LiveBounds | null) => void;
 }
 
-export function CanvasNode({ node, isSelected, keepRatio, onSelect, onUpdate, onDelete }: Props) {
+export function CanvasNode({ node, isSelected, keepRatio, onSelect, onUpdate, onDelete, onLiveBoundsChange }: Props) {
   const [image, status] = useImage(node.image_url, 'anonymous');
   const imageRef = useRef<Konva.Image>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -36,24 +45,38 @@ export function CanvasNode({ node, isSelected, keepRatio, onSelect, onUpdate, on
     return () => window.removeEventListener('keydown', handleKey);
   }, [isSelected, onDelete]);
 
+  const emitLive = () => {
+    const n = imageRef.current;
+    if (!n || !onLiveBoundsChange) return;
+    onLiveBoundsChange({
+      x: n.x(),
+      y: n.y(),
+      width: Math.max(1, n.width() * n.scaleX()),
+      height: Math.max(1, n.height() * n.scaleY()),
+      rotation: n.rotation(),
+    });
+  };
+
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+    onLiveBoundsChange?.(null);
     onUpdate({ x: e.target.x(), y: e.target.y() });
   };
 
   const handleTransformEnd = () => {
-    const node = imageRef.current;
-    if (!node) return;
+    const n = imageRef.current;
+    if (!n) return;
+    onLiveBoundsChange?.(null);
     onUpdate({
-      x: node.x(),
-      y: node.y(),
-      width: Math.max(30, node.width() * node.scaleX()),
-      height: Math.max(30, node.height() * node.scaleY()),
-      rotation: node.rotation(),
+      x: n.x(),
+      y: n.y(),
+      width: Math.max(30, n.width() * n.scaleX()),
+      height: Math.max(30, n.height() * n.scaleY()),
+      rotation: n.rotation(),
       scaleX: 1,
       scaleY: 1,
     });
-    node.scaleX(1);
-    node.scaleY(1);
+    n.scaleX(1);
+    n.scaleY(1);
   };
 
   return (
@@ -83,8 +106,17 @@ export function CanvasNode({ node, isSelected, keepRatio, onSelect, onUpdate, on
           draggable
           onClick={onSelect}
           onTap={onSelect}
+          onDragStart={emitLive}
+          onDragMove={emitLive}
           onDragEnd={handleDragEnd}
+          onTransformStart={emitLive}
+          onTransform={emitLive}
           onTransformEnd={handleTransformEnd}
+          shadowColor="black"
+          shadowBlur={8}
+          shadowOpacity={0.18}
+          shadowOffsetX={0}
+          shadowOffsetY={4}
           dragBoundFunc={(pos) => ({
             x: Math.max(0, Math.min(pos.x, CANVAS_WIDTH - node.width)),
             y: Math.max(0, Math.min(pos.y, CANVAS_HEIGHT - node.height)),
@@ -100,6 +132,16 @@ export function CanvasNode({ node, isSelected, keepRatio, onSelect, onUpdate, on
               ? ['top-left', 'top-right', 'bottom-left', 'bottom-right']
               : ['top-left', 'top-center', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-center', 'bottom-right']
           }
+          rotateEnabled
+          rotateAnchorOffset={28}
+          borderStroke="#1c1a16"
+          borderStrokeWidth={1.5}
+          borderDash={[6, 4]}
+          anchorFill="#ffffff"
+          anchorStroke="#1c1a16"
+          anchorStrokeWidth={1.5}
+          anchorSize={10}
+          anchorCornerRadius={2}
           boundBoxFunc={(oldBox, newBox) =>
             newBox.width < 30 || newBox.height < 30 ? oldBox : newBox
           }
