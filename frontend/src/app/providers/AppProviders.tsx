@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WebSocketProvider } from '@/features/messaging';
 import { refreshAccessToken } from '@/shared/api/api';
 import { getSession, clearSession } from '@/shared/auth/session';
 import { Toaster } from '@/shared/feedback/Toaster';
+
+export const AuthContext = createContext(false);
+export const useIsAuthenticated = () => useContext(AuthContext);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +43,16 @@ export function AppProviders({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Invalidate all cached queries when the user signs in so stale guest data
+  // (is_liked: false, is_owner: false) is replaced with personalized responses.
+  const prevAuthRef = useRef(false);
+  useEffect(() => {
+    if (isAuthenticated && !prevAuthRef.current) {
+      queryClient.invalidateQueries();
+    }
+    prevAuthRef.current = isAuthenticated;
+  }, [isAuthenticated]);
+
   // When auth state becomes true (login or page load with existing session),
   // proactively refresh the token before the WebSocket connects. This ensures
   // the access_token cookie is valid for the WS upgrade handshake.
@@ -72,12 +85,14 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, [isAuthenticated]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <WebSocketProvider isAuthenticated={isWsReady}>
-        {children}
-        <Toaster />
-      </WebSocketProvider>
-    </QueryClientProvider>
+    <AuthContext.Provider value={isAuthenticated}>
+      <QueryClientProvider client={queryClient}>
+        <WebSocketProvider isAuthenticated={isWsReady}>
+          {children}
+          <Toaster />
+        </WebSocketProvider>
+      </QueryClientProvider>
+    </AuthContext.Provider>
   );
 }
 
