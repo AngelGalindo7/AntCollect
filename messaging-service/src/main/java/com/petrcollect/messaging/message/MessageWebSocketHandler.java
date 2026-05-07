@@ -39,7 +39,8 @@ import org.slf4j.MDC;
  * JwtHandshakeInterceptor, which stores the userId in the session attributes
  * map before this handler sees any frames.
  */
-@Controller
+// DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+//@Controller
 public class MessageWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(MessageWebSocketHandler.class);

@@ -19,8 +19,10 @@ import java.security.Principal;
 import java.util.Arrays;
 import java.util.Map;
 
-@Configuration
-@EnableWebSocketMessageBroker
+// DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+//@Configuration
+// DECOMMISSIONED 2026-05-06: messaging service — see docs/RECOMMISSION_TRADING_MESSAGING.md
+//@EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
