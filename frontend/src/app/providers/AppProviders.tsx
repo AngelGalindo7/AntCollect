@@ -3,8 +3,9 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
 // import { WebSocketProvider } from '@/features/messaging';
-import { refreshAccessToken } from '@/shared/api/api';
-import { getSession, clearSession } from '@/shared/auth/session';
+import { refreshAccessToken, fetchWithAuth, API_BASE } from '@/shared/api/api';
+import { getSession, setSession, clearSession } from '@/shared/auth/session';
+import type { Role } from '@/shared/auth/session';
 import { Toaster } from '@/shared/feedback/Toaster';
 
 export const AuthContext = createContext(false);
@@ -83,6 +84,29 @@ export function AppProviders({ children }: { children: ReactNode }) {
         window.location.href = '/Login';
       }
     });
+  }, [isAuthenticated]);
+
+  // Sync the locally-stored role from the server on boot so that a tampered
+  // localStorage role cannot grant elevated UI access. Runs once per session
+  // (guarded by sessionStorage) so it doesn't add a round-trip on every render.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (sessionStorage.getItem('roleSynced')) return;
+    fetchWithAuth(`${API_BASE}/users/me`)
+      .then((res) => {
+        if (!res.ok) return;
+        return res.json();
+      })
+      .then((data: { id: number; username: string; email: string; role: string } | undefined) => {
+        if (!data) return;
+        const session = getSession();
+        if (!session) return;
+        setSession({ ...session, role: data.role as Role });
+        sessionStorage.setItem('roleSynced', '1');
+      })
+      .catch(() => {
+        // Non-fatal — worst case the stale role stays until next boot sync.
+      });
   }, [isAuthenticated]);
 
   // Avoid TS unused-var warning for isWsReady while WebSocketProvider is decommissioned.
