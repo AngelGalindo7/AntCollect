@@ -102,12 +102,13 @@ export async function fetchWithAuth(
 
         if (!isRefreshing) {
             isRefreshing = true;
-            refreshPromise = refreshAccessToken();
+            refreshPromise = refreshAccessToken().finally(() => {
+                isRefreshing = false;
+                refreshPromise = null;
+            });
         }
 
-        const refreshed = await refreshPromise;
-        isRefreshing = false;
-        refreshPromise = null;
+        const refreshed = await refreshPromise!;
 
         if (refreshed) {
             response = await fetch(url, config);
