@@ -206,10 +206,10 @@ def get_top_posts(
         .exists()
     )
 
-    # Authenticated users see all published posts not in a private folder.
-    # Guests see only posts explicitly marked public — no private-post bypass.
+    # A post is visible if it is public, or the viewer owns it.
+    # Guests see only explicitly public posts.
     post_visibility = (
-        or_(Post.public == True, ~in_private_folder)
+        or_(Post.public == True, Post.user_id == current_user.user_id)
         if current_user is not None
         else (Post.public == True)
     )
