@@ -329,9 +329,10 @@ def search_user(
 
 
 def _search_users(query: str,limit: int,db: Session) -> List[User]:
+    safe_query = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     users = db.execute(
         select(User)
-        .where(User.username.ilike(f"%{query}%"))
+        .where(User.username.ilike("%" + safe_query + "%"))
         .limit(limit)
     ).scalars().all()
 
