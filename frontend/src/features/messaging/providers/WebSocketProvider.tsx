@@ -8,6 +8,7 @@ import {
 import type { ReactNode } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useSocketFrameHandler } from '../hooks/useSocketFrameHandler';
+import { toast } from '@/shared/feedback/toastStore';
 
 const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:8080/ws";
 
@@ -44,10 +45,14 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
   // effect scheduler and gets caught by the error boundary.
   const sendReadAck = useCallback((conversationId: string, messageId: string) => {
     if (!clientRef.current?.connected) return;
-    clientRef.current.publish({
-      destination: '/app/read',
-      body: JSON.stringify({ conversationId, messageId }),
-    });
+    try {
+      clientRef.current.publish({
+        destination: '/app/read',
+        body: JSON.stringify({ conversationId, messageId }),
+      });
+    } catch (err) {
+      console.warn('[WS] publish failed — connection not ready:', err);
+    }
   }, []);
 
   
@@ -130,18 +135,27 @@ export function WebSocketProvider({ isAuthenticated, children }: WebSocketProvid
     contentType: string = 'text',
   ) => {
     if (!clientRef.current?.connected) return;
-    clientRef.current.publish({
-      destination: '/app/send',
-      body: JSON.stringify({ clientMessageId, conversationId, content, contentType }),
-    });
+    try {
+      clientRef.current.publish({
+        destination: '/app/send',
+        body: JSON.stringify({ clientMessageId, conversationId, content, contentType }),
+      });
+    } catch (err) {
+      console.warn('[WS] publish failed — connection not ready:', err);
+      toast.error('Message could not be sent. Please try again.');
+    }
   }, []);
 
   const sendTyping = useCallback((conversationId: string) => {
     if (!clientRef.current?.connected) return;
-    clientRef.current.publish({
-      destination: '/app/typing',
-      body: JSON.stringify({ conversationId }),
-    });
+    try {
+      clientRef.current.publish({
+        destination: '/app/typing',
+        body: JSON.stringify({ conversationId }),
+      });
+    } catch (err) {
+      console.warn('[WS] publish failed — connection not ready:', err);
+    }
   }, []);
 
   return (
