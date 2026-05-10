@@ -16,6 +16,8 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 SECRET_KEY = os.getenv("JWT_SECRET")
+if not SECRET_KEY or len(SECRET_KEY) < 32:
+    raise RuntimeError("JWT_SECRET env var is required and must be at least 32 characters")
 security = HTTPBearer(auto_error=False) #Reads the "Authorization: Bearer <token> header"
 
 
