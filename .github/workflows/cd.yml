@@ -84,16 +84,21 @@ jobs:
           envs: PGPASSWORD,PGSSLMODE,RDS_HOST,RDS_PORT,RDS_ADMIN_USER,DB_NAME,APP_DB_USER,APP_DB_PASSWORD,MESSAGING_DB_USER,MESSAGING_DB_PASSWORD,MESSAGING_DB_SCHEMA
           script: |
             set -euo pipefail
+            # :'varname' is psql's quoted-literal substitution: psql escapes the value
+            # and wraps it in single quotes before sending SQL to PG, preventing injection
+            # if the password contains single quotes, backslashes, or semicolons.
             psql \
               -h "$RDS_HOST" \
               -p "$RDS_PORT" \
               -U "$RDS_ADMIN_USER" \
               -d "$DB_NAME" \
               --set=ON_ERROR_STOP=1 \
-              -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${APP_DB_USER}') THEN CREATE ROLE ${APP_DB_USER} WITH LOGIN PASSWORD '${APP_DB_PASSWORD}'; END IF; END \$\$;" \
+              -v app_pw="$APP_DB_PASSWORD" \
+              -v msg_pw="$MESSAGING_DB_PASSWORD" \
+              -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${APP_DB_USER}') THEN CREATE ROLE ${APP_DB_USER} WITH LOGIN PASSWORD :'app_pw'; END IF; END \$\$;" \
               -c "ALTER ROLE ${APP_DB_USER} SET search_path TO public;" \
               -c "GRANT ALL PRIVILEGES ON SCHEMA public TO ${APP_DB_USER};" \
-              -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${MESSAGING_DB_USER}') THEN CREATE ROLE ${MESSAGING_DB_USER} WITH LOGIN PASSWORD '${MESSAGING_DB_PASSWORD}'; END IF; END \$\$;" \
+              -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${MESSAGING_DB_USER}') THEN CREATE ROLE ${MESSAGING_DB_USER} WITH LOGIN PASSWORD :'msg_pw'; END IF; END \$\$;" \
               -c "CREATE SCHEMA IF NOT EXISTS ${MESSAGING_DB_SCHEMA};" \
               -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" \
               -c "CREATE EXTENSION IF NOT EXISTS vector;" \
@@ -104,6 +109,87 @@ jobs:
       # ── Run Alembic Migrations (App User via EC2) ───────────────────────
       # docker run executes on EC2 so the container reaches RDS inside the VPC.
       # ECR token is forwarded from the runner — no aws CLI needed on EC2.
+      #
+      # TODO(follow-up): add downgrade round-trip test in CI before promoting to prod:
+      #   alembic upgrade head && alembic downgrade -1 && alembic upgrade head
+      #   Run against an ephemeral RDS clone or a local pg container seeded from a snapshot.
+
+      - name: Validate pending migrations
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_PASSWORD: ${{ steps.ecr-token.outputs.password }}
+          APP_DB_USER: ${{ secrets.APP_DB_USER }}
+          APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
+          RDS_HOST: ${{ secrets.RDS_HOST }}
+          RDS_PORT: ${{ secrets.RDS_PORT }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: ECR_REGISTRY,ECR_PASSWORD,APP_DB_USER,APP_DB_PASSWORD,RDS_HOST,RDS_PORT,DB_NAME
+          script: |
+            echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+            docker run --rm \
+              -e DB_USER="$APP_DB_USER" \
+              -e DB_PASSWORD="$APP_DB_PASSWORD" \
+              -e DB_HOST="$RDS_HOST" \
+              -e DB_PORT="$RDS_PORT" \
+              -e DB_NAME="$DB_NAME" \
+              "$ECR_REGISTRY/petrcollect-backend:latest" \
+              bash -euo pipefail -c '
+                set -euo pipefail
+
+                # Identify pending revisions (those listed after the current head marker).
+                # alembic history --indicate-current marks the applied head with "(head)";
+                # revisions printed after it (i.e. not yet applied) are the pending ones.
+                PENDING=$(alembic history --indicate-current 2>/dev/null \
+                  | awk "found{print \$1} /\(head\)/{found=1}")
+
+                if [ -z "$PENDING" ]; then
+                  echo "No pending migrations — pre-flight check passed."
+                  exit 0
+                fi
+
+                FAILED=0
+                for REV in $PENDING; do
+                  FILE=$(find alembic/versions -maxdepth 1 -name "${REV}_*.py" 2>/dev/null | head -1)
+                  if [ -z "$FILE" ]; then
+                    echo "WARNING: migration file for revision $REV not found in alembic/versions/"
+                    continue
+                  fi
+
+                  # Non-concurrent index creation locks the table for the full build duration.
+                  if grep -qiE "create_index\b" "$FILE" && ! grep -qiE "postgresql_concurrently\s*=\s*True" "$FILE"; then
+                    echo "ERROR: $FILE — create_index() without postgresql_concurrently=True locks the table in production."
+                    FAILED=1
+                  fi
+
+                  # DML without a WHERE clause risks a full-table write (large backfill = long lock).
+                  if grep -qiE "^\s*(op\.execute|connection\.execute).*\b(UPDATE|DELETE)\b" "$FILE" \
+                     && ! grep -qiE "\bWHERE\b" "$FILE"; then
+                    echo "ERROR: $FILE — UPDATE or DELETE without a WHERE clause detected."
+                    FAILED=1
+                  fi
+
+                  # Adding a NOT NULL column without a server-side default locks the table for a full rewrite.
+                  if grep -qiE "add_column" "$FILE" \
+                     && grep -qiE "nullable\s*=\s*False" "$FILE" \
+                     && ! grep -qiE "server_default" "$FILE"; then
+                    echo "ERROR: $FILE — NOT NULL column added without server_default; locks table on large datasets."
+                    FAILED=1
+                  fi
+                done
+
+                if [ "$FAILED" -ne 0 ]; then
+                  echo "Migration pre-flight check FAILED — aborting deployment."
+                  exit 1
+                fi
+
+                echo "Migration pre-flight check passed."
+              '
+
       - name: Run Backend Migrations
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         env:
@@ -166,6 +252,12 @@ jobs:
           script: mkdir -p ~/petrcollect
 
       # ── Create .env for EC2 ──────────────────────────────────────────────
+      # TODO(security): migrate to AWS Secrets Manager
+      # Current: secrets written to .env on EC2 disk (chmod 600)
+      # Goal: replace with `aws secretsmanager get-secret-value` at container startup
+      # Requires: secrets pre-created in Secrets Manager and IAM role with secretsmanager:GetSecretValue
+      # See: docs/DECISION_LOG.md — Secrets Management Migration
+      #
       # RDS_ADMIN_PASSWORD is intentionally omitted — admin creds are only
       # needed for the one-time schema init steps above, not at runtime.
       - name: Create .env file for EC2
