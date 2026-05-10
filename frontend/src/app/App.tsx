@@ -1,6 +1,5 @@
-// DECOMMISSIONED 2026-05-06: React import only used by commented-out ChatErrorBoundary
-// import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import './index.css';
 import SignUp from '@/features/auth/pages/SignUp';
 import LogIn from '@/features/auth/pages/LogIn';
@@ -24,41 +23,10 @@ function RequireAuth() {
   return getSession() ? <Outlet /> : <Navigate to="/Login" replace />;
 }
 
-// DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
-// ChatErrorBoundary kept here as commented reference for re-enable.
-// interface BoundaryState { hasError: boolean }
-// class ChatErrorBoundary extends React.Component<{ children: ReactNode }, BoundaryState> {
-//   state: BoundaryState = { hasError: false };
-//
-//   static getDerivedStateFromError(): BoundaryState {
-//     return { hasError: true };
-//   }
-//
-//   componentDidCatch(error: Error, info: React.ErrorInfo) {
-//     console.error('[Chat] Render error:', error, info.componentStack);
-//   }
-//
-//   render() {
-//     if (this.state.hasError) {
-//       return (
-//         <div className="flex flex-col items-center justify-center h-full gap-3 px-6 text-center">
-//           <p className="text-sm text-gray-500">Chat couldn't load. Try refreshing the page.</p>
-//           <button
-//             onClick={() => this.setState({ hasError: false })}
-//             className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
-//           >
-//             Retry
-//           </button>
-//         </div>
-//       );
-//     }
-//     return this.props.children;
-//   }
-// }
-
 function App(){
   return (
     <BrowserRouter>
+      <ErrorBoundary>
       <Routes>
         {/* Standalone auth pages — no Layout */}
         <Route path="/Login" element={<LogIn />} />
@@ -89,6 +57,7 @@ function App(){
           <Route path="/:username" element={<UserProfile />} caseSensitive />
         </Route>
       </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }
