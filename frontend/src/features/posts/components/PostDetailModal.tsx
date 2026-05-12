@@ -144,7 +144,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
             <img
               src={imageSrc}
               alt={post.caption || `Post ${post.post_id}`}
-              className="max-h-[80vh] max-w-[90vw] w-auto h-auto object-contain rounded-md shadow-2xl select-none"
+              className={`${canNav ? 'max-h-[68vh]' : 'max-h-[80vh]'} max-w-[90vw] w-auto h-auto object-contain rounded-md shadow-2xl select-none`}
               draggable={false}
             />
           ) : (
