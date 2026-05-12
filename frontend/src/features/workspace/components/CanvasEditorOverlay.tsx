@@ -36,10 +36,9 @@ function dataURLtoBlob(dataUrl: string): Blob {
 
 export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideInitialSize }: Props) {
   const effectiveInitialJson: CanvasState | null = panel.canvas_json
-    ? (panel.canvas_json as CanvasState)
-    : overrideInitialSize
+    ?? (overrideInitialSize
       ? { version: 1, width: overrideInitialSize.w, height: overrideInitialSize.h, background: { type: 'color', value: '#f5f0e8' }, nodes: [] }
-      : null;
+      : null);
 
   const { nodes, background, width, height, isDirty, addNode, updateNode, removeNode, duplicateNode,
     moveNodeUp, moveNodeDown, changeBackground, setCanvasSize, markClean, getCanvasJson } =
@@ -164,11 +163,22 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
       transformers.forEach((t) => t.visible(true));
       stage.batchDraw();
       const blob = dataURLtoBlob(dataUrl);
-      await uploadPanelPreview(panel.id, blob);
+
+      // Save canvas JSON first: if the preview upload fails after this, the stored
+      // JSON still matches what was rendered, so re-saving will recover cleanly.
+      // The reverse order (preview first) leaves JSON stale on any JSON-save failure,
+      // causing the showcase to show more nodes than the editor loads next time.
       let updated = await savePanelCanvas(panel.id, getCanvasJson());
       if (titleDirty) {
         updated = await updatePanelMeta(panel.id, { title: trimmedTitle || null });
       }
+      const previewPath = await uploadPanelPreview(panel.id, blob);
+
+      // Explicitly patch preview_path: savePanelCanvas / updatePanelMeta return the
+      // panel after their own write; the preview upload is a separate DB write and its
+      // result may not be reflected in those responses.
+      updated = { ...updated, preview_path: previewPath };
+
       markClean();
       setLastSavedAt(Date.now());
       onSaved(updated);
