@@ -112,6 +112,32 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
         className="relative z-10 flex flex-col items-center max-w-full max-h-full"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* User identity — top-left, above the image */}
+        {post.user && (
+          <div className="self-start flex items-center gap-2.5 mb-3">
+            {post.user.avatar_path ? (
+              <img
+                src={post.user.avatar_path}
+                alt={post.user.username}
+                className="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-white/30"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                <svg className="w-4 h-4 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => { onClose(); navigate(`/${post.user!.username}`); }}
+              className="text-sm font-semibold text-white/90 hover:text-white hover:underline"
+            >
+              {post.user.username}
+            </button>
+          </div>
+        )}
+
         {/* Image with carousel arrows + admin badge layered on top */}
         <div className="relative inline-flex">
           {imageSrc ? (
@@ -170,7 +196,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
 
         {/* Thumbnail strip */}
         {canNav && (
-          <div className="mt-4 flex gap-2 overflow-x-auto max-w-[90vw] px-1 py-1">
+          <div className="mt-4 flex gap-2 overflow-x-auto max-w-[90vw] px-1 py-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
             {images.map((img, i) => {
               const thumbSrc = img.paths?.thumbnail ?? img.paths?.original ?? post.image_paths[i];
               return (
@@ -192,20 +218,10 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
           </div>
         )}
 
-        {/* Metadata: @username · caption */}
-        {(post.user || post.caption) && (
+        {/* Caption */}
+        {post.caption && (
           <p className="mt-3 text-center text-sm text-white/70 max-w-xl line-clamp-2 px-2">
-            {post.user && (
-              <button
-                type="button"
-                onClick={() => { onClose(); navigate(`/${post.user!.username}`); }}
-                className="font-medium text-white/90 hover:text-white hover:underline"
-              >
-                @{post.user.username}
-              </button>
-            )}
-            {post.user && post.caption && <span className="mx-1.5 text-white/40">·</span>}
-            {post.caption && <span className="text-white/70">{post.caption}</span>}
+            {post.caption}
           </p>
         )}
       </div>
