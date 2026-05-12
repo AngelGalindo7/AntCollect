@@ -11,66 +11,67 @@ export function PanelPreview({ panel }: Props) {
   const canvas = panel.canvas_json as CanvasState | null;
   const cw = canvas?.width ?? CANVAS_WIDTH;
   const ch = canvas?.height ?? CANVAS_HEIGHT;
+  const pw = panel.w;
+  const ph = panel.h;
 
   if (panel.preview_path) {
     const nodes = canvas?.nodes ?? [];
-    // Every node from the first holo onward needs an HTML overlay to preserve z-order.
-    // Non-holo nodes before any holo are safely baked into the PNG only.
     const firstHoloIndex = nodes.findIndex((n) => n.holo);
     const overlayNodes = firstHoloIndex >= 0 ? nodes.slice(firstHoloIndex) : [];
 
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-[#f5f0e8]">
-        <div
-          className="relative"
-          style={{ aspectRatio: `${cw} / ${ch}`, maxWidth: '100%', maxHeight: '100%', width: '100%' }}
-        >
-          <img
-            src={panel.preview_path}
-            className="absolute inset-0 w-full h-full"
-            alt=""
-            draggable={false}
-          />
-          {overlayNodes.map((node) => {
-            const left = (node.x / cw) * 100;
-            const top = (node.y / ch) * 100;
-            const width = (node.width / cw) * 100;
-            const height = (node.height / ch) * 100;
+    // Cover scale: make canvas fill the panel, centered (same math as object-fit: cover)
+    const scale = Math.max(pw / cw, ph / ch);
+    const ox = (pw - cw * scale) / 2;
+    const oy = (ph - ch * scale) / 2;
 
-            return (
-              <div
-                key={node.id}
-                style={{
-                  position: 'absolute',
-                  left: `${left}%`,
-                  top: `${top}%`,
-                  width: `${width}%`,
-                  height: `${height}%`,
-                  transformOrigin: 'top left',
-                  transform: `rotate(${node.rotation}deg)`,
-                }}
-              >
-                {node.holo ? (
-                  <HoloStickerEffect maskUrl={node.image_url} variant={node.holoVariant}>
-                    <img
-                      src={node.image_url}
-                      alt=""
-                      draggable={false}
-                      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
-                    />
-                  </HoloStickerEffect>
-                ) : (
+    return (
+      <div className="w-full h-full relative overflow-hidden">
+        <img
+          src={panel.preview_path}
+          className="absolute inset-0 w-full h-full"
+          style={{ objectFit: 'cover' }}
+          alt=""
+          draggable={false}
+        />
+        {overlayNodes.map((node) => {
+          const left = ((node.x * scale + ox) / pw) * 100;
+          const top = ((node.y * scale + oy) / ph) * 100;
+          const width = (node.width * scale / pw) * 100;
+          const height = (node.height * scale / ph) * 100;
+
+          return (
+            <div
+              key={node.id}
+              style={{
+                position: 'absolute',
+                left: `${left}%`,
+                top: `${top}%`,
+                width: `${width}%`,
+                height: `${height}%`,
+                transformOrigin: 'top left',
+                transform: `rotate(${node.rotation}deg)`,
+              }}
+            >
+              {node.holo ? (
+                <HoloStickerEffect maskUrl={node.image_url} variant={node.holoVariant}>
                   <img
                     src={node.image_url}
                     alt=""
                     draggable={false}
                     style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                   />
-                )}
-              </div>
-            );
-          })}
-        </div>
+                </HoloStickerEffect>
+              ) : (
+                <img
+                  src={node.image_url}
+                  alt=""
+                  draggable={false}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }
