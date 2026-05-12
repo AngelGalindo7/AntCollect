@@ -22,6 +22,7 @@ interface Props {
   posts: Post[];
   onClose: () => void;
   onSaved: (updated: Panel) => void;
+  overrideInitialSize?: { w: number; h: number };
 }
 
 function dataURLtoBlob(dataUrl: string): Blob {
@@ -33,10 +34,16 @@ function dataURLtoBlob(dataUrl: string): Blob {
   return new Blob([arr], { type: mime });
 }
 
-export function CanvasEditorOverlay({ panel, posts, onClose, onSaved }: Props) {
+export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideInitialSize }: Props) {
+  const effectiveInitialJson: CanvasState | null = panel.canvas_json
+    ? (panel.canvas_json as CanvasState)
+    : overrideInitialSize
+      ? { version: 1, width: overrideInitialSize.w, height: overrideInitialSize.h, background: { type: 'color', value: '#f5f0e8' }, nodes: [] }
+      : null;
+
   const { nodes, background, width, height, isDirty, addNode, updateNode, removeNode, duplicateNode,
     moveNodeUp, moveNodeDown, changeBackground, setCanvasSize, markClean, getCanvasJson } =
-    useCanvasState(panel.canvas_json as CanvasState | null);
+    useCanvasState(effectiveInitialJson);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
