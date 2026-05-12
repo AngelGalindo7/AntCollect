@@ -1,5 +1,4 @@
 import type { Panel } from '../types/workspace';
-import type { CanvasState } from '@/features/canvas/types/canvas';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/hooks/useCanvasState';
 import { HoloStickerEffect } from '@/features/canvas/components/HoloStickerEffect';
 
@@ -8,7 +7,7 @@ interface Props {
 }
 
 export function PanelPreview({ panel }: Props) {
-  const canvas = panel.canvas_json as CanvasState | null;
+  const canvas = panel.canvas_json;
   const cw = canvas?.width ?? CANVAS_WIDTH;
   const ch = canvas?.height ?? CANVAS_HEIGHT;
   const pw = panel.w;
@@ -19,17 +18,21 @@ export function PanelPreview({ panel }: Props) {
     const firstHoloIndex = nodes.findIndex((n) => n.holo);
     const overlayNodes = firstHoloIndex >= 0 ? nodes.slice(firstHoloIndex) : [];
 
-    // Cover scale: make canvas fill the panel, centered (same math as object-fit: cover)
-    const scale = Math.max(pw / cw, ph / ch);
+    // Contain scale: fit the entire canvas inside the panel (same math as object-fit: contain).
+    // Using cover here would crop content that is visible in the editor — use contain to match.
+    const scale = Math.min(pw / cw, ph / ch);
     const ox = (pw - cw * scale) / 2;
     const oy = (ph - ch * scale) / 2;
 
+    const bg = canvas?.background;
+    const letterboxColor = bg?.type === 'image' ? '#f6f1e6' : (bg?.value ?? '#f5f0e8');
+
     return (
-      <div className="w-full h-full relative overflow-hidden">
+      <div className="w-full h-full relative overflow-hidden" style={{ background: letterboxColor }}>
         <img
           src={panel.preview_path}
           className="absolute inset-0 w-full h-full"
-          style={{ objectFit: 'cover' }}
+          style={{ objectFit: 'contain' }}
           alt=""
           draggable={false}
         />
