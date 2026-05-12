@@ -84,27 +84,37 @@ jobs:
           envs: PGPASSWORD,PGSSLMODE,RDS_HOST,RDS_PORT,RDS_ADMIN_USER,DB_NAME,APP_DB_USER,APP_DB_PASSWORD,MESSAGING_DB_USER,MESSAGING_DB_PASSWORD,MESSAGING_DB_SCHEMA
           script: |
             set -euo pipefail
-            # :'varname' is psql's quoted-literal substitution: psql escapes the value
-            # and wraps it in single quotes before sending SQL to PG, preventing injection
-            # if the password contains single quotes, backslashes, or semicolons.
+            # :'varname' is psql's quoted-literal substitution — it escapes the value and
+            # wraps it in single quotes, preventing injection from passwords with special chars.
+            # This only works when psql reads from stdin/file; -c bypasses interpolation entirely.
             psql \
               -h "$RDS_HOST" \
               -p "$RDS_PORT" \
               -U "$RDS_ADMIN_USER" \
               -d "$DB_NAME" \
-              --set=ON_ERROR_STOP=1 \
+              -v ON_ERROR_STOP=1 \
               -v app_pw="$APP_DB_PASSWORD" \
               -v msg_pw="$MESSAGING_DB_PASSWORD" \
-              -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${APP_DB_USER}') THEN CREATE ROLE ${APP_DB_USER} WITH LOGIN PASSWORD :'app_pw'; END IF; END \$\$;" \
-              -c "ALTER ROLE ${APP_DB_USER} SET search_path TO public;" \
-              -c "GRANT ALL PRIVILEGES ON SCHEMA public TO ${APP_DB_USER};" \
-              -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${MESSAGING_DB_USER}') THEN CREATE ROLE ${MESSAGING_DB_USER} WITH LOGIN PASSWORD :'msg_pw'; END IF; END \$\$;" \
-              -c "CREATE SCHEMA IF NOT EXISTS ${MESSAGING_DB_SCHEMA};" \
-              -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" \
-              -c "CREATE EXTENSION IF NOT EXISTS vector;" \
-              -c "GRANT ALL PRIVILEGES ON SCHEMA ${MESSAGING_DB_SCHEMA} TO ${MESSAGING_DB_USER};" \
-              -c "ALTER ROLE ${MESSAGING_DB_USER} SET search_path TO ${MESSAGING_DB_SCHEMA}, public;" \
-              -c "GRANT USAGE ON SCHEMA public TO ${MESSAGING_DB_USER};"
+              << EOSQL
+            DO \$\$ BEGIN
+              IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${APP_DB_USER}') THEN
+                CREATE ROLE ${APP_DB_USER} WITH LOGIN PASSWORD :'app_pw';
+              END IF;
+            END \$\$;
+            ALTER ROLE ${APP_DB_USER} SET search_path TO public;
+            GRANT ALL PRIVILEGES ON SCHEMA public TO ${APP_DB_USER};
+            DO \$\$ BEGIN
+              IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${MESSAGING_DB_USER}') THEN
+                CREATE ROLE ${MESSAGING_DB_USER} WITH LOGIN PASSWORD :'msg_pw';
+              END IF;
+            END \$\$;
+            CREATE SCHEMA IF NOT EXISTS ${MESSAGING_DB_SCHEMA};
+            CREATE EXTENSION IF NOT EXISTS pg_trgm;
+            CREATE EXTENSION IF NOT EXISTS vector;
+            GRANT ALL PRIVILEGES ON SCHEMA ${MESSAGING_DB_SCHEMA} TO ${MESSAGING_DB_USER};
+            ALTER ROLE ${MESSAGING_DB_USER} SET search_path TO ${MESSAGING_DB_SCHEMA}, public;
+            GRANT USAGE ON SCHEMA public TO ${MESSAGING_DB_USER};
+            EOSQL
 
       # ── Run Alembic Migrations (App User via EC2) ───────────────────────
       # docker run executes on EC2 so the container reaches RDS inside the VPC.
