@@ -179,6 +179,22 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
       // result may not be reflected in those responses.
       updated = { ...updated, preview_path: previewPath };
 
+      // Sync panel frame AR to canvas AR so the preview fills the frame without
+      // letterbox bars. Keep the larger dimension fixed and shrink the other.
+      const canvasAR = width / height;
+      const frameAR = updated.w / updated.h;
+      if (Math.abs(canvasAR - frameAR) > 0.005) {
+        let newW = updated.w;
+        let newH = updated.h;
+        if (canvasAR > frameAR) {
+          newH = Math.max(220, Math.round(newW / canvasAR));
+        } else {
+          newW = Math.max(280, Math.round(newH * canvasAR));
+        }
+        const arSynced = await updatePanelMeta(panel.id, { w: newW, h: newH });
+        updated = { ...arSynced, preview_path: previewPath };
+      }
+
       markClean();
       setLastSavedAt(Date.now());
       onSaved(updated);
