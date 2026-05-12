@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Panel } from '../types/workspace';
+import type { CanvasState } from '@/features/canvas/types/canvas';
 import {
   getMyWorkspace,
   createPanel,
@@ -27,7 +28,7 @@ interface UseWorkspaceState {
   commitPanelRect: (id: number) => Promise<void>;
   bringToFront: (id: number) => Promise<void>;
   lockPanel: (id: number, locked: boolean) => Promise<void>;
-  savePanelCanvas: (id: number, canvasJson: unknown) => Promise<void>;
+  savePanelCanvas: (id: number, canvasJson: CanvasState) => Promise<void>;
   uploadPanelPreview: (id: number, blob: Blob) => Promise<void>;
   setPanelById: (updated: Panel) => void;
   isLoading: boolean;
@@ -159,7 +160,7 @@ export function useWorkspaceState(): UseWorkspaceState {
     setPanels((prev) => replacePanel(prev, updated));
   }, []);
 
-  const savePanelCanvas = useCallback(async (id: number, canvasJson: unknown) => {
+  const savePanelCanvas = useCallback(async (id: number, canvasJson: CanvasState) => {
     const updated = await apiSavePanelCanvas(id, canvasJson);
     setPanels((prev) => replacePanel(prev, updated));
   }, []);
