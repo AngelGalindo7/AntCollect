@@ -29,7 +29,7 @@ interface Props {
   placedPanels: Panel[];
   bounds: WorkspaceBounds;
   onPlace: (id: number, rect: { x: number; y: number; w: number; h: number }) => Promise<void>;
-  onNewCanvas: () => Promise<void>;
+  onNewCanvas: () => void;
   onClose: () => void;
 }
 
@@ -37,7 +37,6 @@ export function CanvasPickerDrawer({
   libraryPanels, placedPanels, bounds, onPlace, onNewCanvas, onClose,
 }: Props) {
   const [placingId, setPlacingId] = useState<number | null>(null);
-  const [creatingNew, setCreatingNew] = useState(false);
 
   const handlePlace = async (panel: Panel) => {
     const spot = findFreeSpot(placedPanels, bounds, panel.w, panel.h);
@@ -47,15 +46,6 @@ export function CanvasPickerDrawer({
       await onPlace(panel.id, { x: spot.x, y: spot.y, w: panel.w, h: panel.h });
     } finally {
       setPlacingId(null);
-    }
-  };
-
-  const handleNewCanvas = async () => {
-    setCreatingNew(true);
-    try {
-      await onNewCanvas();
-    } finally {
-      setCreatingNew(false);
     }
   };
 
@@ -152,20 +142,13 @@ export function CanvasPickerDrawer({
 
             {/* New canvas card */}
             <button
-              onClick={handleNewCanvas}
-              disabled={creatingNew}
-              className="w-36 h-28 rounded-xl border-2 border-dashed border-neutral-300 hover:border-espresso/50 bg-neutral-50 hover:bg-neutral-100 shrink-0 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+              onClick={onNewCanvas}
+              className="w-36 h-28 rounded-xl border-2 border-dashed border-neutral-300 hover:border-espresso/50 bg-neutral-50 hover:bg-neutral-100 shrink-0 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              {creatingNew ? (
-                <Loader2 size={20} className="text-neutral-400 animate-spin" />
-              ) : (
-                <>
-                  <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center">
-                    <Plus size={16} className="text-neutral-500" />
-                  </div>
-                  <span className="text-xs font-medium text-neutral-500">New Canvas</span>
-                </>
-              )}
+              <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center">
+                <Plus size={16} className="text-neutral-500" />
+              </div>
+              <span className="text-xs font-medium text-neutral-500">New Canvas</span>
             </button>
 
             {/* Empty state when no library canvases */}

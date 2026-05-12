@@ -7,6 +7,7 @@ import { PanelFrame } from './PanelFrame';
 import { PanelPreview } from './PanelPreview';
 import { CanvasEditorOverlay } from './CanvasEditorOverlay';
 import { CanvasPickerDrawer } from './CanvasPickerDrawer';
+import { CanvasSizeSetup } from './CanvasSizeSetup';
 
 interface Props {
   username: string;
@@ -20,8 +21,10 @@ export function Workspace({ posts, isOwner }: Props) {
   const [isWorkspaceEditMode, setIsWorkspaceEditMode] = useState(false);
   const [workspaceH, setWorkspaceH] = useState(600);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isSizeSetupOpen, setIsSizeSetupOpen] = useState(false);
   const [editingPanelId, setEditingPanelId] = useState<number | null>(null);
   const freshPanelIdRef = useRef<number | null>(null);
+  const pendingCanvasSizeRef = useRef<{ w: number; h: number } | null>(null);
 
   const {
     panels,
@@ -174,6 +177,20 @@ export function Workspace({ posts, isOwner }: Props) {
         </div>
       )}
 
+      {/* Canvas size setup — shown before creating a new canvas */}
+      {isSizeSetupOpen && isOwner && (
+        <CanvasSizeSetup
+          onClose={() => setIsSizeSetupOpen(false)}
+          onConfirm={async (w, h) => {
+            pendingCanvasSizeRef.current = { w, h };
+            const panel = await createLibraryCanvas();
+            freshPanelIdRef.current = panel.id;
+            setIsSizeSetupOpen(false);
+            setEditingPanelId(panel.id);
+          }}
+        />
+      )}
+
       {/* Canvas picker drawer */}
       {isPickerOpen && isOwner && (
         <CanvasPickerDrawer
@@ -184,11 +201,9 @@ export function Workspace({ posts, isOwner }: Props) {
             await placePanel(id, rect);
             setIsPickerOpen(false);
           }}
-          onNewCanvas={async () => {
-            const panel = await createLibraryCanvas();
-            freshPanelIdRef.current = panel.id;
+          onNewCanvas={() => {
             setIsPickerOpen(false);
-            setEditingPanelId(panel.id);
+            setIsSizeSetupOpen(true);
           }}
           onClose={() => setIsPickerOpen(false)}
         />
@@ -199,10 +214,12 @@ export function Workspace({ posts, isOwner }: Props) {
         <CanvasEditorOverlay
           panel={editingPanel}
           posts={posts}
+          overrideInitialSize={pendingCanvasSizeRef.current ?? undefined}
           onClose={() => {
             const id = editingPanel.id;
             if (freshPanelIdRef.current === id) {
               freshPanelIdRef.current = null;
+              pendingCanvasSizeRef.current = null;
               deletePanel(id).catch(() => {});
             }
             setEditingPanelId(null);
@@ -210,6 +227,7 @@ export function Workspace({ posts, isOwner }: Props) {
           onSaved={(updated) => {
             if (freshPanelIdRef.current === updated.id) {
               freshPanelIdRef.current = null;
+              pendingCanvasSizeRef.current = null;
             }
             setPanelById(updated);
             setEditingPanelId(null);
