@@ -17,7 +17,7 @@ export function clampRect(target: Rect, bounds: WorkspaceBounds, mode: DragMode)
   let { x, y, w, h } = target;
   if (mode === 'move') {
     x = clamp(x, 0, bounds.w - w);
-    y = clamp(y, 0, bounds.h - h);
+    y = Math.max(0, y); // no lower clamp — workspace grows downward as panels are dragged
   } else {
     if (mode.includes('e')) w = Math.min(w, bounds.w - x);
     if (mode.includes('s')) h = Math.min(h, bounds.h - y);
