@@ -4,6 +4,16 @@ import type { Panel, WorkspaceBounds } from '../types/workspace';
 
 const GRID_STEP = 40;
 
+function deriveFrameSize(panel: Panel, bounds: WorkspaceBounds): { w: number; h: number } {
+  const cw = panel.canvas_json?.width;
+  const ch = panel.canvas_json?.height;
+  if (cw && ch) {
+    const s = Math.min((bounds.w * 0.75) / cw, (bounds.h * 0.70) / ch, 1);
+    return { w: Math.max(280, Math.round(cw * s)), h: Math.max(220, Math.round(ch * s)) };
+  }
+  return { w: panel.w, h: panel.h };
+}
+
 function findFreeSpot(
   panels: { x: number; y: number; w: number; h: number }[],
   bounds: WorkspaceBounds,
@@ -39,11 +49,12 @@ export function CanvasPickerDrawer({
   const [placingId, setPlacingId] = useState<number | null>(null);
 
   const handlePlace = async (panel: Panel) => {
-    const spot = findFreeSpot(placedPanels, bounds, panel.w, panel.h);
+    const { w: fw, h: fh } = deriveFrameSize(panel, bounds);
+    const spot = findFreeSpot(placedPanels, bounds, fw, fh);
     if (!spot) return;
     setPlacingId(panel.id);
     try {
-      await onPlace(panel.id, { x: spot.x, y: spot.y, w: panel.w, h: panel.h });
+      await onPlace(panel.id, { x: spot.x, y: spot.y, w: fw, h: fh });
     } finally {
       setPlacingId(null);
     }
@@ -83,7 +94,8 @@ export function CanvasPickerDrawer({
           <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
             {/* Library canvas cards */}
             {libraryPanels.map((panel) => {
-              const spot = findFreeSpot(placedPanels, bounds, panel.w, panel.h);
+              const { w: fw, h: fh } = deriveFrameSize(panel, bounds);
+              const spot = findFreeSpot(placedPanels, bounds, fw, fh);
               const cantFit = spot === null;
               const isPlacing = placingId === panel.id;
 
