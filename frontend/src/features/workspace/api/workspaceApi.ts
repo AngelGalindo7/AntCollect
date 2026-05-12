@@ -1,5 +1,6 @@
 import { API_BASE, fetchWithAuth } from '@/shared/api/api';
 import type { Panel, WorkspaceData } from '../types/workspace';
+import type { CanvasState } from '@/features/canvas/types/canvas';
 
 export interface PanelCreateRequest {
   rect?: { x: number; y: number; w: number; h: number };
@@ -47,7 +48,7 @@ export async function updatePanelMeta(id: number, patch: PanelMetaUpdate): Promi
   return res.json();
 }
 
-export async function savePanelCanvas(id: number, canvasJson: unknown): Promise<Panel> {
+export async function savePanelCanvas(id: number, canvasJson: CanvasState): Promise<Panel> {
   const res = await fetchWithAuth(`${API_BASE}/workspace/me/panels/${id}/canvas`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },

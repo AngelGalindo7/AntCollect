@@ -1,3 +1,5 @@
+import type { CanvasState } from '@/features/canvas/types/canvas';
+
 export interface Rect {
   x: number;
   y: number;
@@ -24,7 +26,7 @@ export interface Panel {
   placed: boolean;
   title: string | null;
   accent: string | null;
-  canvas_json: unknown | null;
+  canvas_json: CanvasState | null;
   preview_path: string | null;
   created_at: string;
   updated_at: string;
