@@ -1,9 +1,19 @@
 import type { Panel } from '../types/workspace';
+import type { BackgroundConfig } from '@/features/canvas/types/canvas';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/hooks/useCanvasState';
 import { HoloStickerEffect } from '@/features/canvas/components/HoloStickerEffect';
 
 interface Props {
   panel: Panel;
+}
+
+function bgToCss(bg: BackgroundConfig | undefined): React.CSSProperties {
+  if (!bg) return { background: '#f5f0e8' };
+  if (bg.type === 'gradient') {
+    return { background: `linear-gradient(135deg, ${bg.value}, ${bg.gradientEnd ?? '#ffffff'})` };
+  }
+  if (bg.type === 'image') return { background: '#f6f1e6' };
+  return { background: bg.value };
 }
 
 export function PanelPreview({ panel }: Props) {
@@ -15,10 +25,9 @@ export function PanelPreview({ panel }: Props) {
 
   if (panel.preview_path) {
     const nodes = canvas?.nodes ?? [];
-    const overlayNodes = nodes.filter((n) => n.holo);
+    const hasHolo = nodes.some((n) => n.holo);
 
     // Contain scale: fit the entire canvas inside the panel (same math as object-fit: contain).
-    // Using cover here would crop content that is visible in the editor — use contain to match.
     const scale = Math.min(pw / cw, ph / ch);
     const ox = (pw - cw * scale) / 2;
     const oy = (ph - ch * scale) / 2;
@@ -26,32 +35,57 @@ export function PanelPreview({ panel }: Props) {
     const bg = canvas?.background;
     const letterboxColor = bg?.type === 'image' ? '#f6f1e6' : (bg?.value ?? '#f5f0e8');
 
+    if (!hasHolo) {
+      // No holo nodes — PNG is accurate and sufficient.
+      return (
+        <div className="w-full h-full relative overflow-hidden" style={{ background: letterboxColor }}>
+          <img
+            src={panel.preview_path}
+            className="absolute inset-0 w-full h-full"
+            style={{ objectFit: 'contain' }}
+            alt=""
+            draggable={false}
+          />
+        </div>
+      );
+    }
+
+    // Has holo nodes — skip the PNG and render all nodes as DOM elements in z-order.
+    // This is the only way to place the holo shimmer effect at its correct layer:
+    // the PNG is a flat image, so any overlay always ends up above everything in it.
     return (
       <div className="w-full h-full relative overflow-hidden" style={{ background: letterboxColor }}>
-        <img
-          src={panel.preview_path}
-          className="absolute inset-0 w-full h-full"
-          style={{ objectFit: 'contain' }}
-          alt=""
-          draggable={false}
-        />
-        {overlayNodes.map((node) => {
-          const left = ((node.x * scale + ox) / pw) * 100;
-          const top = ((node.y * scale + oy) / ph) * 100;
-          const width = (node.width * scale / pw) * 100;
-          const height = (node.height * scale / ph) * 100;
-
-          return (
+        <div
+          style={{
+            position: 'absolute',
+            left: ox,
+            top: oy,
+            width: cw * scale,
+            height: ch * scale,
+            overflow: 'hidden',
+            ...bgToCss(bg),
+          }}
+        >
+          {bg?.type === 'image' && bg.imageUrl && (
+            <img
+              src={bg.imageUrl}
+              alt=""
+              draggable={false}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          )}
+          {nodes.map((node) => (
             <div
               key={node.id}
               style={{
                 position: 'absolute',
-                left: `${left}%`,
-                top: `${top}%`,
-                width: `${width}%`,
-                height: `${height}%`,
+                left: node.x * scale,
+                top: node.y * scale,
+                width: node.width * scale,
+                height: node.height * scale,
                 transformOrigin: 'top left',
                 transform: `rotate(${node.rotation}deg)`,
+                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.18))',
               }}
             >
               {node.holo ? (
@@ -72,8 +106,8 @@ export function PanelPreview({ panel }: Props) {
                 />
               )}
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
     );
   }
