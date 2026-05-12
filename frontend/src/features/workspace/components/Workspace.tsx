@@ -80,8 +80,8 @@ export function Workspace({ posts, isOwner }: Props) {
   return (
     <div
       ref={containerRef}
-      className={`relative w-full bg-[#F0EBE5] ${isWorkspaceEditMode ? 'outline-2 outline-dashed outline-espresso/20 -outline-offset-2' : ''}`}
-      style={{ height: workspaceH }}
+      className={`relative w-full rounded-xl bg-[#F0EBE5] overflow-hidden ${isWorkspaceEditMode ? 'ring-2 ring-dashed ring-espresso/30' : 'ring-1 ring-black/8 shadow-sm'}`}
+      style={{ height: workspaceH, minHeight: 420 }}
       onClick={(e) => {
         if (e.target === containerRef.current) blur();
       }}
@@ -98,13 +98,18 @@ export function Workspace({ posts, isOwner }: Props) {
       )}
 
       {!isLoading && placedPanels.length === 0 && !isWorkspaceEditMode && isOwner && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <p className="text-neutral-400 text-sm">Your showcase is empty.</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+          <div className="flex flex-col items-center gap-1 text-center">
+            <p className="text-espresso/50 text-sm font-medium">This is your Showcase</p>
+            <p className="text-espresso/35 text-xs max-w-xs">
+              Add canvases here to display your work on your profile.
+            </p>
+          </div>
           <button
             onClick={() => setIsWorkspaceEditMode(true)}
-            className="px-4 py-2 rounded-full bg-espresso text-white text-xs font-semibold shadow-md hover:bg-espresso/90 transition-colors"
+            className="px-5 py-2 rounded-full bg-espresso text-white text-xs font-semibold shadow-md hover:bg-espresso/90 transition-colors"
           >
-            Start adding canvases
+            + Add your first canvas
           </button>
         </div>
       )}
