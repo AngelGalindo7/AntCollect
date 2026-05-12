@@ -345,13 +345,11 @@ const UserProfile: React.FC = () => {
 
       {/* ── Section 3: Tab content ── */}
       {activeTab === "showcase" ? (
-        <div className="max-w-6xl mx-auto w-full px-6 py-4">
-          {profile.is_owner ? (
-            <Workspace username={String(username)} posts={profile.posts} isOwner={true} />
-          ) : (
-            <WorkspaceViewer username={String(username)} />
-          )}
-        </div>
+        profile.is_owner ? (
+          <Workspace username={String(username)} posts={profile.posts} isOwner={true} />
+        ) : (
+          <WorkspaceViewer username={String(username)} />
+        )
       ) : (
         <div className="max-w-6xl mx-auto px-4 mt-6">
           <div className="mb-4 inline-flex rounded-full bg-warm-cream p-1">
