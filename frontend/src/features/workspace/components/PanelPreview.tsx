@@ -15,8 +15,7 @@ export function PanelPreview({ panel }: Props) {
 
   if (panel.preview_path) {
     const nodes = canvas?.nodes ?? [];
-    const firstHoloIndex = nodes.findIndex((n) => n.holo);
-    const overlayNodes = firstHoloIndex >= 0 ? nodes.slice(firstHoloIndex) : [];
+    const overlayNodes = nodes.filter((n) => n.holo);
 
     // Contain scale: fit the entire canvas inside the panel (same math as object-fit: contain).
     // Using cover here would crop content that is visible in the editor — use contain to match.
