@@ -84,9 +84,9 @@ jobs:
           envs: PGPASSWORD,PGSSLMODE,RDS_HOST,RDS_PORT,RDS_ADMIN_USER,DB_NAME,APP_DB_USER,APP_DB_PASSWORD,MESSAGING_DB_USER,MESSAGING_DB_PASSWORD,MESSAGING_DB_SCHEMA
           script: |
             set -euo pipefail
-            # :'varname' is psql's quoted-literal substitution — it escapes the value and
-            # wraps it in single quotes, preventing injection from passwords with special chars.
-            # This only works when psql reads from stdin/file; -c bypasses interpolation entirely.
+            # :'varname' (psql quoted-literal substitution) only works at the statement level.
+            # psql disables it inside dollar-quoted blocks (DO $$ ... $$), so passwords must
+            # be set via ALTER ROLE *outside* the DO block where substitution is active.
             psql \
               -h "$RDS_HOST" \
               -p "$RDS_PORT" \
@@ -98,16 +98,18 @@ jobs:
               << EOSQL
             DO \$\$ BEGIN
               IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${APP_DB_USER}') THEN
-                CREATE ROLE ${APP_DB_USER} WITH LOGIN PASSWORD :'app_pw';
+                CREATE ROLE ${APP_DB_USER} WITH LOGIN;
               END IF;
             END \$\$;
+            ALTER ROLE ${APP_DB_USER} WITH PASSWORD :'app_pw';
             ALTER ROLE ${APP_DB_USER} SET search_path TO public;
             GRANT ALL PRIVILEGES ON SCHEMA public TO ${APP_DB_USER};
             DO \$\$ BEGIN
               IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${MESSAGING_DB_USER}') THEN
-                CREATE ROLE ${MESSAGING_DB_USER} WITH LOGIN PASSWORD :'msg_pw';
+                CREATE ROLE ${MESSAGING_DB_USER} WITH LOGIN;
               END IF;
             END \$\$;
+            ALTER ROLE ${MESSAGING_DB_USER} WITH PASSWORD :'msg_pw';
             CREATE SCHEMA IF NOT EXISTS ${MESSAGING_DB_SCHEMA};
             CREATE EXTENSION IF NOT EXISTS pg_trgm;
             CREATE EXTENSION IF NOT EXISTS vector;
