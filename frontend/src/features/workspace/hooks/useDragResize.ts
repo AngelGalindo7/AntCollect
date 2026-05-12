@@ -80,6 +80,7 @@ export function useDragResize(opts: UseDragResizeOptions): {
     const { locked, panelId, rect, onFocus } = optsRef.current;
     if (locked) return;
 
+    e.preventDefault(); // stop browser scroll/text-select from stealing the gesture
     onFocus(panelId);
     e.currentTarget.setPointerCapture(e.pointerId);
 

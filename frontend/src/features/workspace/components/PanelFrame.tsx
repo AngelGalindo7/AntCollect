@@ -91,6 +91,7 @@ export function PanelFrame({
             borderRadius: 12,
             zIndex: 2,
             cursor: 'grab',
+            touchAction: 'none',
           }}
           onPointerDown={(e) => {
             if ((e.target as HTMLElement).closest('[data-panel-ctrl]')) return;
@@ -177,7 +178,7 @@ export function PanelFrame({
         RESIZE_MODES.map(({ mode, cursor, style }) => (
           <div
             key={mode}
-            style={{ position: 'absolute', cursor, zIndex: 10, ...style }}
+            style={{ position: 'absolute', cursor, zIndex: 10, touchAction: 'none', ...style }}
             onPointerDown={resizeHandleProps(mode)}
           />
         ))}
