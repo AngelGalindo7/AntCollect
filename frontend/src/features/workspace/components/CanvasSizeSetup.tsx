@@ -10,7 +10,16 @@ interface Props {
 const MIN = 200;
 const MAX = 4000;
 const PRESET_LONG_EDGE = 1440;
-const HANDLE_SIZE = 10;
+const HANDLE_PX = 24;
+
+// Mock showcase reference dimensions (logical px — same coordinate space as workspace panels)
+const MOCK_W = 1440;
+const MOCK_H = 900;
+const MOCK_SIDEBAR_W = 64;
+const MOCK_PROFILE_H = 196;
+const MOCK_TABS_H = 44;
+const WS_W = MOCK_W - MOCK_SIDEBAR_W;                   // 1376
+const WS_H = MOCK_H - MOCK_PROFILE_H - MOCK_TABS_H;    // 660
 
 const PRESETS: { label: string; ratio: [number, number] }[] = [
   { label: '16:9', ratio: [16, 9] },
@@ -35,6 +44,13 @@ function presetDims(ratio: [number, number]): { w: number; h: number } {
 }
 
 function clamp(v: number) { return Math.max(MIN, Math.min(MAX, v)); }
+
+function centeredPos(canvasW: number, canvasH: number) {
+  return {
+    px: Math.max(0, Math.round((WS_W - canvasW) / 2)),
+    py: Math.max(0, Math.round((WS_H - canvasH) / 2)),
+  };
+}
 
 const eyebrow: React.CSSProperties = {
   fontSize: 10.5,
@@ -61,83 +77,126 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
   const [w, setW] = useState(1440);
   const [h, setH] = useState(810);
   const [lockAspect, setLockAspect] = useState(false);
-  const [scale, setScale] = useState(0.5);
+  const [mockScale, setMockScale] = useState(0.35);
+  const [panelX, setPanelX] = useState(() => centeredPos(1440, 810).px);
+  const [panelY, setPanelY] = useState(() => centeredPos(1440, 810).py);
   const previewRef = useRef<HTMLDivElement>(null);
 
-  const dragRef = useRef<{
+  const resizeDragRef = useRef<{
     handle: Handle;
     startX: number; startY: number;
     startW: number; startH: number;
+    startPX: number; startPY: number;
     scaleAtStart: number;
     aspectAtStart: number;
   } | null>(null);
 
-  const computeScale = useCallback((canvasW: number, canvasH: number) => {
+  const moveDragRef = useRef<{
+    startX: number; startY: number;
+    startPX: number; startPY: number;
+  } | null>(null);
+
+  const computeMockScale = useCallback(() => {
     const el = previewRef.current;
     if (!el) return;
     const { width: cw, height: ch } = el.getBoundingClientRect();
-    const s = Math.min(1, (cw - 80) / canvasW, (ch - 80) / canvasH);
-    setScale(s);
+    const s = Math.min((cw - 48) / MOCK_W, (ch - 48) / MOCK_H);
+    setMockScale(Math.max(0.1, s));
   }, []);
 
   useLayoutEffect(() => {
-    computeScale(w, h);
+    computeMockScale();
     const el = previewRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => computeScale(w, h));
+    const ro = new ResizeObserver(computeMockScale);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [computeScale, w, h]);
+  }, [computeMockScale]);
+
+  // Clamp position when dimensions change (typed input or aspect-lock)
+  useEffect(() => {
+    setPanelX((px) => Math.max(0, Math.min(px, WS_W - w)));
+    setPanelY((py) => Math.max(0, Math.min(py, WS_H - h)));
+  }, [w, h]);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
-      const d = dragRef.current;
-      if (!d) return;
-      const dx = (e.clientX - d.startX) / d.scaleAtStart;
-      const dy = (e.clientY - d.startY) / d.scaleAtStart;
-      let nw = d.startW;
-      let nh = d.startH;
+      const rd = resizeDragRef.current;
+      if (rd) {
+        const dx = (e.clientX - rd.startX) / rd.scaleAtStart;
+        const dy = (e.clientY - rd.startY) / rd.scaleAtStart;
 
-      if (d.handle === 'e'  || d.handle === 'ne' || d.handle === 'se') nw = d.startW + dx;
-      if (d.handle === 'w'  || d.handle === 'nw' || d.handle === 'sw') nw = d.startW - dx;
-      if (d.handle === 's'  || d.handle === 'se' || d.handle === 'sw') nh = d.startH + dy;
-      if (d.handle === 'n'  || d.handle === 'ne' || d.handle === 'nw') nh = d.startH - dy;
+        const fromLeft = rd.handle === 'w' || rd.handle === 'nw' || rd.handle === 'sw';
+        const fromTop  = rd.handle === 'n' || rd.handle === 'ne' || rd.handle === 'nw';
 
-      if (lockAspect) {
-        const a = d.aspectAtStart;
-        const pureVertical = d.handle === 'n' || d.handle === 's';
-        if (pureVertical) {
-          nh = clamp(nh);
-          nw = clamp(nh * a);
+        let nw = rd.startW;
+        let nh = rd.startH;
+
+        if (rd.handle === 'e' || rd.handle === 'ne' || rd.handle === 'se') nw = rd.startW + dx;
+        if (fromLeft) nw = rd.startW - dx;
+        if (rd.handle === 's' || rd.handle === 'se' || rd.handle === 'sw') nh = rd.startH + dy;
+        if (fromTop) nh = rd.startH - dy;
+
+        if (lockAspect) {
+          const a = rd.aspectAtStart;
+          const pureVert = rd.handle === 'n' || rd.handle === 's';
+          if (pureVert) { nh = clamp(nh); nw = clamp(nh * a); }
+          else { nw = clamp(nw); nh = clamp(nw / a); }
         } else {
           nw = clamp(nw);
-          nh = clamp(nw / a);
+          nh = clamp(nh);
         }
-      } else {
-        nw = clamp(nw);
-        nh = clamp(nh);
+
+        // Position shifts by how much width/height actually changed on the left/top edges
+        const npx = fromLeft ? Math.max(0, rd.startPX + (rd.startW - nw)) : rd.startPX;
+        const npy = fromTop  ? Math.max(0, rd.startPY + (rd.startH - nh)) : rd.startPY;
+
+        setW(Math.round(nw));
+        setH(Math.round(nh));
+        setPanelX(Math.round(npx));
+        setPanelY(Math.round(npy));
       }
 
-      setW(Math.round(nw));
-      setH(Math.round(nh));
+      const md = moveDragRef.current;
+      if (md) {
+        const dx = (e.clientX - md.startX) / mockScale;
+        const dy = (e.clientY - md.startY) / mockScale;
+        setPanelX(Math.round(Math.max(0, Math.min(WS_W - w, md.startPX + dx))));
+        setPanelY(Math.round(Math.max(0, Math.min(WS_H - h, md.startPY + dy))));
+      }
     };
-    const onUp = () => { dragRef.current = null; };
+
+    const onUp = () => {
+      resizeDragRef.current = null;
+      moveDragRef.current = null;
+    };
+
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [lockAspect]);
+  }, [lockAspect, mockScale, w, h]);
 
-  const startDrag = (handle: Handle) => (e: React.MouseEvent) => {
+  const startResize = (dir: Handle) => (e: React.MouseEvent) => {
     e.preventDefault();
-    dragRef.current = {
-      handle,
+    e.stopPropagation();
+    resizeDragRef.current = {
+      handle: dir,
       startX: e.clientX, startY: e.clientY,
       startW: w, startH: h,
-      scaleAtStart: scale,
+      startPX: panelX, startPY: panelY,
+      scaleAtStart: mockScale,
       aspectAtStart: w / h,
+    };
+  };
+
+  const startMove = (e: React.MouseEvent) => {
+    e.preventDefault();
+    moveDragRef.current = {
+      startX: e.clientX, startY: e.clientY,
+      startPX: panelX, startPY: panelY,
     };
   };
 
@@ -153,25 +212,24 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
     if (lockAspect) setW(Math.round(clamp(nh * (w / h))));
   };
 
-  const hs = HANDLE_SIZE / 2;
-  const visW = Math.round(w * scale);
-  const visH = Math.round(h * scale);
+  const hs = HANDLE_PX / 2;
 
-  const handle = (h: Handle, topCenter: number, leftCenter: number) => (
+  const mkHandle = (dir: Handle, topCenter: number, leftCenter: number) => (
     <div
-      onMouseDown={startDrag(h)}
+      key={dir}
+      onMouseDown={startResize(dir)}
       style={{
         position: 'absolute',
-        width: HANDLE_SIZE,
-        height: HANDLE_SIZE,
+        width: HANDLE_PX,
+        height: HANDLE_PX,
         top: topCenter - hs,
         left: leftCenter - hs,
-        borderRadius: 2,
+        borderRadius: 3,
         background: 'white',
-        border: '1.5px solid #888',
-        cursor: CURSORS[h],
+        border: '2px solid #555',
+        cursor: CURSORS[dir],
         zIndex: 10,
-        boxShadow: '0 1px 4px rgba(0,0,0,0.22)',
+        boxShadow: '0 1px 8px rgba(0,0,0,0.28)',
       }}
     />
   );
@@ -180,6 +238,8 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
     const d = presetDims(p.ratio);
     return d.w === w && d.h === h;
   });
+
+  const overflows = w > WS_W || h > WS_H;
 
   const content = (
     <div
@@ -249,7 +309,7 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
       {/* Body */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-        {/* Left sidebar */}
+        {/* Left sidebar — controls */}
         <div
           style={{
             width: 196,
@@ -299,7 +359,7 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
               </div>
             </div>
 
-            {/* Aspect lock toggle */}
+            {/* Aspect lock */}
             <button
               type="button"
               onClick={() => setLockAspect((v) => !v)}
@@ -335,8 +395,11 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
                     type="button"
                     onClick={() => {
                       const d = presetDims(preset.ratio);
+                      const c = centeredPos(d.w, d.h);
                       setW(d.w);
                       setH(d.h);
+                      setPanelX(c.px);
+                      setPanelY(c.py);
                     }}
                     className="pw-mono"
                     style={{
@@ -358,62 +421,225 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
             </div>
           </div>
 
-          <p style={{ fontSize: 11, color: 'var(--pw-ink3)', lineHeight: 1.55, marginTop: 'auto' }}>
-            Drag the handles or type pixel values to set canvas size.
-          </p>
+          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {overflows && (
+              <p style={{ fontSize: 11, color: '#b45309', lineHeight: 1.55 }}>
+                Canvas exceeds the showcase area — it will scroll on the profile.
+              </p>
+            )}
+            <p style={{ fontSize: 11, color: 'var(--pw-ink3)', lineHeight: 1.55 }}>
+              Drag handles to resize · drag the canvas to reposition it in the preview.
+            </p>
+          </div>
         </div>
 
-        {/* Preview area — showcase background */}
+        {/* Preview area — scaled mock showcase */}
         <div
           ref={previewRef}
           style={{
             flex: 1,
-            background: '#F0EBE5',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',
             position: 'relative',
+            background: 'var(--pw-bg)',
           }}
         >
-          {/* Canvas rectangle */}
-          <div
+          {/* Label */}
+          <span
             style={{
-              position: 'relative',
-              width: visW,
-              height: visH,
-              background: '#ffffff',
-              boxShadow: '0 4px 28px rgba(0,0,0,0.14)',
-              userSelect: 'none',
-              flexShrink: 0,
+              position: 'absolute',
+              top: 10,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: 11,
+              color: 'var(--pw-ink3)',
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
             }}
           >
-            {/* Centered dimension label */}
-            <span
-              className="pw-mono"
+            Showcase preview
+          </span>
+
+          {/* Outer wrapper — takes up the correct visual footprint after scaling */}
+          <div
+            style={{
+              width: MOCK_W * mockScale,
+              height: MOCK_H * mockScale,
+              position: 'relative',
+              flexShrink: 0,
+              borderRadius: 6,
+              overflow: 'hidden',
+              boxShadow: '0 8px 48px rgba(0,0,0,0.22)',
+            }}
+          >
+            {/* Full-size mock, scaled from top-left corner */}
+            <div
               style={{
                 position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                fontSize: 13,
-                color: 'rgba(0,0,0,0.22)',
-                pointerEvents: 'none',
-                whiteSpace: 'nowrap',
+                top: 0,
+                left: 0,
+                width: MOCK_W,
+                height: MOCK_H,
+                transformOrigin: 'top left',
+                transform: `scale(${mockScale})`,
+                display: 'flex',
               }}
             >
-              {w} × {h}
-            </span>
+              {/* Dark sidebar */}
+              <div
+                style={{
+                  width: MOCK_SIDEBAR_W,
+                  background: '#2C2016',
+                  flexShrink: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  paddingTop: 24,
+                  gap: 20,
+                }}
+              >
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(255,255,255,0.15)', marginBottom: 8 }} />
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: '50%',
+                      background: i === 1 ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.07)',
+                    }}
+                  />
+                ))}
+              </div>
 
-            {/* 8 resize handles */}
-            {handle('nw', 0,         0)}
-            {handle('n',  0,         visW / 2)}
-            {handle('ne', 0,         visW)}
-            {handle('e',  visH / 2,  visW)}
-            {handle('se', visH,      visW)}
-            {handle('s',  visH,      visW / 2)}
-            {handle('sw', visH,      0)}
-            {handle('w',  visH / 2,  0)}
+              {/* Main content column */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+                {/* Profile header skeleton */}
+                <div
+                  style={{
+                    height: MOCK_PROFILE_H,
+                    background: '#ffffff',
+                    borderBottom: '1px solid #e5e0db',
+                    padding: '32px 48px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 32,
+                    flexShrink: 0,
+                  }}
+                >
+                  <div style={{ width: 92, height: 92, borderRadius: '50%', background: '#ddd8d2', flexShrink: 0 }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ width: 200, height: 24, borderRadius: 5, background: '#ccc8c2' }} />
+                    <div style={{ width: 320, height: 14, borderRadius: 4, background: '#e8e3de' }} />
+                    <div style={{ width: 260, height: 14, borderRadius: 4, background: '#e8e3de' }} />
+                    <div style={{ display: 'flex', gap: 28, marginTop: 2 }}>
+                      {[72, 54, 80].map((bw, i) => (
+                        <div key={i} style={{ width: bw, height: 13, borderRadius: 3, background: '#eee9e4' }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tab bar — Showcase active */}
+                <div
+                  style={{
+                    height: MOCK_TABS_H,
+                    background: '#ffffff',
+                    borderBottom: '1px solid #e5e0db',
+                    display: 'flex',
+                    alignItems: 'center',
+                    paddingLeft: 48,
+                    gap: 36,
+                    flexShrink: 0,
+                  }}
+                >
+                  {['Posts', 'Showcase', 'Trade'].map((tab) => {
+                    const active = tab === 'Showcase';
+                    return (
+                      <span
+                        key={tab}
+                        style={{
+                          fontSize: 26,
+                          fontWeight: active ? 600 : 400,
+                          color: active ? '#2C2016' : '#b8a99e',
+                          paddingBottom: 4,
+                          borderBottom: active ? '3px solid #2C2016' : '3px solid transparent',
+                        }}
+                      >
+                        {tab}
+                      </span>
+                    );
+                  })}
+                </div>
+
+                {/* Showcase / workspace area */}
+                <div
+                  style={{
+                    flex: 1,
+                    background: '#F0EBE5',
+                    position: 'relative',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Canvas rectangle — draggable body, resizable via handles */}
+                  <div
+                    onMouseDown={startMove}
+                    style={{
+                      position: 'absolute',
+                      left: panelX,
+                      top: panelY,
+                      width: w,
+                      height: h,
+                      background: '#ffffff',
+                      boxShadow: '0 6px 36px rgba(0,0,0,0.16)',
+                      cursor: 'grab',
+                      userSelect: 'none',
+                    }}
+                  >
+                    <span
+                      className="pw-mono"
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: 38,
+                        color: 'rgba(0,0,0,0.18)',
+                        pointerEvents: 'none',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {w} × {h}
+                    </span>
+
+                    {mkHandle('nw', 0,     0)}
+                    {mkHandle('n',  0,     w / 2)}
+                    {mkHandle('ne', 0,     w)}
+                    {mkHandle('e',  h / 2, w)}
+                    {mkHandle('se', h,     w)}
+                    {mkHandle('s',  h,     w / 2)}
+                    {mkHandle('sw', h,     0)}
+                    {mkHandle('w',  h / 2, 0)}
+                  </div>
+
+                  <span
+                    style={{
+                      position: 'absolute',
+                      bottom: 16,
+                      right: 20,
+                      fontSize: 20,
+                      color: 'rgba(0,0,0,0.28)',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    drag to reposition
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
