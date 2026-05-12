@@ -90,11 +90,11 @@ describe('clampRect — move mode', () => {
     expect(clampRect(r, bounds, 'move')).toEqual(r);
   });
 
-  it('pulls a rect past the right/bottom edge back inside', () => {
+  it('clamps x past the right edge but leaves y unclamped (workspace grows downward)', () => {
     const r: Rect = { x: 1900, y: 1900, w: 300, h: 250 };
     const out = clampRect(r, bounds, 'move');
-    expect(out.x).toBe(bounds.w - r.w);
-    expect(out.y).toBe(bounds.h - r.h);
+    expect(out.x).toBe(bounds.w - r.w); // clamped to right edge
+    expect(out.y).toBe(r.y);            // y has no upper bound — panels can go below viewport
     expect(out.w).toBe(300);
     expect(out.h).toBe(250);
   });
