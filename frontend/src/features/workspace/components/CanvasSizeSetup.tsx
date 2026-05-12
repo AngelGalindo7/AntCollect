@@ -5,21 +5,20 @@ import { ArrowLeft, Lock, Unlock } from 'lucide-react';
 interface Props {
   onConfirm: (w: number, h: number) => void;
   onClose: () => void;
+  initialW?: number;
+  initialH?: number;
+  confirmLabel?: string;
 }
 
 const MIN = 200;
 const MAX = 4000;
 const PRESET_LONG_EDGE = 1440;
-const HANDLE_PX = 24;
+const HANDLE_PX = 10; // fixed screen pixels regardless of zoom
 
-// Mock showcase reference dimensions (logical px — same coordinate space as workspace panels)
-const MOCK_W = 1440;
-const MOCK_H = 900;
-const MOCK_SIDEBAR_W = 64;
-const MOCK_PROFILE_H = 196;
-const MOCK_TABS_H = 44;
-const WS_W = MOCK_W - MOCK_SIDEBAR_W;                   // 1376
-const WS_H = MOCK_H - MOCK_PROFILE_H - MOCK_TABS_H;    // 660
+// Reference dimensions of the showcase workspace area on a typical 1440-wide screen.
+// Used to compute the proportion of the canvas relative to the showcase.
+const WS_W = 1376; // 1440 - 64px sidebar
+const WS_H = 660;  // 900 - 196px profile header - 44px tabs
 
 const PRESETS: { label: string; ratio: [number, number] }[] = [
   { label: '16:9', ratio: [16, 9] },
@@ -73,14 +72,22 @@ const inputStyle: React.CSSProperties = {
   outline: 'none',
 };
 
-export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
-  const [w, setW] = useState(1440);
-  const [h, setH] = useState(810);
+export function CanvasSizeSetup({
+  onConfirm,
+  onClose,
+  initialW = 1440,
+  initialH = 810,
+  confirmLabel = 'Create Canvas',
+}: Props) {
+  const [w, setW] = useState(initialW);
+  const [h, setH] = useState(initialH);
   const [lockAspect, setLockAspect] = useState(false);
-  const [mockScale, setMockScale] = useState(0.35);
-  const [panelX, setPanelX] = useState(() => centeredPos(1440, 810).px);
-  const [panelY, setPanelY] = useState(() => centeredPos(1440, 810).py);
-  const previewRef = useRef<HTMLDivElement>(null);
+  const [previewScale, setPreviewScale] = useState(0.5);
+  const [panelX, setPanelX] = useState(() => centeredPos(initialW, initialH).px);
+  const [panelY, setPanelY] = useState(() => centeredPos(initialW, initialH).py);
+
+  // Ref on the beige workspace area so scale is relative to that, not the whole right panel
+  const wsAreaRef = useRef<HTMLDivElement>(null);
 
   const resizeDragRef = useRef<{
     handle: Handle;
@@ -96,24 +103,24 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
     startPX: number; startPY: number;
   } | null>(null);
 
-  const computeMockScale = useCallback(() => {
-    const el = previewRef.current;
+  const computeScale = useCallback(() => {
+    const el = wsAreaRef.current;
     if (!el) return;
     const { width: cw, height: ch } = el.getBoundingClientRect();
-    const s = Math.min((cw - 48) / MOCK_W, (ch - 48) / MOCK_H);
-    setMockScale(Math.max(0.1, s));
+    const s = Math.min((cw - 80) / WS_W, (ch - 80) / WS_H);
+    setPreviewScale(Math.max(0.1, s));
   }, []);
 
   useLayoutEffect(() => {
-    computeMockScale();
-    const el = previewRef.current;
+    computeScale();
+    const el = wsAreaRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(computeMockScale);
+    const ro = new ResizeObserver(computeScale);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [computeMockScale]);
+  }, [computeScale]);
 
-  // Clamp position when dimensions change (typed input or aspect-lock)
+  // Clamp position when dimensions change
   useEffect(() => {
     setPanelX((px) => Math.max(0, Math.min(px, WS_W - w)));
     setPanelY((py) => Math.max(0, Math.min(py, WS_H - h)));
@@ -123,6 +130,7 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
     const onMove = (e: MouseEvent) => {
       const rd = resizeDragRef.current;
       if (rd) {
+        // Convert screen-pixel delta to reference-pixel delta
         const dx = (e.clientX - rd.startX) / rd.scaleAtStart;
         const dy = (e.clientY - rd.startY) / rd.scaleAtStart;
 
@@ -147,7 +155,7 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
           nh = clamp(nh);
         }
 
-        // Position shifts by how much width/height actually changed on the left/top edges
+        // Anchor the opposite edge: left/top shift by actual size change
         const npx = fromLeft ? Math.max(0, rd.startPX + (rd.startW - nw)) : rd.startPX;
         const npy = fromTop  ? Math.max(0, rd.startPY + (rd.startH - nh)) : rd.startPY;
 
@@ -159,8 +167,8 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
 
       const md = moveDragRef.current;
       if (md) {
-        const dx = (e.clientX - md.startX) / mockScale;
-        const dy = (e.clientY - md.startY) / mockScale;
+        const dx = (e.clientX - md.startX) / previewScale;
+        const dy = (e.clientY - md.startY) / previewScale;
         setPanelX(Math.round(Math.max(0, Math.min(WS_W - w, md.startPX + dx))));
         setPanelY(Math.round(Math.max(0, Math.min(WS_H - h, md.startPY + dy))));
       }
@@ -177,7 +185,7 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [lockAspect, mockScale, w, h]);
+  }, [lockAspect, previewScale, w, h]);
 
   const startResize = (dir: Handle) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -187,7 +195,7 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
       startX: e.clientX, startY: e.clientY,
       startW: w, startH: h,
       startPX: panelX, startPY: panelY,
-      scaleAtStart: mockScale,
+      scaleAtStart: previewScale,
       aspectAtStart: w / h,
     };
   };
@@ -214,7 +222,8 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
 
   const hs = HANDLE_PX / 2;
 
-  const mkHandle = (dir: Handle, topCenter: number, leftCenter: number) => (
+  // Handle positions are given in screen pixels (reference × previewScale)
+  const mkHandle = (dir: Handle, topScreen: number, leftScreen: number) => (
     <div
       key={dir}
       onMouseDown={startResize(dir)}
@@ -222,14 +231,14 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
         position: 'absolute',
         width: HANDLE_PX,
         height: HANDLE_PX,
-        top: topCenter - hs,
-        left: leftCenter - hs,
-        borderRadius: 3,
+        top: topScreen - hs,
+        left: leftScreen - hs,
+        borderRadius: 2,
         background: 'white',
-        border: '2px solid #555',
+        border: '1.5px solid #555',
         cursor: CURSORS[dir],
         zIndex: 10,
-        boxShadow: '0 1px 8px rgba(0,0,0,0.28)',
+        boxShadow: '0 1px 6px rgba(0,0,0,0.28)',
       }}
     />
   );
@@ -241,13 +250,19 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
 
   const overflows = w > WS_W || h > WS_H;
 
+  // Screen-pixel dimensions of canvas and workspace
+  const canvasVisW = w * previewScale;
+  const canvasVisH = h * previewScale;
+  const wsVisW = WS_W * previewScale;
+  const wsVisH = WS_H * previewScale;
+
   const content = (
     <div
       className="paper-workshop"
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
+        zIndex: 10000,
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--pw-bg)',
@@ -302,7 +317,7 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
             borderRadius: 8,
           }}
         >
-          Create Canvas
+          {confirmLabel}
         </button>
       </div>
 
@@ -323,7 +338,6 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
             overflowY: 'auto',
           }}
         >
-          {/* Dimensions */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <p style={eyebrow}>Dimensions</p>
 
@@ -359,7 +373,6 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
               </div>
             </div>
 
-            {/* Aspect lock */}
             <button
               type="button"
               onClick={() => setLockAspect((v) => !v)}
@@ -383,7 +396,6 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
             </button>
           </div>
 
-          {/* Presets */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <p style={eyebrow}>Presets</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
@@ -428,218 +440,163 @@ export function CanvasSizeSetup({ onConfirm, onClose }: Props) {
               </p>
             )}
             <p style={{ fontSize: 11, color: 'var(--pw-ink3)', lineHeight: 1.55 }}>
-              Drag handles to resize · drag the canvas to reposition it in the preview.
+              Drag handles to resize · drag the canvas to reposition in the showcase.
             </p>
           </div>
         </div>
 
-        {/* Preview area — scaled mock showcase */}
-        <div
-          ref={previewRef}
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            position: 'relative',
-            background: 'var(--pw-bg)',
-          }}
-        >
-          {/* Label */}
-          <span
-            style={{
-              position: 'absolute',
-              top: 10,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              fontSize: 11,
-              color: 'var(--pw-ink3)',
-              pointerEvents: 'none',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Showcase preview
-          </span>
+        {/* Right panel — context strip + live showcase preview */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-          {/* Outer wrapper — takes up the correct visual footprint after scaling */}
+          {/* Compact profile context strip */}
           <div
             style={{
-              width: MOCK_W * mockScale,
-              height: MOCK_H * mockScale,
-              position: 'relative',
               flexShrink: 0,
-              borderRadius: 6,
-              overflow: 'hidden',
-              boxShadow: '0 8px 48px rgba(0,0,0,0.22)',
+              background: '#ffffff',
+              borderBottom: '1px solid #e5e0db',
             }}
           >
-            {/* Full-size mock, scaled from top-left corner */}
+            {/* Micro profile row */}
             <div
               style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: MOCK_W,
-                height: MOCK_H,
-                transformOrigin: 'top left',
-                transform: `scale(${mockScale})`,
+                height: 40,
                 display: 'flex',
+                alignItems: 'center',
+                padding: '0 20px',
+                gap: 10,
+                borderBottom: '1px solid #f0ebe5',
               }}
             >
-              {/* Dark sidebar */}
+              <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#ddd8d2', flexShrink: 0 }} />
+              <div style={{ width: 88, height: 9, borderRadius: 3, background: '#ccc8c2' }} />
+              <div style={{ width: 140, height: 7, borderRadius: 3, background: '#e8e3de' }} />
+            </div>
+
+            {/* Tab bar — Showcase active */}
+            <div
+              style={{
+                height: 36,
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 20px',
+                gap: 20,
+              }}
+            >
+              {['Posts', 'Showcase', 'Trade'].map((tab) => {
+                const active = tab === 'Showcase';
+                return (
+                  <span
+                    key={tab}
+                    style={{
+                      fontSize: 12,
+                      fontWeight: active ? 600 : 400,
+                      color: active ? '#2C2016' : '#b8a99e',
+                      paddingBottom: 3,
+                      borderBottom: active ? '2px solid #2C2016' : '2px solid transparent',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {tab}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Beige showcase workspace — fills the rest, this is the interactive area */}
+          <div
+            ref={wsAreaRef}
+            style={{
+              flex: 1,
+              background: '#F0EBE5',
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {/* Workspace boundary box — dashed outline shows the showcase extent */}
+            <div
+              style={{
+                position: 'relative',
+                width: wsVisW,
+                height: wsVisH,
+                flexShrink: 0,
+                // overflow visible so handles on overflowing canvas aren't clipped
+                overflow: 'visible',
+              }}
+            >
+              {/* Dashed boundary indicator */}
               <div
                 style={{
-                  width: MOCK_SIDEBAR_W,
-                  background: '#2C2016',
-                  flexShrink: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  paddingTop: 24,
-                  gap: 20,
+                  position: 'absolute',
+                  inset: 0,
+                  border: '1.5px dashed rgba(44,32,22,0.20)',
+                  pointerEvents: 'none',
+                  zIndex: 0,
+                }}
+              />
+
+              {/* Canvas rectangle — draggable, resizable */}
+              <div
+                onMouseDown={startMove}
+                style={{
+                  position: 'absolute',
+                  left: panelX * previewScale,
+                  top: panelY * previewScale,
+                  width: canvasVisW,
+                  height: canvasVisH,
+                  background: '#ffffff',
+                  boxShadow: '0 4px 28px rgba(0,0,0,0.15)',
+                  cursor: 'grab',
+                  userSelect: 'none',
+                  zIndex: 1,
                 }}
               >
-                <div style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(255,255,255,0.15)', marginBottom: 8 }} />
-                {[0, 1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: '50%',
-                      background: i === 1 ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.07)',
-                    }}
-                  />
-                ))}
-              </div>
-
-              {/* Main content column */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-
-                {/* Profile header skeleton */}
-                <div
-                  style={{
-                    height: MOCK_PROFILE_H,
-                    background: '#ffffff',
-                    borderBottom: '1px solid #e5e0db',
-                    padding: '32px 48px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 32,
-                    flexShrink: 0,
-                  }}
-                >
-                  <div style={{ width: 92, height: 92, borderRadius: '50%', background: '#ddd8d2', flexShrink: 0 }} />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ width: 200, height: 24, borderRadius: 5, background: '#ccc8c2' }} />
-                    <div style={{ width: 320, height: 14, borderRadius: 4, background: '#e8e3de' }} />
-                    <div style={{ width: 260, height: 14, borderRadius: 4, background: '#e8e3de' }} />
-                    <div style={{ display: 'flex', gap: 28, marginTop: 2 }}>
-                      {[72, 54, 80].map((bw, i) => (
-                        <div key={i} style={{ width: bw, height: 13, borderRadius: 3, background: '#eee9e4' }} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tab bar — Showcase active */}
-                <div
-                  style={{
-                    height: MOCK_TABS_H,
-                    background: '#ffffff',
-                    borderBottom: '1px solid #e5e0db',
-                    display: 'flex',
-                    alignItems: 'center',
-                    paddingLeft: 48,
-                    gap: 36,
-                    flexShrink: 0,
-                  }}
-                >
-                  {['Posts', 'Showcase', 'Trade'].map((tab) => {
-                    const active = tab === 'Showcase';
-                    return (
-                      <span
-                        key={tab}
-                        style={{
-                          fontSize: 26,
-                          fontWeight: active ? 600 : 400,
-                          color: active ? '#2C2016' : '#b8a99e',
-                          paddingBottom: 4,
-                          borderBottom: active ? '3px solid #2C2016' : '3px solid transparent',
-                        }}
-                      >
-                        {tab}
-                      </span>
-                    );
-                  })}
-                </div>
-
-                {/* Showcase / workspace area */}
-                <div
-                  style={{
-                    flex: 1,
-                    background: '#F0EBE5',
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {/* Canvas rectangle — draggable body, resizable via handles */}
-                  <div
-                    onMouseDown={startMove}
-                    style={{
-                      position: 'absolute',
-                      left: panelX,
-                      top: panelY,
-                      width: w,
-                      height: h,
-                      background: '#ffffff',
-                      boxShadow: '0 6px 36px rgba(0,0,0,0.16)',
-                      cursor: 'grab',
-                      userSelect: 'none',
-                    }}
-                  >
-                    <span
-                      className="pw-mono"
-                      style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        fontSize: 38,
-                        color: 'rgba(0,0,0,0.18)',
-                        pointerEvents: 'none',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {w} × {h}
-                    </span>
-
-                    {mkHandle('nw', 0,     0)}
-                    {mkHandle('n',  0,     w / 2)}
-                    {mkHandle('ne', 0,     w)}
-                    {mkHandle('e',  h / 2, w)}
-                    {mkHandle('se', h,     w)}
-                    {mkHandle('s',  h,     w / 2)}
-                    {mkHandle('sw', h,     0)}
-                    {mkHandle('w',  h / 2, 0)}
-                  </div>
-
+                {/* Dimension label — only shows when canvas is large enough to fit it */}
+                {canvasVisW > 80 && canvasVisH > 32 && (
                   <span
+                    className="pw-mono"
                     style={{
                       position: 'absolute',
-                      bottom: 16,
-                      right: 20,
-                      fontSize: 20,
-                      color: 'rgba(0,0,0,0.28)',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      fontSize: 12,
+                      color: 'rgba(0,0,0,0.22)',
                       pointerEvents: 'none',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    drag to reposition
+                    {w} × {h}
                   </span>
-                </div>
+                )}
+
+                {mkHandle('nw', 0,             0)}
+                {mkHandle('n',  0,             canvasVisW / 2)}
+                {mkHandle('ne', 0,             canvasVisW)}
+                {mkHandle('e',  canvasVisH / 2, canvasVisW)}
+                {mkHandle('se', canvasVisH,    canvasVisW)}
+                {mkHandle('s',  canvasVisH,    canvasVisW / 2)}
+                {mkHandle('sw', canvasVisH,    0)}
+                {mkHandle('w',  canvasVisH / 2, 0)}
               </div>
             </div>
+
+            {/* Showcase scale label */}
+            <span
+              style={{
+                position: 'absolute',
+                bottom: 10,
+                right: 12,
+                fontSize: 10,
+                color: 'rgba(0,0,0,0.30)',
+                pointerEvents: 'none',
+              }}
+            >
+              {Math.round(previewScale * 100)}% · drag canvas to reposition
+            </span>
           </div>
         </div>
       </div>

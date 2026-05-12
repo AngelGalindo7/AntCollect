@@ -7,7 +7,7 @@ import { StickerPicker } from '@/features/canvas/components/StickerPicker';
 import { StickerControls } from '@/features/canvas/components/StickerControls';
 import { CropModal } from '@/features/canvas/components/CropModal';
 import { ContextualToolbar } from '@/features/canvas/components/ContextualToolbar';
-import { CanvasSizePopover } from '@/features/canvas/components/CanvasSizePopover';
+import { CanvasSizeSetup } from './CanvasSizeSetup';
 import { useCanvasState } from '@/features/canvas/hooks/useCanvasState';
 import type { CanvasState } from '@/features/canvas/types/canvas';
 import type { LiveBounds } from '@/features/canvas/components/CanvasNode';
@@ -56,7 +56,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [liveBounds, setLiveBounds] = useState<LiveBounds | null>(null);
   const [title, setTitle] = useState(panel.title ?? '');
-  const [isSizePopoverOpen, setIsSizePopoverOpen] = useState(false);
+  const [isSizePreviewOpen, setIsSizePreviewOpen] = useState(false);
   const stageRef = useRef<Konva.Stage | null>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
 
@@ -318,38 +318,27 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
           <span style={{ fontSize: 12, color: 'var(--pw-danger)' }}>{saveError}</span>
         )}
 
-        <div style={{ position: 'relative' }}>
-          <button
-            type="button"
-            onClick={() => setIsSizePopoverOpen((v) => !v)}
-            title="Canvas size"
-            className="pw-mono"
-            style={{
-              height: 32,
-              padding: '0 10px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              color: 'var(--pw-ink2)',
-              fontSize: 12,
-              fontWeight: 500,
-              borderRadius: 6,
-              background: isSizePopoverOpen ? 'var(--pw-surface2)' : 'transparent',
-            }}
-          >
-            <Crop size={14} strokeWidth={1.6} />
-            {Math.round(width)} × {Math.round(height)}
-          </button>
-          {isSizePopoverOpen && (
-            <CanvasSizePopover
-              currentWidth={width}
-              currentHeight={height}
-              nodes={nodes}
-              onApply={(w, h) => { setCanvasSize(w, h); setIsSizePopoverOpen(false); }}
-              onClose={() => setIsSizePopoverOpen(false)}
-            />
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => setIsSizePreviewOpen(true)}
+          title="Resize canvas"
+          className="pw-mono"
+          style={{
+            height: 32,
+            padding: '0 10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            color: 'var(--pw-ink2)',
+            fontSize: 12,
+            fontWeight: 500,
+            borderRadius: 6,
+            background: isSizePreviewOpen ? 'var(--pw-surface2)' : 'transparent',
+          }}
+        >
+          <Crop size={14} strokeWidth={1.6} />
+          {Math.round(width)} × {Math.round(height)}
+        </button>
 
         <button
           type="button"
@@ -651,6 +640,18 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
   return (
     <>
       {ReactDOM.createPortal(content, document.body)}
+      {isSizePreviewOpen && (
+        <CanvasSizeSetup
+          initialW={width}
+          initialH={height}
+          confirmLabel="Apply Size"
+          onClose={() => setIsSizePreviewOpen(false)}
+          onConfirm={(w, h) => {
+            setCanvasSize(w, h);
+            setIsSizePreviewOpen(false);
+          }}
+        />
+      )}
       {cropTargetId && cropNode && (
         <CropModal
           imageUrl={cropNode.image_url}
