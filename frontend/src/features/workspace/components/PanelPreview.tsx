@@ -1,7 +1,53 @@
+import { useState } from 'react';
 import type { Panel } from '../types/workspace';
 import type { BackgroundConfig } from '@/features/canvas/types/canvas';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/hooks/useCanvasState';
 import { HoloStickerEffect } from '@/features/canvas/components/HoloStickerEffect';
+
+// Replicates BackgroundImageLayer's cover+offset+scale math in DOM/CSS space.
+// panelScale converts bg.imageOffsetX/Y from canvas logical pixels to container CSS pixels.
+function ImageBg({ bg, containerW, containerH, panelScale }: {
+  bg: BackgroundConfig;
+  containerW: number;
+  containerH: number;
+  panelScale: number;
+}) {
+  const [nat, setNat] = useState<[number, number] | null>(null);
+  if (!bg.imageUrl) return null;
+
+  const handleLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    if (!nat) setNat([e.currentTarget.naturalWidth, e.currentTarget.naturalHeight]);
+  };
+
+  if (nat) {
+    const [natW, natH] = nat;
+    const imgScale = bg.imageScale ?? 1;
+    const cover = Math.max(containerW / natW, containerH / natH);
+    const drawW = natW * cover * imgScale;
+    const drawH = natH * cover * imgScale;
+    const left = (containerW - drawW) / 2 + (bg.imageOffsetX ?? 0) * panelScale;
+    const top = (containerH - drawH) / 2 + (bg.imageOffsetY ?? 0) * panelScale;
+    return (
+      <img
+        src={bg.imageUrl}
+        alt=""
+        draggable={false}
+        onLoad={handleLoad}
+        style={{ position: 'absolute', left, top, width: drawW, height: drawH }}
+      />
+    );
+  }
+
+  return (
+    <img
+      src={bg.imageUrl}
+      alt=""
+      draggable={false}
+      onLoad={handleLoad}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+    />
+  );
+}
 
 interface Props {
   panel: Panel;
@@ -67,11 +113,11 @@ export function PanelPreview({ panel }: Props) {
           }}
         >
           {bg?.type === 'image' && bg.imageUrl && (
-            <img
-              src={bg.imageUrl}
-              alt=""
-              draggable={false}
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            <ImageBg
+              bg={bg}
+              containerW={cw * scale}
+              containerH={ch * scale}
+              panelScale={scale}
             />
           )}
           {nodes.map((node) => (
