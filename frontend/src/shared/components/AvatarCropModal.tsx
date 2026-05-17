@@ -215,8 +215,8 @@ export function AvatarCropModal({
               width: FRAME_PX,
               height: FRAME_PX,
               background: 'rgba(31, 41, 55, 0.55)',
-              WebkitMask: 'radial-gradient(circle at center, transparent 49.7%, black 50%)',
-              mask: 'radial-gradient(circle at center, transparent 49.7%, black 50%)',
+              WebkitMask: 'radial-gradient(circle closest-side, transparent 99.5%, black 100%)',
+              mask: 'radial-gradient(circle closest-side, transparent 99.5%, black 100%)',
             }}
           />
           <div
