@@ -8,6 +8,7 @@ import {
 } from '@/shared/utils/profileBackground';
 import { PositionedBackgroundImage } from '@/shared/components/PositionedBackgroundImage';
 import { useBackgroundPositioning } from '@/shared/hooks/useBackgroundPositioning';
+import { AvatarCropModal } from '@/shared/components/AvatarCropModal';
 
 interface UserMe {
   id: number;
@@ -43,6 +44,8 @@ export default function ProfileTab() {
   const [pendingBgFile, setPendingBgFile] = useState<File | null>(null);
   const [pendingBgUrl, setPendingBgUrl] = useState<string | null>(null);
   const [bgError, setBgError] = useState<string | null>(null);
+
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
 
   // Initialise fields once data loads
   const [initialised, setInitialised] = useState(false);
@@ -232,11 +235,23 @@ export default function ProfileTab() {
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
-            if (file) avatarMutation.mutate(file);
+            if (file) setPendingAvatarFile(file);
             e.target.value = '';
           }}
         />
       </div>
+
+      {pendingAvatarFile && (
+        <AvatarCropModal
+          file={pendingAvatarFile}
+          title="Position your profile picture"
+          onCancel={() => setPendingAvatarFile(null)}
+          onConfirm={(cropped) => {
+            setPendingAvatarFile(null);
+            avatarMutation.mutate(cropped);
+          }}
+        />
+      )}
 
       {/* Background image */}
       <div>
