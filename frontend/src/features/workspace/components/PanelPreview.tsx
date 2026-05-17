@@ -152,7 +152,7 @@ export function PanelPreview({ panel }: Props) {
                     src={node.image_url}
                     alt=""
                     draggable={false}
-                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block' }}
                   />
                 </HoloStickerEffect>
               ) : (
@@ -160,7 +160,7 @@ export function PanelPreview({ panel }: Props) {
                   src={node.image_url}
                   alt=""
                   draggable={false}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block' }}
                 />
               )}
             </div>
