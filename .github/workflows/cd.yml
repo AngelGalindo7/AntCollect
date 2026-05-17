@@ -153,11 +153,26 @@ jobs:
               bash -euo pipefail -c '
                 set -euo pipefail
 
-                # Identify pending revisions (those listed after the current head marker).
-                # alembic history --indicate-current marks the applied head with "(head)";
-                # revisions printed after it (i.e. not yet applied) are the pending ones.
-                PENDING=$(alembic history --indicate-current 2>/dev/null \
-                  | awk "found{print \$1} /\(head\)/{found=1}")
+                # Pending = revisions strictly between the DB''s applied state and the script head.
+                # "alembic current" reads the DB; "alembic heads" reads the migration chain tip.
+                # If they match, nothing is pending. Otherwise enumerate the gap with -r.
+                CURRENT=$(alembic current 2>/dev/null | awk "/^[a-f0-9]+/ {print \$1; exit}")
+                HEAD=$(alembic heads 2>/dev/null   | awk "/^[a-f0-9]+/ {print \$1; exit}")
+
+                if [ -z "$HEAD" ]; then
+                  echo "Could not determine head revision — aborting."
+                  exit 1
+                fi
+
+                if [ "$CURRENT" = "$HEAD" ]; then
+                  echo "No pending migrations — pre-flight check passed."
+                  exit 0
+                fi
+
+                # "${CURRENT:-base}:$HEAD" handles the empty-DB case (no current revision yet).
+                # Each history line is "<down_rev> -> <rev_id> (...), <message>"; pull <rev_id>.
+                PENDING=$(alembic history -r "${CURRENT:-base}:$HEAD" 2>/dev/null \
+                  | grep -oE "-> [a-f0-9]+" | awk "{print \$2}" || true)
 
                 if [ -z "$PENDING" ]; then
                   echo "No pending migrations — pre-flight check passed."
