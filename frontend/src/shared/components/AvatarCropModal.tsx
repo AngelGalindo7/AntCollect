@@ -245,10 +245,6 @@ export function AvatarCropModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [onCancel]);
 
-  const onSliderChange = (val: number) => {
-    applyZoomAroundAnchor(val, WORKING / 2, WORKING / 2);
-  };
-
   const handleSave = useCallback(async () => {
     const img = imgRef.current;
     if (!img || !natural || saving) return;
@@ -351,23 +347,7 @@ export function AvatarCropModal({
           />
         </div>
 
-        <div className="mt-4 flex items-center gap-3">
-          <span className="text-xs text-gray-500" aria-hidden>−</span>
-          <input
-            type="range"
-            min={MIN_SCALE}
-            max={MAX_SCALE}
-            step={0.01}
-            value={scale}
-            onChange={(e) => onSliderChange(Number(e.target.value))}
-            className="flex-1 accent-blue-500"
-            aria-label="Zoom"
-            disabled={!natural}
-          />
-          <span className="text-xs text-gray-500" aria-hidden>+</span>
-        </div>
-
-        <p className="mt-2 text-xs text-gray-500 text-center">Drag to move · scroll, pinch, or slide to zoom</p>
+        <p className="mt-3 text-xs text-gray-500 text-center">Drag to move · scroll or pinch to zoom</p>
 
         <div className="mt-5 flex justify-end gap-2">
           <button
