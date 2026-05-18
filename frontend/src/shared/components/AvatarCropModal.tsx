@@ -13,9 +13,16 @@ interface NaturalSize {
   h: number;
 }
 
+interface Point {
+  x: number;
+  y: number;
+}
+
 const WORKING = 380;
 const FRAME_PX = 220;
 const DEFAULT_OUTPUT = 512;
+const MIN_SCALE = 1;
+const MAX_SCALE = 4;
 
 export function AvatarCropModal({
   file,
@@ -26,6 +33,7 @@ export function AvatarCropModal({
 }: Props) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [natural, setNatural] = useState<NaturalSize | null>(null);
+  const [scale, setScale] = useState(MIN_SCALE);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -33,7 +41,19 @@ export function AvatarCropModal({
 
   const workingRef = useRef<HTMLDivElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
-  const dragRef = useRef<{ startX: number; startY: number; ox: number; oy: number; ratio: number } | null>(null);
+
+  const pointersRef = useRef<Map<number, Point>>(new Map());
+  const gestureRef = useRef<
+    | { mode: 'pan'; startX: number; startY: number; ox: number; oy: number }
+    | {
+        mode: 'pinch';
+        initialDist: number;
+        initialScale: number;
+        anchorFracX: number;
+        anchorFracY: number;
+      }
+    | null
+  >(null);
 
   useEffect(() => {
     const url = URL.createObjectURL(file);
@@ -49,6 +69,7 @@ export function AvatarCropModal({
       if (cancelled) return;
       imgRef.current = img;
       setNatural({ w: img.naturalWidth, h: img.naturalHeight });
+      setScale(MIN_SCALE);
       setOffsetX(0);
       setOffsetY(0);
     };
@@ -60,7 +81,8 @@ export function AvatarCropModal({
 
   const coverCircle = natural ? FRAME_PX / Math.min(natural.w, natural.h) : 1;
   const fitWorking = natural ? WORKING / Math.max(natural.w, natural.h) : 1;
-  const drawScale = Math.max(coverCircle, fitWorking);
+  const baseScale = Math.max(coverCircle, fitWorking);
+  const drawScale = baseScale * scale;
   const drawW = natural ? natural.w * drawScale : 0;
   const drawH = natural ? natural.h * drawScale : 0;
 
@@ -69,56 +91,151 @@ export function AvatarCropModal({
   const clampedOffsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, offsetX));
   const clampedOffsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, offsetY));
 
-  const stateRef = useRef({ offsetX: clampedOffsetX, offsetY: clampedOffsetY });
-  stateRef.current = { offsetX: clampedOffsetX, offsetY: clampedOffsetY };
+  const stateRef = useRef({ scale, offsetX: clampedOffsetX, offsetY: clampedOffsetY, baseScale, natural });
+  stateRef.current = { scale, offsetX: clampedOffsetX, offsetY: clampedOffsetY, baseScale, natural };
+
+  const applyZoomAroundAnchor = useCallback((nextScaleRaw: number, anchorX: number, anchorY: number) => {
+    const s = stateRef.current;
+    if (!s.natural) return;
+    const nextScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, nextScaleRaw));
+    if (nextScale === s.scale) return;
+    const oldDrawW = s.natural.w * s.baseScale * s.scale;
+    const oldDrawH = s.natural.h * s.baseScale * s.scale;
+    const newDrawW = s.natural.w * s.baseScale * nextScale;
+    const newDrawH = s.natural.h * s.baseScale * nextScale;
+    const oldLeft = (WORKING - oldDrawW) / 2 + s.offsetX;
+    const oldTop = (WORKING - oldDrawH) / 2 + s.offsetY;
+    const fracX = (anchorX - oldLeft) / oldDrawW;
+    const fracY = (anchorY - oldTop) / oldDrawH;
+    setScale(nextScale);
+    setOffsetX(anchorX - fracX * newDrawW - (WORKING - newDrawW) / 2);
+    setOffsetY(anchorY - fracY * newDrawH - (WORKING - newDrawH) / 2);
+  }, []);
 
   useEffect(() => {
     const el = workingRef.current;
     if (!el || !natural) return;
 
-    const computeRatio = () => {
-      const rect = el.getBoundingClientRect();
-      return rect.width === 0 ? 1 : WORKING / rect.width;
+    const toWorking = (clientX: number, clientY: number, rect: DOMRect): Point => {
+      const ratio = rect.width === 0 ? 1 : WORKING / rect.width;
+      return { x: (clientX - rect.left) * ratio, y: (clientY - rect.top) * ratio };
+    };
+    const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
+    const mid = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    const twoPointsWorking = (rect: DOMRect): [Point, Point] => {
+      const pts = Array.from(pointersRef.current.values()).slice(0, 2);
+      return [toWorking(pts[0].x, pts[0].y, rect), toWorking(pts[1].x, pts[1].y, rect)];
     };
 
     const onPointerDown = (e: PointerEvent) => {
       e.preventDefault();
       try { el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
-      dragRef.current = {
-        startX: e.clientX,
-        startY: e.clientY,
-        ox: stateRef.current.offsetX,
-        oy: stateRef.current.offsetY,
-        ratio: computeRatio(),
-      };
-      setIsDragging(true);
+      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      if (pointersRef.current.size === 1) {
+        gestureRef.current = {
+          mode: 'pan',
+          startX: e.clientX,
+          startY: e.clientY,
+          ox: stateRef.current.offsetX,
+          oy: stateRef.current.offsetY,
+        };
+        setIsDragging(true);
+      } else if (pointersRef.current.size === 2) {
+        const rect = el.getBoundingClientRect();
+        const [w1, w2] = twoPointsWorking(rect);
+        const m = mid(w1, w2);
+        const s = stateRef.current;
+        if (!s.natural) return;
+        const oldDrawW = s.natural.w * s.baseScale * s.scale;
+        const oldDrawH = s.natural.h * s.baseScale * s.scale;
+        const oldLeft = (WORKING - oldDrawW) / 2 + s.offsetX;
+        const oldTop = (WORKING - oldDrawH) / 2 + s.offsetY;
+        gestureRef.current = {
+          mode: 'pinch',
+          initialDist: Math.max(1, dist(w1, w2)),
+          initialScale: s.scale,
+          anchorFracX: (m.x - oldLeft) / oldDrawW,
+          anchorFracY: (m.y - oldTop) / oldDrawH,
+        };
+      }
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      const d = dragRef.current;
-      if (!d) return;
-      setOffsetX(d.ox + (e.clientX - d.startX) * d.ratio);
-      setOffsetY(d.oy + (e.clientY - d.startY) * d.ratio);
+      if (!pointersRef.current.has(e.pointerId)) return;
+      pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const g = gestureRef.current;
+      if (!g) return;
+
+      if (g.mode === 'pan' && pointersRef.current.size === 1) {
+        const rect = el.getBoundingClientRect();
+        const ratio = rect.width === 0 ? 1 : WORKING / rect.width;
+        setOffsetX(g.ox + (e.clientX - g.startX) * ratio);
+        setOffsetY(g.oy + (e.clientY - g.startY) * ratio);
+      } else if (g.mode === 'pinch' && pointersRef.current.size >= 2) {
+        const rect = el.getBoundingClientRect();
+        const [w1, w2] = twoPointsWorking(rect);
+        const m = mid(w1, w2);
+        const newDist = dist(w1, w2);
+        const nextScale = Math.max(
+          MIN_SCALE,
+          Math.min(MAX_SCALE, g.initialScale * (newDist / g.initialDist)),
+        );
+        const s = stateRef.current;
+        if (!s.natural) return;
+        const newDrawW = s.natural.w * s.baseScale * nextScale;
+        const newDrawH = s.natural.h * s.baseScale * nextScale;
+        setScale(nextScale);
+        setOffsetX(m.x - g.anchorFracX * newDrawW - (WORKING - newDrawW) / 2);
+        setOffsetY(m.y - g.anchorFracY * newDrawH - (WORKING - newDrawH) / 2);
+      }
     };
 
     const onPointerUp = (e: PointerEvent) => {
-      if (!dragRef.current) return;
       try { el.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-      dragRef.current = null;
-      setIsDragging(false);
+      pointersRef.current.delete(e.pointerId);
+
+      if (pointersRef.current.size === 0) {
+        gestureRef.current = null;
+        setIsDragging(false);
+      } else if (pointersRef.current.size === 1) {
+        const [remaining] = Array.from(pointersRef.current.values());
+        gestureRef.current = {
+          mode: 'pan',
+          startX: remaining.x,
+          startY: remaining.y,
+          ox: stateRef.current.offsetX,
+          oy: stateRef.current.offsetY,
+        };
+      }
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      const s = stateRef.current;
+      if (!s.natural) return;
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0) return;
+      const anchor = toWorking(e.clientX, e.clientY, rect);
+      const factor = Math.exp(-e.deltaY * 0.0015);
+      applyZoomAroundAnchor(s.scale * factor, anchor.x, anchor.y);
     };
 
     el.addEventListener('pointerdown', onPointerDown);
     el.addEventListener('pointermove', onPointerMove);
     el.addEventListener('pointerup', onPointerUp);
     el.addEventListener('pointercancel', onPointerUp);
+    el.addEventListener('wheel', onWheel, { passive: false });
     return () => {
       el.removeEventListener('pointerdown', onPointerDown);
       el.removeEventListener('pointermove', onPointerMove);
       el.removeEventListener('pointerup', onPointerUp);
       el.removeEventListener('pointercancel', onPointerUp);
+      el.removeEventListener('wheel', onWheel);
+      pointersRef.current.clear();
+      gestureRef.current = null;
     };
-  }, [natural]);
+  }, [natural, applyZoomAroundAnchor]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -127,6 +244,10 @@ export function AvatarCropModal({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onCancel]);
+
+  const onSliderChange = (val: number) => {
+    applyZoomAroundAnchor(val, WORKING / 2, WORKING / 2);
+  };
 
   const handleSave = useCallback(async () => {
     const img = imgRef.current;
@@ -230,7 +351,23 @@ export function AvatarCropModal({
           />
         </div>
 
-        <p className="mt-3 text-xs text-gray-500 text-center">Drag the picture to position it inside the circle</p>
+        <div className="mt-4 flex items-center gap-3">
+          <span className="text-xs text-gray-500" aria-hidden>−</span>
+          <input
+            type="range"
+            min={MIN_SCALE}
+            max={MAX_SCALE}
+            step={0.01}
+            value={scale}
+            onChange={(e) => onSliderChange(Number(e.target.value))}
+            className="flex-1 accent-blue-500"
+            aria-label="Zoom"
+            disabled={!natural}
+          />
+          <span className="text-xs text-gray-500" aria-hidden>+</span>
+        </div>
+
+        <p className="mt-2 text-xs text-gray-500 text-center">Drag to move · scroll, pinch, or slide to zoom</p>
 
         <div className="mt-5 flex justify-end gap-2">
           <button
