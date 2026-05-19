@@ -1,11 +1,27 @@
-from pydantic import BaseModel, EmailStr, ConfigDict, Field
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 from typing import List, Optional
 from enum import Enum
 from datetime import datetime
+
+
+# Usernames are case-insensitive: stored lowercase, validated lowercase.
+# Enforced by a DB CHECK constraint and the lowercase_usernames migration.
+_USERNAME_PATTERN = r'^[a-z0-9_]+$'
+
+
+def _normalize_username(value: str) -> str:
+    return value.strip().lower()
+
+
 class UserCreate(BaseModel):
-    username: str = Field(min_length=3, max_length=50)
+    username: str = Field(min_length=3, max_length=50, pattern=_USERNAME_PATTERN)
     password: str = Field(min_length=8)
     email: EmailStr
+
+    @field_validator('username', mode='before')
+    @classmethod
+    def _lower_username(cls, v: str) -> str:
+        return _normalize_username(v) if isinstance(v, str) else v
 
 class UserSearch(BaseModel):
     user_id: int
@@ -155,9 +171,14 @@ class UserMeResponse(BaseModel):
     background_scale: float = 1.0
 
 class UpdateProfileRequest(BaseModel):
-    username: Optional[str] = Field(default=None, min_length=3, max_length=50)
+    username: Optional[str] = Field(default=None, min_length=3, max_length=50, pattern=_USERNAME_PATTERN)
     bio: Optional[str] = Field(default=None, max_length=500)
     sticker_count: Optional[int] = Field(default=None, ge=0, le=10_000)
+
+    @field_validator('username', mode='before')
+    @classmethod
+    def _lower_username(cls, v):
+        return _normalize_username(v) if isinstance(v, str) else v
 
 class AvatarUpdateResponse(BaseModel):
     avatar_path: str
@@ -295,7 +316,12 @@ class TradeRequestResponse(BaseModel):
 
 
 class CompleteGoogleSignupRequest(BaseModel):
-    username: str = Field(min_length=3, max_length=50, pattern=r'^[a-zA-Z0-9_]+$')
+    username: str = Field(min_length=3, max_length=50, pattern=_USERNAME_PATTERN)
+
+    @field_validator('username', mode='before')
+    @classmethod
+    def _lower_username(cls, v: str) -> str:
+        return _normalize_username(v) if isinstance(v, str) else v
 
 
 class ReportTargetType(str, Enum):
