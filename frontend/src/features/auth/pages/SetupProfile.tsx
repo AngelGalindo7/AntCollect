@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE } from '@/shared/api/api';
 
-const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,50}$/;
+const USERNAME_REGEX = /^[a-z0-9_]{3,50}$/;
 
 const SetupProfile: React.FC = () => {
     const [username, setUsername] = useState('');
@@ -68,7 +68,7 @@ const SetupProfile: React.FC = () => {
                             id="username"
                             type="text"
                             value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            onChange={(e) => setUsername(e.target.value.toLowerCase())}
                             required
                             placeholder=" "
                             className="peer w-full h-[52px] px-4 pt-5 pb-2 rounded border border-gray-300 focus:outline-none focus:border-[#003087] text-sm transition-all"
