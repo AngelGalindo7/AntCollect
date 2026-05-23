@@ -117,7 +117,7 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Google account email is not verified")
 
     google_id = id_info["sub"]
-    email = id_info.get("email", "")
+    email = id_info.get("email", "").strip().lower()
     display_name = id_info.get("given_name") or id_info.get("name") or ""
 
     if not email:
