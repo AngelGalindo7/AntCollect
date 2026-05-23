@@ -13,6 +13,12 @@ def _normalize_username(value: str) -> str:
     return value.strip().lower()
 
 
+# Emails are case-insensitive: stored lowercase, validated lowercase.
+# Enforced by a DB CHECK constraint and the lowercase_emails migration.
+def _normalize_email(value: str) -> str:
+    return value.strip().lower()
+
+
 class UserCreate(BaseModel):
     username: str = Field(min_length=3, max_length=50, pattern=_USERNAME_PATTERN)
     password: str = Field(min_length=8)
@@ -22,6 +28,11 @@ class UserCreate(BaseModel):
     @classmethod
     def _lower_username(cls, v: str) -> str:
         return _normalize_username(v) if isinstance(v, str) else v
+
+    @field_validator('email', mode='before')
+    @classmethod
+    def _lower_email(cls, v):
+        return _normalize_email(v) if isinstance(v, str) else v
 
 class UserSearch(BaseModel):
     user_id: int
@@ -38,6 +49,11 @@ class UserResponse(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+    @field_validator('email', mode='before')
+    @classmethod
+    def _lower_email(cls, v):
+        return _normalize_email(v) if isinstance(v, str) else v
 
 
 class TokenResponse(BaseModel):
