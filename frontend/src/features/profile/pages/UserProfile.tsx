@@ -47,10 +47,6 @@ const UserProfile: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sticker inline-edit state
-  const [editingStickers, setEditingStickers] = useState(false);
-  const [stickerDraft, setStickerDraft] = useState<number>(0);
-
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
@@ -134,28 +130,6 @@ const UserProfile: React.FC = () => {
     } finally {
       setUploading(false);
       e.target.value = "";
-    }
-  };
-
-  const handleStickerCommit = async (newValue: number) => {
-    if (!profile || newValue === profile.sticker_count) {
-      setEditingStickers(false);
-      return;
-    }
-    const previous = profile.sticker_count;
-    setProfile((p) => p ? { ...p, sticker_count: newValue } : p);
-    setEditingStickers(false);
-    try {
-      const res = await fetchWithAuth(`${API_BASE}/users/me/profile`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ sticker_count: newValue }),
-      });
-      if (!res.ok) throw new Error("Failed to update sticker count");
-    } catch (err) {
-      console.error(err);
-      setProfile((p) => p ? { ...p, sticker_count: previous } : p);
     }
   };
 
@@ -284,35 +258,13 @@ const UserProfile: React.FC = () => {
             ) : null}
 
             <div className="flex items-center gap-3 flex-wrap" data-testid="profile-stats">
-              <div className="flex flex-col items-center bg-white/60 rounded-md px-2 py-0.5">
+              <button
+                onClick={() => navigate(`/${profile.username}/stickers`)}
+                className="flex flex-col items-center bg-white/60 rounded-md px-2 py-0.5 hover:bg-white/80 transition-colors"
+              >
                 <span className="text-xs text-espresso/60">Stickers</span>
-                {profile.is_owner && editingStickers ? (
-                  <input
-                    type="number"
-                    min={0}
-                    value={stickerDraft}
-                    onChange={(e) => setStickerDraft(Number(e.target.value))}
-                    onBlur={() => handleStickerCommit(stickerDraft)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleStickerCommit(stickerDraft);
-                      if (e.key === "Escape") setEditingStickers(false);
-                    }}
-                    autoFocus
-                    className="w-16 text-center text-sm font-semibold text-espresso border-b border-uci-gold outline-none bg-transparent"
-                  />
-                ) : (
-                  <span
-                    className={`text-sm font-semibold text-espresso${profile.is_owner ? " cursor-pointer hover:text-uci-gold" : ""}`}
-                    onClick={() => {
-                      if (!profile.is_owner) return;
-                      setStickerDraft(profile.sticker_count);
-                      setEditingStickers(true);
-                    }}
-                  >
-                    {profile.sticker_count}
-                  </span>
-                )}
-              </div>
+                <span className="text-sm font-semibold text-espresso">{profile.sticker_count}</span>
+              </button>
               <div className="flex flex-col items-center bg-white/60 rounded-md px-2 py-0.5">
                 <span className="text-xs text-espresso/60">Folders</span>
                 <span className="text-sm font-semibold text-espresso">{folders.length}</span>
