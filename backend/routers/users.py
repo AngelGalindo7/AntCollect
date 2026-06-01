@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func, literal
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset
+from backend.models.user_sticker import UserSticker
 from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, BackgroundUpdateResponse, BackgroundPositionRequest, BackgroundPositionResponse, ChangePasswordRequest
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token, optional_auth_token
 from ..utils.files import process_and_save_image, delete_file
@@ -51,9 +52,6 @@ def update_profile(
 
     if updates.bio is not None:
         db_user.bio = updates.bio
-
-    if updates.sticker_count is not None:
-        db_user.sticker_count = updates.sticker_count
 
     db.commit()
     db.refresh(db_user)
@@ -471,13 +469,17 @@ def retrieve_user(
         row_dict["user"] = post_user
         posts.append(PostBase.model_validate(row_dict))
 
+    sticker_count = db.execute(
+        select(func.count(UserSticker.id)).where(UserSticker.user_id == target_user.id)
+    ).scalar_one()
+
     return UserProfileResponse(
         user_id=target_user.id,
         username=target_user.username,
         bio=target_user.bio,
         avatar_path=target_user.avatar_path,
         background_path=target_user.background_path,
-        sticker_count=target_user.sticker_count,
+        sticker_count=sticker_count,
         is_owner=is_owner,
         posts=posts,
     )
