@@ -19,6 +19,7 @@ from backend.models.sticker_library import StickerLibrary, StickerLibraryImage
 from backend.models.report import Report
 from backend.models.canvas import UserCanvas
 from backend.models.workspace import Workspace, Panel
+from backend.models.user_sticker import UserSticker, UserStickerImage
 
 __all__ = [
     "Base",
@@ -40,4 +41,6 @@ __all__ = [
     "UserCanvas",
     "Workspace",
     "Panel",
+    "UserSticker",
+    "UserStickerImage",
 ]
