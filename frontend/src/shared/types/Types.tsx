@@ -120,3 +120,24 @@ export interface Folder {
 export type GridItem =
   | { kind: 'folder'; data: Folder }
   | { kind: 'post'; data: Post };
+
+export type UserStickerImage = {
+  id: number;
+  asset_id: number;
+  order_index: number;
+  file_url: string;
+};
+
+export type UserSticker = {
+  id: number;
+  sticker_id: number | null;
+  source_post_id: number | null;
+  favorite: boolean;
+  for_trade: boolean;
+  condition: string | null;
+  note: string | null;
+  acquired_at: string | null;
+  created_at: string;
+  updated_at: string;
+  images: UserStickerImage[];
+};
