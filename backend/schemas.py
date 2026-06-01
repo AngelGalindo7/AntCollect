@@ -189,7 +189,6 @@ class UserMeResponse(BaseModel):
 class UpdateProfileRequest(BaseModel):
     username: Optional[str] = Field(default=None, min_length=3, max_length=50, pattern=_USERNAME_PATTERN)
     bio: Optional[str] = Field(default=None, max_length=500)
-    sticker_count: Optional[int] = Field(default=None, ge=0, le=10_000)
 
     @field_validator('username', mode='before')
     @classmethod
@@ -437,3 +436,45 @@ class WorkspaceResponse(BaseModel):
 
 class PanelPreviewResponse(BaseModel):
     preview_path: str
+
+
+class UserStickerImageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    asset_id: int
+    order_index: int
+    file_url: str
+
+
+class UserStickerOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    sticker_id: Optional[int] = None
+    source_post_id: Optional[int] = None
+    favorite: bool
+    for_trade: bool
+    condition: Optional[str] = None
+    note: Optional[str] = None
+    acquired_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    images: List[UserStickerImageOut]
+
+
+class UserStickerCreate(BaseModel):
+    sticker_id: Optional[int] = None
+    source_post_id: Optional[int] = None
+    favorite: bool = False
+    for_trade: bool = False
+    condition: Optional[str] = Field(default=None, max_length=100)
+    note: Optional[str] = Field(default=None, max_length=500)
+    acquired_at: Optional[datetime] = None
+    asset_ids: List[int] = Field(default_factory=list)
+
+
+class UserStickerUpdate(BaseModel):
+    favorite: Optional[bool] = None
+    for_trade: Optional[bool] = None
+    condition: Optional[str] = Field(default=None, max_length=100)
+    note: Optional[str] = Field(default=None, max_length=500)
+    acquired_at: Optional[datetime] = None
