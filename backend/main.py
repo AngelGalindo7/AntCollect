@@ -15,7 +15,7 @@ from starlette.responses import Response
 
 from .errors import AppError, ErrorCode
 # DECOMMISSIONED 2026-05-06: trading + messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
-from .routers import auth, users, posts, folders, library, reports, canvas, workspace, oauth  # trade_requests removed
+from .routers import auth, users, posts, folders, library, reports, canvas, workspace, oauth, user_sticker  # trade_requests removed
 from .utils.logging_config import configure_logging, request_id_var
 from .utils.rate_limit import get_real_ip, limiter
 
@@ -252,6 +252,7 @@ app.include_router(reports.router)
 app.include_router(canvas.router)
 app.include_router(workspace.router)
 app.include_router(oauth.router)
+app.include_router(user_sticker.router)
 
 
 @app.get("/health")
