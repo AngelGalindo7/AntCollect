@@ -15,6 +15,7 @@ import SettingsPage from '@/features/settings/pages/SettingsPage';
 import CreateFolder from '@/features/create/pages/CreateFolder';
 import FolderPage from '@/features/create/pages/FolderPage';
 import LibraryPage from '@/features/library/pages/LibraryPage';
+import StickersPage from '@/features/stickers/pages/StickersPage';
 import SetupProfile from '@/features/auth/pages/SetupProfile';
 import AuthComplete from '@/features/auth/pages/AuthComplete';
 import { getSession } from '@/shared/auth/session';
@@ -54,6 +55,7 @@ function App(){
           </Route>
 
           {/* Catch-all LAST — must follow specific routes to avoid shadowing /settings etc. */}
+          <Route path="/:username/stickers" element={<StickersPage />} />
           <Route path="/:username" element={<UserProfile />} caseSensitive />
         </Route>
       </Routes>
