@@ -36,9 +36,6 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(['source_post_id'], ['posts.id'], ondelete='SET NULL'),
         sa.PrimaryKeyConstraint('id'),
     )
-    op.create_index('ix_user_sticker_user_id', 'user_sticker', ['user_id'])
-    op.create_index('ix_user_sticker_sticker_id', 'user_sticker', ['sticker_id'])
-    op.create_index('ix_user_sticker_source_post_id', 'user_sticker', ['source_post_id'])
 
     op.create_table(
         'user_sticker_image',
@@ -52,10 +49,19 @@ def upgrade() -> None:
         sa.UniqueConstraint('user_sticker_id', 'order_index', name='uq_user_sticker_image_order'),
     )
 
+    # Indexes built concurrently (outside the transaction) so the pre-flight
+    # lock check passes and the pattern stays consistent with future migrations
+    # that add indexes to existing populated tables.
+    with op.get_context().autocommit_block():
+        op.create_index('ix_user_sticker_user_id', 'user_sticker', ['user_id'], postgresql_concurrently=True)
+        op.create_index('ix_user_sticker_sticker_id', 'user_sticker', ['sticker_id'], postgresql_concurrently=True)
+        op.create_index('ix_user_sticker_source_post_id', 'user_sticker', ['source_post_id'], postgresql_concurrently=True)
+
 
 def downgrade() -> None:
     op.drop_table('user_sticker_image')
-    op.drop_index('ix_user_sticker_source_post_id', table_name='user_sticker')
-    op.drop_index('ix_user_sticker_sticker_id', table_name='user_sticker')
-    op.drop_index('ix_user_sticker_user_id', table_name='user_sticker')
+    with op.get_context().autocommit_block():
+        op.drop_index('ix_user_sticker_source_post_id', table_name='user_sticker', postgresql_concurrently=True)
+        op.drop_index('ix_user_sticker_sticker_id', table_name='user_sticker', postgresql_concurrently=True)
+        op.drop_index('ix_user_sticker_user_id', table_name='user_sticker', postgresql_concurrently=True)
     op.drop_table('user_sticker')
