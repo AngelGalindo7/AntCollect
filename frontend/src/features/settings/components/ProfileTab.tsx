@@ -345,9 +345,13 @@ export default function ProfileTab() {
         <input
           type="text"
           value={username}
-          onChange={(e) => { setUsername(e.target.value); setUsernameError(''); }}
+          onChange={(e) => {
+            setUsername(e.target.value);
+            setUsernameError('');
+          }}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        <p className="mt-1 text-xs text-gray-400">3–50 characters. Lowercase letters, numbers, and underscores only.</p>
         {usernameError && <p className="mt-1 text-xs text-red-500">{usernameError}</p>}
       </div>
 
@@ -355,11 +359,11 @@ export default function ProfileTab() {
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Bio
-          <span className="float-right text-gray-400 font-normal">{bio.length}/160</span>
+          <span className="float-right text-gray-400 font-normal">{bio.length}/500</span>
         </label>
         <textarea
           value={bio}
-          maxLength={160}
+          maxLength={500}
           rows={3}
           onChange={(e) => setBio(e.target.value)}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -371,7 +375,14 @@ export default function ProfileTab() {
       )}
 
       <button
-        onClick={() => profileMutation.mutate()}
+        onClick={() => {
+          const valid = /^[a-z0-9_]{3,50}$/.test(username);
+          if (!valid) {
+            setUsernameError('Username must be 3–50 characters: lowercase letters, numbers, and underscores only.');
+            return;
+          }
+          profileMutation.mutate();
+        }}
         disabled={profileMutation.isPending}
         className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
       >
