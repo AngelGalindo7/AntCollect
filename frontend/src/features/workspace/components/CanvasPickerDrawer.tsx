@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { X, Plus, Loader2 } from 'lucide-react';
 import type { Panel, WorkspaceBounds } from '../types/workspace';
-
-const GRID_STEP = 40;
+import { findFreeSpot } from '../geometry/placement';
 
 function deriveFrameSize(panel: Panel, bounds: WorkspaceBounds): { w: number; h: number } {
   const cw = panel.canvas_json?.width;
@@ -12,26 +11,6 @@ function deriveFrameSize(panel: Panel, bounds: WorkspaceBounds): { w: number; h:
     return { w: Math.max(280, Math.round(cw * s)), h: Math.max(220, Math.round(ch * s)) };
   }
   return { w: panel.w, h: panel.h };
-}
-
-function findFreeSpot(
-  panels: { x: number; y: number; w: number; h: number }[],
-  bounds: WorkspaceBounds,
-  w: number,
-  h: number,
-): { x: number; y: number } | null {
-  const maxX = bounds.w - w;
-  const maxY = bounds.h - h;
-  if (maxX < 0 || maxY < 0) return null;
-  for (let fy = 0; fy <= maxY; fy += GRID_STEP) {
-    for (let fx = 0; fx <= maxX; fx += GRID_STEP) {
-      const blocked = panels.some(
-        (p) => fx < p.x + p.w && fx + w > p.x && fy < p.y + p.h && fy + h > p.y,
-      );
-      if (!blocked) return { x: fx, y: fy };
-    }
-  }
-  return null;
 }
 
 interface Props {
