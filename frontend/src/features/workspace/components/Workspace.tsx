@@ -8,6 +8,7 @@ import { PanelPreview } from './PanelPreview';
 import { CanvasEditorOverlay } from './CanvasEditorOverlay';
 import { CanvasPickerDrawer } from './CanvasPickerDrawer';
 import { CanvasSizeSetup } from './CanvasSizeSetup';
+import { placementSpot } from '../geometry/placement';
 
 interface Props {
   username: string;
@@ -236,6 +237,16 @@ export function Workspace({ posts, isOwner }: Props) {
             }
             setPanelById(updated);
             setEditingPanelId(null);
+            // C1: a freshly created canvas is a library panel (placed:false) and would
+            // vanish from the showcase on save — auto-place it into a free spot so the
+            // owner sees their work immediately instead of assuming it was lost.
+            if (!updated.placed) {
+              const occupied = placedPanels
+                .filter((p) => p.id !== updated.id)
+                .map(({ x, y, w, h }) => ({ x, y, w, h }));
+              const spot = placementSpot(occupied, bounds, updated.w, updated.h);
+              placePanel(updated.id, { x: spot.x, y: spot.y, w: updated.w, h: updated.h }).catch(() => {});
+            }
           }}
         />
       )}
