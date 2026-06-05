@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { ArrowLeft, Undo2, Redo2, Crop } from 'lucide-react';
+import { ArrowLeft, Undo2, Redo2, Crop, Eye } from 'lucide-react';
 import type Konva from 'konva';
 import { CanvasStage } from '@/features/canvas/components/CanvasStage';
+import { CanvasDomPreview } from '@/features/canvas/components/CanvasDomPreview';
 import { StickerPicker } from '@/features/canvas/components/StickerPicker';
 import { StickerControls } from '@/features/canvas/components/StickerControls';
 import { CropModal } from '@/features/canvas/components/CropModal';
@@ -56,6 +57,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
   const [liveBounds, setLiveBounds] = useState<LiveBounds | null>(null);
   const [title, setTitle] = useState(panel.title ?? '');
   const [isSizePreviewOpen, setIsSizePreviewOpen] = useState(false);
+  const [isHoloPreview, setIsHoloPreview] = useState(false);
   const stageRef = useRef<Konva.Stage | null>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
 
@@ -384,6 +386,27 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
 
         <button
           type="button"
+          onClick={() => { setSelectedId(null); setIsHoloPreview((v) => !v); }}
+          title="Preview holo — hover a sticker to see the shine"
+          style={{
+            height: 32,
+            padding: '0 10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            color: isHoloPreview ? 'var(--pw-paper)' : 'var(--pw-ink2)',
+            fontSize: 12,
+            fontWeight: 500,
+            borderRadius: 6,
+            background: isHoloPreview ? 'var(--pw-ink)' : 'transparent',
+          }}
+        >
+          <Eye size={14} strokeWidth={1.6} />
+          Preview
+        </button>
+
+        <button
+          type="button"
           title="Undo (Ctrl/Cmd+Z)"
           onClick={undo}
           disabled={!canUndo}
@@ -588,6 +611,20 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
                     onDelete={() => { removeNode(selectedNode.id); setSelectedId(null); }}
                   />
                 </>
+              )}
+
+              {/* C2: live holo preview — DOM render over the Konva stage so the owner can
+                  hover a sticker and see the actual shine before saving. */}
+              {isHoloPreview && !bgEditUrl && (
+                <div style={{ position: 'absolute', inset: 0, zIndex: 8 }}>
+                  <CanvasDomPreview
+                    width={width}
+                    height={height}
+                    background={background}
+                    nodes={nodes}
+                    scale={scale}
+                  />
+                </div>
               )}
             </div>
           </div>
