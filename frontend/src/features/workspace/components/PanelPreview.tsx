@@ -1,77 +1,9 @@
-import { useEffect, useState } from 'react';
 import type { Panel } from '../types/workspace';
-import type { BackgroundConfig } from '@/features/canvas/types/canvas';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/hooks/useCanvasState';
-import { HoloStickerEffect } from '@/features/canvas/components/HoloStickerEffect';
-
-// Replicates BackgroundImageLayer's cover+offset+scale math in DOM/CSS space.
-// panelScale converts bg.imageOffsetX/Y from canvas logical pixels to container CSS pixels.
-// Loads natural size via new Image() so we don't miss the load event for cached images
-// (React's onLoad on <img> can fire before the handler attaches when the resource is cached).
-function ImageBg({ bg, containerW, containerH, panelScale }: {
-  bg: BackgroundConfig;
-  containerW: number;
-  containerH: number;
-  panelScale: number;
-}) {
-  const [nat, setNat] = useState<[number, number] | null>(null);
-
-  useEffect(() => {
-    if (!bg.imageUrl) return;
-    let cancelled = false;
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      if (!cancelled) setNat([img.naturalWidth, img.naturalHeight]);
-    };
-    img.src = bg.imageUrl;
-    if (img.complete && img.naturalWidth > 0) {
-      setNat([img.naturalWidth, img.naturalHeight]);
-    }
-    return () => { cancelled = true; };
-  }, [bg.imageUrl]);
-
-  if (!bg.imageUrl) return null;
-
-  if (!nat) {
-    return (
-      <img
-        src={bg.imageUrl}
-        alt=""
-        draggable={false}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-      />
-    );
-  }
-
-  const [natW, natH] = nat;
-  const imgScale = bg.imageScale ?? 1;
-  const cover = Math.max(containerW / natW, containerH / natH);
-  const drawW = natW * cover * imgScale;
-  const drawH = natH * cover * imgScale;
-  const left = (containerW - drawW) / 2 + (bg.imageOffsetX ?? 0) * panelScale;
-  const top = (containerH - drawH) / 2 + (bg.imageOffsetY ?? 0) * panelScale;
-  return (
-    <img
-      src={bg.imageUrl}
-      alt=""
-      draggable={false}
-      style={{ position: 'absolute', left, top, width: drawW, height: drawH }}
-    />
-  );
-}
+import { CanvasDomPreview } from '@/features/canvas/components/CanvasDomPreview';
 
 interface Props {
   panel: Panel;
-}
-
-function bgToCss(bg: BackgroundConfig | undefined): React.CSSProperties {
-  if (!bg) return { background: '#f5f0e8' };
-  if (bg.type === 'gradient') {
-    return { background: `linear-gradient(135deg, ${bg.value}, ${bg.gradientEnd ?? '#ffffff'})` };
-  }
-  if (bg.type === 'image') return { background: '#f6f1e6' };
-  return { background: bg.value };
 }
 
 export function PanelPreview({ panel }: Props) {
@@ -94,7 +26,7 @@ export function PanelPreview({ panel }: Props) {
     const letterboxColor = bg?.type === 'image' ? '#f6f1e6' : (bg?.value ?? '#f5f0e8');
 
     if (!hasHolo) {
-      // No holo nodes — PNG is accurate and sufficient.
+      // No holo nodes — the rendered PNG is accurate and sufficient.
       return (
         <div className="w-full h-full relative overflow-hidden" style={{ background: letterboxColor }}>
           <img
@@ -108,63 +40,12 @@ export function PanelPreview({ panel }: Props) {
       );
     }
 
-    // Has holo nodes — skip the PNG and render all nodes as DOM elements in z-order.
-    // This is the only way to place the holo shimmer effect at its correct layer:
-    // the PNG is a flat image, so any overlay always ends up above everything in it.
+    // Has holo nodes — render nodes as live DOM so the shimmer sits at its correct layer
+    // (a flat PNG can't host an overlay below other nodes).
     return (
       <div className="w-full h-full relative overflow-hidden" style={{ background: letterboxColor }}>
-        <div
-          style={{
-            position: 'absolute',
-            left: ox,
-            top: oy,
-            width: cw * scale,
-            height: ch * scale,
-            overflow: 'hidden',
-            ...bgToCss(bg),
-          }}
-        >
-          {bg?.type === 'image' && bg.imageUrl && (
-            <ImageBg
-              bg={bg}
-              containerW={cw * scale}
-              containerH={ch * scale}
-              panelScale={scale}
-            />
-          )}
-          {nodes.map((node) => (
-            <div
-              key={node.id}
-              style={{
-                position: 'absolute',
-                left: node.x * scale,
-                top: node.y * scale,
-                width: node.width * scale,
-                height: node.height * scale,
-                transformOrigin: 'top left',
-                transform: `rotate(${node.rotation}deg)`,
-                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.18))',
-              }}
-            >
-              {node.holo ? (
-                <HoloStickerEffect maskUrl={node.image_url} variant={node.holoVariant}>
-                  <img
-                    src={node.image_url}
-                    alt=""
-                    draggable={false}
-                    style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block' }}
-                  />
-                </HoloStickerEffect>
-              ) : (
-                <img
-                  src={node.image_url}
-                  alt=""
-                  draggable={false}
-                  style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block' }}
-                />
-              )}
-            </div>
-          ))}
+        <div style={{ position: 'absolute', left: ox, top: oy }}>
+          <CanvasDomPreview width={cw} height={ch} background={bg} nodes={nodes} scale={scale} />
         </div>
       </div>
     );
