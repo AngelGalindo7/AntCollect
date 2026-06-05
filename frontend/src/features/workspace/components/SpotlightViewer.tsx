@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Maximize2 } from 'lucide-react';
 import type { Panel } from '../types/workspace';
 import { getPublicWorkspace } from '../api/workspaceApi';
 import { PanelPreview } from './PanelPreview';
+import { PanelLightbox } from './PanelLightbox';
 
 interface Props {
   username: string;
@@ -20,6 +21,7 @@ export function SpotlightViewer({ username }: Props) {
   const [containerW, setContainerW] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activePanel, setActivePanel] = useState<Panel | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,7 +100,16 @@ export function SpotlightViewer({ username }: Props) {
         {panels.map((p) => (
           <div
             key={p.id}
-            className="group"
+            className="group cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onClick={() => setActivePanel(p)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setActivePanel(p);
+              }
+            }}
             style={{
               position: 'absolute',
               left: p.x * scale,
@@ -111,6 +122,11 @@ export function SpotlightViewer({ username }: Props) {
           >
             <PanelPreview panel={p} />
 
+            {/* Expand affordance — signals the panel is clickable without obscuring the art. */}
+            <div className="pointer-events-none absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <Maximize2 size={14} />
+            </div>
+
             {/* H3: title revealed on hover so it never obscures the artwork at rest. */}
             {p.title && (
               <div className="pointer-events-none absolute inset-x-0 bottom-0 px-3 py-2 bg-linear-to-t from-black/55 to-transparent opacity-0 transition-opacity duration-200 group-hover:opacity-100">
@@ -120,6 +136,10 @@ export function SpotlightViewer({ username }: Props) {
           </div>
         ))}
       </div>
+
+      {activePanel && (
+        <PanelLightbox panel={activePanel} onClose={() => setActivePanel(null)} />
+      )}
     </div>
   );
 }
