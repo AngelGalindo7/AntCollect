@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import PostGridLayout from "@/features/posts/components/PostGridLayout";
 import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import { Workspace } from "@/features/workspace/components/Workspace";
-import { WorkspaceViewer } from "@/features/workspace/components/WorkspaceViewer";
+import { SpotlightViewer } from "@/features/workspace/components/SpotlightViewer";
 import { PositionedBackgroundImage } from "@/shared/components/PositionedBackgroundImage";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchPublic, fetchWithAuth, API_BASE } from "@/shared/api/api";
@@ -300,7 +300,7 @@ const UserProfile: React.FC = () => {
         profile.is_owner ? (
           <Workspace username={String(username)} posts={profile.posts} isOwner={true} />
         ) : (
-          <WorkspaceViewer username={String(username)} />
+          <SpotlightViewer username={String(username)} />
         )
       ) : (
         <div className="max-w-6xl mx-auto px-4 mt-6">
