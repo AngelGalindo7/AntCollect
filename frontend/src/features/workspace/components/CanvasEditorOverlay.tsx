@@ -40,8 +40,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
       ? { version: 1, width: overrideInitialSize.w, height: overrideInitialSize.h, background: { type: 'color', value: '#f5f0e8' }, nodes: [] }
       : null);
 
-  const { nodes, background, width, height, isDirty, addNode, updateNode, removeNode, duplicateNode,
-    moveNodeUp, moveNodeDown, changeBackground, setCanvasSize, markClean, getCanvasJson } =
+  const { nodes, background, width, height, isDirty, canUndo, canRedo, addNode, updateNode, removeNode, duplicateNode,
+    moveNodeUp, moveNodeDown, changeBackground, setCanvasSize, undo, redo, markClean, getCanvasJson } =
     useCanvasState(effectiveInitialJson);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -144,6 +144,22 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
     window.addEventListener('keydown', handle);
     return () => window.removeEventListener('keydown', handle);
   }, [isDirty, titleDirty, onClose]);
+
+  useEffect(() => {
+    const handle = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key.toLowerCase() !== 'z' && e.key.toLowerCase() !== 'y') return;
+      // Don't hijack the browser's text-undo while the title field is focused.
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      e.preventDefault();
+      const isRedo = e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey);
+      if (isRedo) redo();
+      else undo();
+    };
+    window.addEventListener('keydown', handle);
+    return () => window.removeEventListener('keydown', handle);
+  }, [undo, redo]);
 
   const handleClose = () => {
     if ((isDirty || titleDirty) && !window.confirm('Discard unsaved changes?')) return;
@@ -368,8 +384,9 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
 
         <button
           type="button"
-          title="Undo"
-          disabled
+          title="Undo (Ctrl/Cmd+Z)"
+          onClick={undo}
+          disabled={!canUndo}
           style={{
             width: 32,
             height: 32,
@@ -377,15 +394,17 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             alignItems: 'center',
             justifyContent: 'center',
             color: 'var(--pw-ink2)',
-            opacity: 0.4,
+            opacity: canUndo ? 1 : 0.4,
+            cursor: canUndo ? 'pointer' : 'default',
           }}
         >
           <Undo2 size={16} strokeWidth={1.6} />
         </button>
         <button
           type="button"
-          title="Redo"
-          disabled
+          title="Redo (Ctrl/Cmd+Shift+Z)"
+          onClick={redo}
+          disabled={!canRedo}
           style={{
             width: 32,
             height: 32,
@@ -393,7 +412,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             alignItems: 'center',
             justifyContent: 'center',
             color: 'var(--pw-ink2)',
-            opacity: 0.4,
+            opacity: canRedo ? 1 : 0.4,
+            cursor: canRedo ? 'pointer' : 'default',
           }}
         >
           <Redo2 size={16} strokeWidth={1.6} />
