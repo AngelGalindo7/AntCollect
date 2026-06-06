@@ -20,6 +20,7 @@ from backend.models.report import Report
 from backend.models.canvas import UserCanvas
 from backend.models.workspace import Workspace, Panel
 from backend.models.user_sticker import UserSticker, UserStickerImage
+from backend.models.used_verification_token import UsedVerificationToken
 
 __all__ = [
     "Base",
@@ -43,4 +44,5 @@ __all__ = [
     "Panel",
     "UserSticker",
     "UserStickerImage",
+    "UsedVerificationToken",
 ]
