@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from ..utils.rate_limit import limiter, get_real_ip, get_user_or_ip_key
 
 from ..database import get_db
-from backend.models import RefreshToken, User
+from backend.models import RefreshToken, User, UsedVerificationToken
 from ..utils.auth import create_access_token, create_refresh_token, decode_refresh_token, authenthicate_access_token, SECRET_KEY, _create_verification_token
 from ..schemas import VerifyEmailRequest, ConfirmEmailChangeRequest, MessageResponse, UserSearch
 
@@ -199,23 +199,28 @@ def verify_email(
     if payload.get("purpose") != "signup_verify":
         raise HTTPException(status_code=400, detail="Invalid verification link")
 
+    jti = payload.get("jti")
+    if not jti:
+        raise HTTPException(status_code=400, detail="Invalid verification link")
+
     user_id = payload.get("sub")
     token_email = payload.get("email")
     if not user_id or not token_email:
         raise HTTPException(status_code=400, detail="Invalid verification link")
 
+    # Replay guard: token already consumed — return success so double-clicks are silent
+    if db.query(UsedVerificationToken).filter(UsedVerificationToken.jti == jti).first():
+        return MessageResponse(message="Email verified successfully")
+
     db_user = db.query(User).filter(User.id == int(user_id)).first()
-    # Return success regardless of whether the user exists — anti-enumeration.
     if not db_user:
         return MessageResponse(message="Email verified successfully")
 
     if db_user.email != token_email:
-        # Email has changed since token was issued — silently no-op.
         return MessageResponse(message="Email verified successfully")
 
-    if db_user.email_verified:
-        return MessageResponse(message="Email verified successfully")
-
+    # Mark token consumed and verify email in a single transaction
+    db.add(UsedVerificationToken(jti=jti, expires_at=datetime.fromtimestamp(payload["exp"], tz=timezone.utc)))
     db_user.email_verified = True
     db.commit()
     return MessageResponse(message="Email verified successfully")
@@ -268,13 +273,20 @@ def confirm_email_change(
     if payload.get("purpose") != "email_change":
         raise HTTPException(status_code=400, detail="Invalid confirmation link")
 
+    jti = payload.get("jti")
+    if not jti:
+        raise HTTPException(status_code=400, detail="Invalid confirmation link")
+
     user_id = payload.get("sub")
     new_email = payload.get("email")
     if not user_id or not new_email:
         raise HTTPException(status_code=400, detail="Invalid confirmation link")
 
+    # Replay guard: prevents a captured link from overwriting a later pending_email change
+    if db.query(UsedVerificationToken).filter(UsedVerificationToken.jti == jti).first():
+        return MessageResponse(message="Email updated successfully")
+
     db_user = db.query(User).filter(User.id == int(user_id)).first()
-    # Return success regardless — anti-enumeration.
     if not db_user:
         return MessageResponse(message="Email updated successfully")
 
@@ -293,6 +305,8 @@ def confirm_email_change(
         db.commit()
         raise HTTPException(status_code=409, detail="That email address is no longer available")
 
+    # Mark token consumed and swap email in a single transaction
+    db.add(UsedVerificationToken(jti=jti, expires_at=datetime.fromtimestamp(payload["exp"], tz=timezone.utc)))
     db_user.email = new_email
     db_user.pending_email = None
     db_user.email_verified = True
