@@ -113,7 +113,7 @@ const LogIn: React.FC = () => {
                     </div>
 
                     <div className="flex justify-between items-center text-sm px-1">
-                        <a href="#" className="text-[#003087] hover:underline">Forgot password?</a>
+                        <Link to="/forgot-password" className="text-[#003087] hover:underline">Forgot password?</Link>
                         <Link to="/CreateAccount" className="text-[#003087] hover:underline">Sign up</Link>
                     </div>
 
