@@ -242,7 +242,6 @@ class VerifyEmailRequest(BaseModel):
 
 class EmailChangeRequest(BaseModel):
     new_email: EmailStr
-    password: str
 
     @field_validator('new_email', mode='before')
     @classmethod
