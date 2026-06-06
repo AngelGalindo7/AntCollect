@@ -1,7 +1,7 @@
 import base64
 import binascii
 import logging
-from fastapi import UploadFile, File, Depends, Form, HTTPException, APIRouter, Request
+from fastapi import UploadFile, File, Depends, Form, HTTPException, APIRouter, Request, Query
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select, desc, tuple_, literal, or_
@@ -82,9 +82,10 @@ def upload_post(
                 delete_file(path)
             except Exception:
                 pass
+        logger.error("post upload failed", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"An error occurred during upload: {e}"
+            detail="An error occurred during upload"
         )
 @router.post("/like_image")
 def like_image(
@@ -308,9 +309,11 @@ def get_top_posts(
 
 
 @router.post("/comment_post")
+@limiter.limit("30/hour", key_func=get_user_or_ip_key)
 def comment(
+    request: Request,
     post_id: int,
-    content: str,
+    content: str = Query(..., min_length=1, max_length=2000),
     user: UserSearch = Depends(authenthicate_access_token),
     db: Session = Depends(get_db)
 ):
