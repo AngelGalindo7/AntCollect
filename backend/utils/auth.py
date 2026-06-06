@@ -165,6 +165,22 @@ def decode_google_pending_token(token: str) -> dict:
     return payload
 
 
+def _create_verification_token(user_id: int, target_email: str, purpose: str) -> str:
+    """
+    purpose must be 'signup_verify' or 'email_change'.
+    Expires in 1 hour. Never log the returned token.
+    """
+    payload = {
+        "sub": str(user_id),
+        "email": target_email,
+        "purpose": purpose,
+        "jti": secrets.token_hex(16),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+        "type": "email_verify",
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+
 class RoleChecker:
     def __init__(self, allowed_roles: List[str]):
         self.allowed_roles = allowed_roles
