@@ -30,3 +30,5 @@ class User(Base):
     background_scale: Mapped[float] = mapped_column(Float, nullable=False, default=1.0, server_default="1")
     bio: Mapped[str | None] = mapped_column(String(500), nullable=True)
     sticker_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    email_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text('false'))
+    pending_email: Mapped[str | None] = mapped_column(String(50), nullable=True)
