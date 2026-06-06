@@ -133,6 +133,7 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
     existing_by_email = db.query(User).filter(User.email == email).first()
     if existing_by_email:
         existing_by_email.google_id = google_id
+        existing_by_email.email_verified = True
         db.commit()
         logger.info("google login: linked existing account", extra={"event": "oauth.google_account_linked", "user_id": existing_by_email.id})
         return _login_and_redirect(existing_by_email, db)
@@ -179,7 +180,7 @@ def google_complete(
     if db.query(User).filter(User.email == email).first():
         raise HTTPException(status_code=409, detail="Could not complete signup")
 
-    user = User(username=username, email=email, google_id=google_id, password_hash=None)
+    user = User(username=username, email=email, google_id=google_id, password_hash=None, email_verified=True)
     db.add(user)
     db.flush()
     logger.info("google signup: account created", extra={"event": "oauth.google_signup", "user_id": user.id})
