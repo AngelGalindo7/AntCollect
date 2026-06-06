@@ -270,7 +270,7 @@ class ResetPasswordRequest(BaseModel):
 
 
 class ChangeEmailWithIntentRequest(BaseModel):
-    intent_token: str
+    intent_token: Optional[str] = None
     new_email: EmailStr
 
     @field_validator('new_email', mode='before')
