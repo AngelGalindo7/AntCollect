@@ -1,3 +1,5 @@
+import json as _json
+
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator, computed_field
 from typing import List, Optional
 from enum import Enum
@@ -185,6 +187,8 @@ class UserMeResponse(BaseModel):
     background_offset_x: float = 0.0
     background_offset_y: float = 0.0
     background_scale: float = 1.0
+    email_verified: bool = False
+    pending_email: Optional[str] = None
     # Read from ORM but excluded from JSON output — used only to derive has_password
     password_hash: Optional[str] = Field(default=None, exclude=True, repr=False)
 
@@ -228,8 +232,37 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+class MessageResponse(BaseModel):
+    message: str
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+
+class EmailChangeRequest(BaseModel):
+    new_email: EmailStr
+    password: str
+
+    @field_validator('new_email', mode='before')
+    @classmethod
+    def _lower_email(cls, v):
+        return _normalize_email(v) if isinstance(v, str) else v
+
+
+class ConfirmEmailChangeRequest(BaseModel):
+    token: str
+
+
 class CanvasSaveRequest(BaseModel):
     canvas_json: dict
+
+    @field_validator('canvas_json')
+    @classmethod
+    def check_canvas_size(cls, v):
+        if len(_json.dumps(v)) > 2_097_152:
+            raise ValueError('canvas_json exceeds maximum allowed size')
+        return v
 
 class CanvasResponse(BaseModel):
     canvas_json: Optional[dict] = None
