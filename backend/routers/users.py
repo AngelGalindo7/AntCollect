@@ -1,6 +1,8 @@
 import logging
 import os
+from datetime import datetime, timezone
 
+import jwt
 from fastapi import Depends, HTTPException, APIRouter, Request, File, Form, UploadFile
 from ..utils.rate_limit import limiter, get_real_ip, get_user_or_ip_key
 from fastapi.responses import JSONResponse
@@ -8,11 +10,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func, literal
 from ..database import get_db
-from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset
+from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset, UsedVerificationToken
 from backend.models.user_sticker import UserSticker
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, BackgroundUpdateResponse, BackgroundPositionRequest, BackgroundPositionResponse, ChangePasswordRequest, EmailChangeRequest, MessageResponse
-from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token, optional_auth_token, _create_verification_token
-from ..utils.email import send_verification_email, send_email_change_verification
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, BackgroundUpdateResponse, BackgroundPositionRequest, BackgroundPositionResponse, ChangePasswordRequest, ChangeEmailWithIntentRequest, MessageResponse
+from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token, optional_auth_token, _create_verification_token, SECRET_KEY
+from ..utils.email import send_verification_email, send_email_change_verification, send_email_change_notification
 from ..utils.files import process_and_save_image, delete_file
 from typing import List
 
@@ -556,10 +558,33 @@ def retrieve_user_likes(
 @limiter.limit("3/hour", key_func=get_user_or_ip_key)
 def change_email(
     request: Request,
-    payload: EmailChangeRequest,
+    payload: ChangeEmailWithIntentRequest,
     db: Session = Depends(get_db),
     user: UserSearch = Depends(authenthicate_access_token),
 ):
+    # Validate the intent token issued by POST /auth/send-change-email-intent
+    try:
+        intent = jwt.decode(payload.intent_token, SECRET_KEY, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Intent link has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid intent token")
+
+    if intent.get("purpose") != "change_email_intent":
+        raise HTTPException(status_code=400, detail="Invalid intent token")
+
+    jti = intent.get("jti")
+    if not jti:
+        raise HTTPException(status_code=400, detail="Invalid intent token")
+
+    # Replay guard: token already consumed
+    if db.query(UsedVerificationToken).filter(UsedVerificationToken.jti == jti).first():
+        raise HTTPException(status_code=400, detail="Intent link already used")
+
+    # Token must belong to the authenticated user
+    if intent.get("sub") != str(user.user_id):
+        raise HTTPException(status_code=403, detail="Intent token does not match the authenticated user")
+
     db_user = db.query(User).filter(User.id == user.user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -570,24 +595,41 @@ def change_email(
             detail="Google accounts cannot change email here. Use your Google account settings.",
         )
 
+    # Stale token guard: user's email changed since the intent was issued
+    if intent.get("email") != db_user.email:
+        raise HTTPException(status_code=400, detail="Intent token is no longer valid for this account")
+
     new_email = str(payload.new_email)
 
     if new_email == db_user.email:
         raise HTTPException(status_code=400, detail="New email is the same as the current email")
 
-    # Anti-enumeration: if the address is taken, return the same success-shaped response
-    # without sending an email. Attacker cannot learn whether the address is registered.
+    # Anti-enumeration: if the address is taken, consume the intent jti and return the
+    # same success-shaped response. Attacker cannot learn whether the address is registered.
     conflict = db.query(User).filter(User.email == new_email).first()
     if conflict:
+        db.add(UsedVerificationToken(jti=jti, expires_at=datetime.fromtimestamp(intent["exp"], tz=timezone.utc)))
+        db.commit()
         return MessageResponse(message="If that address is available, a confirmation email has been sent")
 
+    # Mark intent consumed, set pending_email — single transaction so both succeed or neither does
+    db.add(UsedVerificationToken(jti=jti, expires_at=datetime.fromtimestamp(intent["exp"], tz=timezone.utc)))
+    old_email = db_user.email
     db_user.pending_email = new_email
     db.commit()
 
-    token = _create_verification_token(db_user.id, new_email, "email_change")
     frontend_url = os.getenv("FRONTEND_URL", "")
+
+    # Notify the old address that a change was requested
+    try:
+        send_email_change_notification(old_email, new_email)
+    except Exception:
+        logger.warning("email change notification failed for user %s", db_user.id, exc_info=True)
+
+    # Send confirmation link to the new address
+    confirm_token = _create_verification_token(db_user.id, new_email, "email_change")
     if frontend_url:
-        send_email_change_verification(new_email, token, frontend_url)
+        send_email_change_verification(new_email, confirm_token, frontend_url)
 
     return MessageResponse(message="If that address is available, a confirmation email has been sent")
 
