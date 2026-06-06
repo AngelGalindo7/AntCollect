@@ -202,7 +202,7 @@ def google_complete(
 
     _, domain = _cookie_cfg()
     response = _cookie_response(
-        content={"id": user.id, "username": user.username, "email": user.email},
+        content={"id": user.id, "username": user.username, "email": user.email, "role": user.role},
         access_token=access_token,
         refresh_token=refresh_token_data["token"],
     )
