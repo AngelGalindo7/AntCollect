@@ -2,14 +2,16 @@ import logging
 import os
 from datetime import datetime, timezone, timedelta
 
+import jwt
 from fastapi import Depends, HTTPException, APIRouter, Request
 from sqlalchemy.orm import Session
 from fastapi.responses import JSONResponse
-from ..utils.rate_limit import limiter, get_real_ip
+from ..utils.rate_limit import limiter, get_real_ip, get_user_or_ip_key
 
 from ..database import get_db
 from backend.models import RefreshToken, User
-from ..utils.auth import create_access_token, create_refresh_token, decode_refresh_token
+from ..utils.auth import create_access_token, create_refresh_token, decode_refresh_token, authenthicate_access_token, SECRET_KEY, _create_verification_token
+from ..schemas import VerifyEmailRequest, ConfirmEmailChangeRequest, MessageResponse, UserSearch
 
 logger = logging.getLogger(__name__)
 
@@ -178,3 +180,121 @@ def logout(
     response.delete_cookie("access_token", path="/", domain=domain, secure=secure)
     response.delete_cookie("refresh_token", path="/", domain=domain, secure=secure)
     return response
+
+
+@router.post("/verify-email", response_model=MessageResponse)
+@limiter.limit("10/hour", key_func=get_real_ip)
+def verify_email(
+    request: Request,
+    body: VerifyEmailRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        payload = jwt.decode(body.token, SECRET_KEY, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Verification link has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid verification link")
+
+    if payload.get("purpose") != "signup_verify":
+        raise HTTPException(status_code=400, detail="Invalid verification link")
+
+    user_id = payload.get("sub")
+    token_email = payload.get("email")
+    if not user_id or not token_email:
+        raise HTTPException(status_code=400, detail="Invalid verification link")
+
+    db_user = db.query(User).filter(User.id == int(user_id)).first()
+    # Return success regardless of whether the user exists — anti-enumeration.
+    if not db_user:
+        return MessageResponse(message="Email verified successfully")
+
+    if db_user.email != token_email:
+        # Email has changed since token was issued — silently no-op.
+        return MessageResponse(message="Email verified successfully")
+
+    if db_user.email_verified:
+        return MessageResponse(message="Email verified successfully")
+
+    db_user.email_verified = True
+    db.commit()
+    return MessageResponse(message="Email verified successfully")
+
+
+@router.post("/resend-verification", response_model=MessageResponse)
+@limiter.limit("3/hour", key_func=get_user_or_ip_key)
+def resend_verification(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token),
+):
+    db_user = db.query(User).filter(User.id == user.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if db_user.google_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Google accounts do not require email verification",
+        )
+
+    if db_user.email_verified:
+        raise HTTPException(status_code=400, detail="Email is already verified")
+
+    frontend_url = os.getenv("FRONTEND_URL")
+    if not frontend_url:
+        raise RuntimeError("FRONTEND_URL env var is not set")
+
+    token = _create_verification_token(db_user.id, db_user.email, "signup_verify")
+    from ..utils.email import send_verification_email
+    send_verification_email(db_user.email, token, frontend_url)
+    return MessageResponse(message="Verification email sent")
+
+
+@router.post("/confirm-email-change", response_model=MessageResponse)
+@limiter.limit("10/hour", key_func=get_real_ip)
+def confirm_email_change(
+    request: Request,
+    body: ConfirmEmailChangeRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        payload = jwt.decode(body.token, SECRET_KEY, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Confirmation link has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid confirmation link")
+
+    if payload.get("purpose") != "email_change":
+        raise HTTPException(status_code=400, detail="Invalid confirmation link")
+
+    user_id = payload.get("sub")
+    new_email = payload.get("email")
+    if not user_id or not new_email:
+        raise HTTPException(status_code=400, detail="Invalid confirmation link")
+
+    db_user = db.query(User).filter(User.id == int(user_id)).first()
+    # Return success regardless — anti-enumeration.
+    if not db_user:
+        return MessageResponse(message="Email updated successfully")
+
+    if db_user.pending_email is None:
+        return MessageResponse(message="Email updated successfully")
+
+    if db_user.pending_email != new_email:
+        return MessageResponse(message="Email updated successfully")
+
+    # Race-condition guard: another account may have claimed this address since the
+    # token was issued. This is the one place we surface a conflict — the user's own
+    # pending change is being rejected and they need to know why.
+    conflict = db.query(User).filter(User.email == new_email).first()
+    if conflict:
+        db_user.pending_email = None
+        db.commit()
+        raise HTTPException(status_code=409, detail="That email address is no longer available")
+
+    db_user.email = new_email
+    db_user.pending_email = None
+    db_user.email_verified = True
+    db.commit()
+    return MessageResponse(message="Email updated successfully")
