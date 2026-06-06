@@ -55,6 +55,10 @@ export default function AccountTab() {
   // Send-intent button feedback
   const [intentError, setIntentError] = useState('');
 
+  // Direct email change (unverified users only)
+  const [directNewEmail, setDirectNewEmail] = useState('');
+  const [directEmailError, setDirectEmailError] = useState('');
+
   // Forgot-password shortcut feedback
   const [forgotSent, setForgotSent] = useState(false);
 
@@ -108,6 +112,22 @@ export default function AccountTab() {
         return r.json();
       }),
     onError: (err: Error) => setIntentError(err.message),
+  });
+
+  const directEmailMutation = useMutation({
+    mutationFn: () =>
+      fetchWithAuth(`${API_BASE}/users/me/email`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_email: directNewEmail }),
+      }).then(async (r) => {
+        if (!r.ok) {
+          const data = await r.json().catch(() => ({}));
+          throw new Error(data.detail ?? 'Failed to update email. Try again.');
+        }
+        return r.json();
+      }),
+    onError: (err: Error) => setDirectEmailError(err.message),
   });
 
   const forgotFromSettingsMutation = useMutation({
@@ -174,25 +194,54 @@ export default function AccountTab() {
           </div>
         )}
 
-        {/* Change email — intent link button */}
+        {/* Change email */}
         <div className="mt-3">
-          {sendIntentMutation.isSuccess ? (
+          {emailVerified ? (
+            // Verified: send intent link to current inbox to prove ownership
+            sendIntentMutation.isSuccess ? (
+              <p className="text-sm text-green-600">
+                Check your inbox — a link to change your email has been sent.
+              </p>
+            ) : (
+              <>
+                <button
+                  onClick={() => { setIntentError(''); sendIntentMutation.mutate(); }}
+                  disabled={sendIntentMutation.isPending}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+                >
+                  {sendIntentMutation.isPending ? 'Sending…' : 'Send change email link'}
+                </button>
+                {intentError && (
+                  <p className="mt-1 text-xs text-red-500">{intentError}</p>
+                )}
+              </>
+            )
+          ) : directEmailMutation.isSuccess ? (
+            // Unverified success
             <p className="text-sm text-green-600">
-              Check your inbox — a link to change your email has been sent.
+              Confirmation sent to {directNewEmail}. Click the link in that email to complete the change.
             </p>
           ) : (
-            <>
+            // Unverified: current email is untrusted, allow direct change
+            <div className="space-y-2">
+              <input
+                type="email"
+                value={directNewEmail}
+                onChange={(e) => setDirectNewEmail(e.target.value)}
+                placeholder="New email address"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
               <button
-                onClick={() => { setIntentError(''); sendIntentMutation.mutate(); }}
-                disabled={sendIntentMutation.isPending}
+                onClick={() => { setDirectEmailError(''); directEmailMutation.mutate(); }}
+                disabled={directEmailMutation.isPending || !directNewEmail}
                 className="text-sm font-medium text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
               >
-                {sendIntentMutation.isPending ? 'Sending…' : 'Send change email link'}
+                {directEmailMutation.isPending ? 'Sending…' : 'Update Email'}
               </button>
-              {intentError && (
-                <p className="mt-1 text-xs text-red-500">{intentError}</p>
+              {directEmailError && (
+                <p className="mt-1 text-xs text-red-500">{directEmailError}</p>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
