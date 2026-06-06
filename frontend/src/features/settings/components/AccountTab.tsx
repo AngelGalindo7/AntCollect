@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 import { getSession, clearSession } from '@/shared/auth/session';
 
 interface UserMe {
   has_password: boolean;
+  email_verified: boolean;
+  pending_email: string | null;
 }
 
 function passwordStrength(pw: string): 'weak' | 'medium' | 'strong' {
@@ -27,6 +30,7 @@ const strengthConfig = {
 
 export default function AccountTab() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const email = getSession()?.email || '—';
 
   const { data: me } = useQuery<UserMe>({
@@ -36,6 +40,7 @@ export default function AccountTab() {
   });
   const hasPassword = me?.has_password ?? true;
 
+  // Password accordion state
   const [open, setOpen] = useState(false);
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
@@ -44,6 +49,15 @@ export default function AccountTab() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [localError, setLocalError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Email change accordion state
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [emailSuccess, setEmailSuccess] = useState('');
+
+  // Resend verification inline feedback
+  const [resendMsg, setResendMsg] = useState('');
 
   const strength = newPw ? passwordStrength(newPw) : null;
 
@@ -75,6 +89,52 @@ export default function AccountTab() {
     passwordMutation.mutate();
   };
 
+  const resendMutation = useMutation({
+    mutationFn: () =>
+      fetchWithAuth(`${API_BASE}/auth/resend-verification`, { method: 'POST' }).then(async (r) => {
+        if (!r.ok) throw new Error('resend_failed');
+        return r.json();
+      }),
+    onSuccess: () => setResendMsg('Check your inbox — email sent.'),
+    onError: () => setResendMsg('Failed to send. Try again shortly.'),
+  });
+
+  const emailChangeMutation = useMutation({
+    mutationFn: () =>
+      fetchWithAuth(`${API_BASE}/users/me/email`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_email: newEmail }),
+      }).then(async (r) => {
+        if (r.status === 400) throw new Error('Failed to update email. Please try again.');
+        if (!r.ok) throw new Error('Failed to update email. Please try again.');
+        return r.json();
+      }),
+    onSuccess: () => {
+      setNewEmail('');
+      setEmailError('');
+      setEmailSuccess(`Check ${newEmail} for a confirmation link.`);
+      setEmailOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+    },
+    onError: (err: Error) => setEmailError(err.message),
+  });
+
+  const cancelEmailChangeMutation = useMutation({
+    mutationFn: () =>
+      fetchWithAuth(`${API_BASE}/users/me/email/cancel`, { method: 'DELETE' }).then(async (r) => {
+        if (!r.ok) throw new Error('Failed to cancel email change');
+        return r.json();
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['me'] }),
+  });
+
+  const handleEmailChangeSubmit = () => {
+    setEmailError(''); setEmailSuccess('');
+    if (!newEmail) { setEmailError('Enter a new email address'); return; }
+    emailChangeMutation.mutate();
+  };
+
   const handleLogout = async () => {
     try {
       await fetchWithAuth(`${API_BASE}/auth/logout`, { method: 'POST' });
@@ -92,14 +152,101 @@ export default function AccountTab() {
   };
   const roleBadge = roleConfig[role] ?? null;
 
+  const emailVerified = me?.email_verified ?? true;
+  const pendingEmail = me?.pending_email ?? null;
+
   return (
     <div className="space-y-6">
       {/* Email */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-        <p className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500 bg-gray-50">
-          {email}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500 bg-gray-50">
+            {email}
+          </p>
+          {emailVerified && !pendingEmail && (
+            <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+              Verified
+            </span>
+          )}
+        </div>
+
+        {/* Case A — unverified */}
+        {!emailVerified && !pendingEmail && (
+          <div className="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2">
+            <p className="text-sm text-yellow-800">Your email address is not verified.</p>
+            <button
+              onClick={() => { setResendMsg(''); resendMutation.mutate(); }}
+              disabled={resendMutation.isPending}
+              className="mt-1 text-sm font-medium text-yellow-700 hover:text-yellow-900 underline disabled:opacity-50"
+            >
+              {resendMutation.isPending ? 'Sending…' : 'Resend verification email'}
+            </button>
+            {resendMsg && (
+              <p className={`mt-1 text-xs ${resendMsg.startsWith('Failed') ? 'text-red-600' : 'text-green-700'}`}>
+                {resendMsg}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Case B — pending email change */}
+        {pendingEmail && (
+          <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 flex items-start justify-between gap-2">
+            <p className="text-sm text-blue-800">
+              Pending change to <span className="font-medium">{pendingEmail}</span> — check your inbox.
+            </p>
+            <button
+              onClick={() => cancelEmailChangeMutation.mutate()}
+              disabled={cancelEmailChangeMutation.isPending}
+              className="shrink-0 text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50"
+            >
+              {cancelEmailChangeMutation.isPending ? 'Cancelling…' : 'Cancel'}
+            </button>
+          </div>
+        )}
+
+        {/* Case C — verified, no pending: show Change Email accordion */}
+        {emailVerified && !pendingEmail && (
+          <div className="mt-3 border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => { setEmailOpen((v) => !v); setEmailError(''); setEmailSuccess(''); }}
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Change Email
+              <svg
+                className={`w-4 h-4 text-gray-400 transition-transform ${emailOpen ? 'rotate-180' : ''}`}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {emailOpen && (
+              <div className="px-4 pb-4 space-y-3 border-t border-gray-200 pt-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">New email address</label>
+                  <input
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                {emailError && <p className="text-xs text-red-500">{emailError}</p>}
+                {emailSuccess && <p className="text-xs text-green-600">{emailSuccess}</p>}
+                <button
+                  onClick={handleEmailChangeSubmit}
+                  disabled={emailChangeMutation.isPending}
+                  className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                >
+                  {emailChangeMutation.isPending ? 'Sending…' : 'Send Confirmation'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Role badge — only shown for non-standard roles */}
@@ -154,7 +301,7 @@ export default function AccountTab() {
                     onClick={() => setShowNew((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showNew ? '🙈' : '👁️'}
+                    {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
                 {strength && (
@@ -183,7 +330,7 @@ export default function AccountTab() {
                     onClick={() => setShowConfirm((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showConfirm ? '🙈' : '👁️'}
+                    {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
