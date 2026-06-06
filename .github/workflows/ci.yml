@@ -61,6 +61,7 @@ jobs:
           AWS_S3_BUCKET: test-bucket
           AWS_REGION: us-east-1
           S3_MOCK: "true"
+          FRONTEND_URL: "http://localhost:5173"
 
   messaging:
     runs-on: ubuntu-latest
