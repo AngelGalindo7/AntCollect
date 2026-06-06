@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE } from '@/shared/api/api';
+import { setSession, type Role } from '@/shared/auth/session';
 
 const USERNAME_REGEX = /^[a-z0-9_]{3,50}$/;
 
@@ -34,9 +35,12 @@ const SetupProfile: React.FC = () => {
                 setError(data.detail || 'Something went wrong.');
                 return;
             }
-            localStorage.setItem('userId', String(data.id));
-            localStorage.setItem('username', data.username);
-            localStorage.setItem('email', data.email);
+            setSession({
+              userId: String(data.id),
+              username: data.username,
+              email: data.email,
+              role: (data.role as Role) ?? 'user',
+            });
             window.dispatchEvent(new Event('auth:login'));
             navigate(`/${data.username}`, { replace: true });
         } catch {
