@@ -567,15 +567,6 @@ def change_email(
             detail="Google accounts cannot change email here. Use your Google account settings.",
         )
 
-    if db_user.password_hash is None:
-        raise HTTPException(
-            status_code=400,
-            detail="Google accounts cannot change email here. Use your Google account settings.",
-        )
-
-    if not verify_password(payload.password, db_user.password_hash):
-        raise HTTPException(status_code=400, detail="Current password is incorrect")
-
     new_email = str(payload.new_email)
 
     if new_email == db_user.email:
