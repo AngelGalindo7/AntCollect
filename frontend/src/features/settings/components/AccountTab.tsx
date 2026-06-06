@@ -74,6 +74,13 @@ export default function AccountTab() {
     navigate('/Login');
   };
 
+  const role = getSession()?.role ?? 'user';
+  const roleConfig: Record<string, { label: string; className: string }> = {
+    admin:     { label: 'Admin',     className: 'bg-purple-100 text-purple-700 border-purple-200' },
+    moderator: { label: 'Moderator', className: 'bg-blue-100 text-blue-700 border-blue-200' },
+  };
+  const roleBadge = roleConfig[role] ?? null;
+
   return (
     <div className="space-y-6">
       {/* Email */}
@@ -83,6 +90,16 @@ export default function AccountTab() {
           {email}
         </p>
       </div>
+
+      {/* Role badge — only shown for non-standard roles */}
+      {roleBadge && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Account type</label>
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${roleBadge.className}`}>
+            {roleBadge.label}
+          </span>
+        </div>
+      )}
 
       {/* Change password accordion */}
       <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -174,10 +191,10 @@ export default function AccountTab() {
       </div>
 
       {/* Logout */}
-      <div className="pt-2">
+      <div className="pt-2 border-t border-gray-100">
         <button
           onClick={handleLogout}
-          className="text-sm text-gray-500 hover:text-gray-700 font-medium underline"
+          className="text-sm font-medium px-4 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
         >
           Log out
         </button>
