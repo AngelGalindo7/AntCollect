@@ -47,6 +47,7 @@ class UserResponse(BaseModel):
     username: str
     email: EmailStr
     role: str = "user"
+    email_verified: bool = False
 
 class UserLogin(BaseModel):
     email: EmailStr
