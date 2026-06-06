@@ -629,7 +629,10 @@ def change_email(
     # Send confirmation link to the new address
     confirm_token = _create_verification_token(db_user.id, new_email, "email_change")
     if frontend_url:
-        send_email_change_verification(new_email, confirm_token, frontend_url)
+        try:
+            send_email_change_verification(new_email, confirm_token, frontend_url)
+        except Exception:
+            logger.warning("email change confirmation send failed for user %s", db_user.id, exc_info=True)
 
     return MessageResponse(message="If that address is available, a confirmation email has been sent")
 
