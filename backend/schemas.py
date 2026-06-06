@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
+from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator, computed_field
 from typing import List, Optional
 from enum import Enum
 from datetime import datetime
@@ -185,6 +185,13 @@ class UserMeResponse(BaseModel):
     background_offset_x: float = 0.0
     background_offset_y: float = 0.0
     background_scale: float = 1.0
+    # Read from ORM but excluded from JSON output — used only to derive has_password
+    password_hash: Optional[str] = Field(default=None, exclude=True, repr=False)
+
+    @computed_field
+    @property
+    def has_password(self) -> bool:
+        return self.password_hash is not None
 
 class UpdateProfileRequest(BaseModel):
     username: Optional[str] = Field(default=None, min_length=3, max_length=50, pattern=_USERNAME_PATTERN)
