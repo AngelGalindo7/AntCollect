@@ -27,7 +27,9 @@ def mock_s3():
     This prevents any test from requiring real AWS credentials.
     """
     with patch("backend.utils.s3.upload_image_bytes", return_value=_FAKE_S3_URL) as mock_upload, \
-         patch("backend.utils.s3.delete_s3_object", return_value=None) as mock_delete:
+         patch("backend.utils.s3.delete_s3_object", return_value=None) as mock_delete, \
+         patch("backend.routers.canvas.upload_image_bytes", return_value=_FAKE_S3_URL), \
+         patch("backend.routers.workspace.upload_image_bytes", return_value=_FAKE_S3_URL):
         yield {"upload": mock_upload, "delete": mock_delete}
 
 
