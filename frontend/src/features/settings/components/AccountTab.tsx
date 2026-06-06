@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
@@ -29,7 +29,6 @@ const strengthConfig = {
 
 export default function AccountTab() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const email = getSession()?.email || '—';
 
   const { data: me } = useQuery<UserMe>({
