@@ -18,6 +18,11 @@ import LibraryPage from '@/features/library/pages/LibraryPage';
 import StickersPage from '@/features/stickers/pages/StickersPage';
 import SetupProfile from '@/features/auth/pages/SetupProfile';
 import AuthComplete from '@/features/auth/pages/AuthComplete';
+import VerifyEmailPage from '@/features/auth/pages/VerifyEmailPage';
+import ConfirmEmailChangePage from '@/features/auth/pages/ConfirmEmailChangePage';
+import ChangeEmailPage from '@/features/auth/pages/ChangeEmailPage';
+import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
+import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
 import { getSession } from '@/shared/auth/session';
 
 function RequireAuth() {
@@ -34,6 +39,11 @@ function App(){
         <Route path="/CreateAccount" element={<SignUp />} />
         <Route path="/setup-profile" element={<SetupProfile />} />
         <Route path="/auth/complete" element={<AuthComplete />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
+        <Route path="/change-email" element={<ChangeEmailPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         {/* Single Layout instance for all app routes.
             RequireAuth is nested INSIDE Layout so auth users on public routes
