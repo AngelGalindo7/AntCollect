@@ -1,3 +1,4 @@
+import logging
 import os
 
 from fastapi import Depends, HTTPException, APIRouter, Request, File, Form, UploadFile
@@ -9,10 +10,12 @@ from sqlalchemy import select, func, literal
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset
 from backend.models.user_sticker import UserSticker
-from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, BackgroundUpdateResponse, BackgroundPositionRequest, BackgroundPositionResponse, ChangePasswordRequest
-from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token, optional_auth_token
+from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, BackgroundUpdateResponse, BackgroundPositionRequest, BackgroundPositionResponse, ChangePasswordRequest, EmailChangeRequest, MessageResponse
+from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token, optional_auth_token, _create_verification_token
 from ..utils.files import process_and_save_image, delete_file
 from typing import List
+
+logger = logging.getLogger(__name__)
 
 ACCESS_TOKEN_MAX_AGE = 30 * 60  # 30 minutes — matches JWT expiry in create_access_token
 REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60  # 30 days
@@ -208,6 +211,16 @@ def create_user(
         raise HTTPException(status_code=409, detail="Username or email already registered")
     db.refresh(new_user)
 
+    # Send signup verification — failure must not block registration; user can resend later.
+    try:
+        frontend_url = os.getenv("FRONTEND_URL", "")
+        if frontend_url:
+            from ..utils.email import send_verification_email
+            token = _create_verification_token(new_user.id, new_user.email, "signup_verify")
+            send_verification_email(new_user.email, token, frontend_url)
+    except Exception:
+        logger.warning("signup verification email failed to send", extra={"user_id": new_user.id})
+
     return new_user
 
 @router.post("/login")
@@ -330,13 +343,14 @@ def _search_users(query: str,limit: int,db: Session) -> List[User]:
     safe_query = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     users = db.execute(
         select(User)
-        .where(User.username.ilike("%" + safe_query + "%"))
+        .where(User.username.ilike("%" + safe_query + "%", escape="\\"))
         .limit(limit)
     ).scalars().all()
 
     return users
 
 def _search_posts(query: str, limit: int, db: Session) -> List[PostWithEngagement]:
+    safe_query = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     top_search_posts_subquery = (
         select(
             Post.id.label("id"),
@@ -344,7 +358,7 @@ def _search_posts(query: str, limit: int, db: Session) -> List[PostWithEngagemen
         )
         .outerjoin(EngagementLog, Post.id == EngagementLog.post_id)
         .where(
-            Post.caption.ilike(f"%{query}%"),
+            Post.caption.ilike(f"%{safe_query}%", escape="\\"),
             Post.public == True,
             Post.is_published == True
         )
@@ -535,6 +549,66 @@ def retrieve_user_likes(
     )
 
 
+@router.patch("/me/email", response_model=MessageResponse)
+@limiter.limit("3/hour", key_func=get_user_or_ip_key)
+def change_email(
+    request: Request,
+    payload: EmailChangeRequest,
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token),
+):
+    db_user = db.query(User).filter(User.id == user.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if db_user.google_id is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Google accounts cannot change email here. Use your Google account settings.",
+        )
+
+    if db_user.password_hash is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Google accounts cannot change email here. Use your Google account settings.",
+        )
+
+    if not verify_password(payload.password, db_user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    new_email = str(payload.new_email)
+
+    if new_email == db_user.email:
+        raise HTTPException(status_code=400, detail="New email is the same as the current email")
+
+    # Anti-enumeration: if the address is taken, return the same success-shaped response
+    # without sending an email. Attacker cannot learn whether the address is registered.
+    conflict = db.query(User).filter(User.email == new_email).first()
+    if conflict:
+        return MessageResponse(message="If that address is available, a confirmation email has been sent")
+
+    db_user.pending_email = new_email
+    db.commit()
+
+    token = _create_verification_token(db_user.id, new_email, "email_change")
+    frontend_url = os.getenv("FRONTEND_URL", "")
+    if frontend_url:
+        from ..utils.email import send_email_change_verification
+        send_email_change_verification(new_email, token, frontend_url)
+
+    return MessageResponse(message="If that address is available, a confirmation email has been sent")
 
 
+@router.delete("/me/email/cancel", response_model=MessageResponse)
+def cancel_email_change(
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token),
+):
+    db_user = db.query(User).filter(User.id == user.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db_user.pending_email = None
+    db.commit()
+    return MessageResponse(message="Email change cancelled")
 
