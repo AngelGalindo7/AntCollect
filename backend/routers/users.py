@@ -562,29 +562,6 @@ def change_email(
     db: Session = Depends(get_db),
     user: UserSearch = Depends(authenthicate_access_token),
 ):
-    # Validate the intent token issued by POST /auth/send-change-email-intent
-    try:
-        intent = jwt.decode(payload.intent_token, SECRET_KEY, algorithms=["HS256"])
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=400, detail="Intent link has expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=400, detail="Invalid intent token")
-
-    if intent.get("purpose") != "change_email_intent":
-        raise HTTPException(status_code=400, detail="Invalid intent token")
-
-    jti = intent.get("jti")
-    if not jti:
-        raise HTTPException(status_code=400, detail="Invalid intent token")
-
-    # Replay guard: token already consumed
-    if db.query(UsedVerificationToken).filter(UsedVerificationToken.jti == jti).first():
-        raise HTTPException(status_code=400, detail="Intent link already used")
-
-    # Token must belong to the authenticated user
-    if intent.get("sub") != str(user.user_id):
-        raise HTTPException(status_code=403, detail="Intent token does not match the authenticated user")
-
     db_user = db.query(User).filter(User.id == user.user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -595,38 +572,67 @@ def change_email(
             detail="Google accounts cannot change email here. Use your Google account settings.",
         )
 
-    # Stale token guard: user's email changed since the intent was issued
-    if intent.get("email") != db_user.email:
-        raise HTTPException(status_code=400, detail="Intent token is no longer valid for this account")
+    jti: str | None = None
+    intent_exp: int | None = None
+
+    if db_user.email_verified:
+        # Verified users must prove inbox ownership via the intent token before changing email
+        if not payload.intent_token:
+            raise HTTPException(status_code=400, detail="Intent token required")
+        try:
+            intent = jwt.decode(payload.intent_token, SECRET_KEY, algorithms=["HS256"])
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=400, detail="Intent link has expired")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=400, detail="Invalid intent token")
+
+        if intent.get("purpose") != "change_email_intent":
+            raise HTTPException(status_code=400, detail="Invalid intent token")
+
+        jti = intent.get("jti")
+        if not jti:
+            raise HTTPException(status_code=400, detail="Invalid intent token")
+
+        if db.query(UsedVerificationToken).filter(UsedVerificationToken.jti == jti).first():
+            raise HTTPException(status_code=400, detail="Intent link already used")
+
+        if intent.get("sub") != str(user.user_id):
+            raise HTTPException(status_code=403, detail="Intent token does not match the authenticated user")
+
+        if intent.get("email") != db_user.email:
+            raise HTTPException(status_code=400, detail="Intent token is no longer valid for this account")
+
+        intent_exp = intent.get("exp")
 
     new_email = str(payload.new_email)
 
     if new_email == db_user.email:
         raise HTTPException(status_code=400, detail="New email is the same as the current email")
 
-    # Anti-enumeration: if the address is taken, consume the intent jti and return the
-    # same success-shaped response. Attacker cannot learn whether the address is registered.
+    # Anti-enumeration: if the address is taken, consume intent jti (if present) and return
+    # the same success-shaped response so attackers cannot enumerate registered addresses.
     conflict = db.query(User).filter(User.email == new_email).first()
     if conflict:
-        db.add(UsedVerificationToken(jti=jti, expires_at=datetime.fromtimestamp(intent["exp"], tz=timezone.utc)))
-        db.commit()
+        if jti and intent_exp:
+            db.add(UsedVerificationToken(jti=jti, expires_at=datetime.fromtimestamp(intent_exp, tz=timezone.utc)))
+            db.commit()
         return MessageResponse(message="If that address is available, a confirmation email has been sent")
 
-    # Mark intent consumed, set pending_email — single transaction so both succeed or neither does
-    db.add(UsedVerificationToken(jti=jti, expires_at=datetime.fromtimestamp(intent["exp"], tz=timezone.utc)))
+    if jti and intent_exp:
+        db.add(UsedVerificationToken(jti=jti, expires_at=datetime.fromtimestamp(intent_exp, tz=timezone.utc)))
     old_email = db_user.email
     db_user.pending_email = new_email
     db.commit()
 
     frontend_url = os.getenv("FRONTEND_URL", "")
 
-    # Notify the old address that a change was requested
-    try:
-        send_email_change_notification(old_email, new_email)
-    except Exception:
-        logger.warning("email change notification failed for user %s", db_user.id, exc_info=True)
+    # Only notify the old address if it was verified — unverified emails are untrusted inboxes
+    if db_user.email_verified:
+        try:
+            send_email_change_notification(old_email, new_email)
+        except Exception:
+            logger.warning("email change notification failed for user %s", db_user.id, exc_info=True)
 
-    # Send confirmation link to the new address
     confirm_token = _create_verification_token(db_user.id, new_email, "email_change")
     if frontend_url:
         try:
