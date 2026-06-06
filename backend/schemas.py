@@ -255,6 +255,30 @@ class ConfirmEmailChangeRequest(BaseModel):
     token: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+    @field_validator('email', mode='before')
+    @classmethod
+    def _lower_email(cls, v):
+        return _normalize_email(v) if isinstance(v, str) else v
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8)
+
+
+class ChangeEmailWithIntentRequest(BaseModel):
+    intent_token: str
+    new_email: EmailStr
+
+    @field_validator('new_email', mode='before')
+    @classmethod
+    def _lower_email(cls, v):
+        return _normalize_email(v) if isinstance(v, str) else v
+
+
 class CanvasSaveRequest(BaseModel):
     canvas_json: dict
 
