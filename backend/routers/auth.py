@@ -1,5 +1,6 @@
 import logging
 import os
+import secrets
 from datetime import datetime, timezone, timedelta
 
 import jwt
@@ -10,8 +11,9 @@ from ..utils.rate_limit import limiter, get_real_ip, get_user_or_ip_key
 
 from ..database import get_db
 from backend.models import RefreshToken, User, UsedVerificationToken
-from ..utils.auth import create_access_token, create_refresh_token, decode_refresh_token, authenthicate_access_token, SECRET_KEY, _create_verification_token
-from ..schemas import VerifyEmailRequest, ConfirmEmailChangeRequest, MessageResponse, UserSearch
+from ..utils.auth import create_access_token, create_refresh_token, decode_refresh_token, authenthicate_access_token, hash_password, SECRET_KEY, _create_verification_token
+from ..utils.email import send_password_reset_email, send_change_email_intent_email
+from ..schemas import VerifyEmailRequest, ConfirmEmailChangeRequest, MessageResponse, UserSearch, ForgotPasswordRequest, ResetPasswordRequest
 
 logger = logging.getLogger(__name__)
 
@@ -312,3 +314,111 @@ def confirm_email_change(
     db_user.email_verified = True
     db.commit()
     return MessageResponse(message="Email updated successfully")
+
+
+@router.post("/forgot-password", response_model=MessageResponse)
+@limiter.limit("3/hour", key_func=get_real_ip)
+def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    _ANTI_ENUM_MSG = "If that email is registered, a reset link has been sent"
+
+    db_user = db.query(User).filter(User.email == body.email).first()
+    # Google accounts have no password — silently skip; still return 200
+    if not db_user or db_user.password_hash is None:
+        return MessageResponse(message=_ANTI_ENUM_MSG)
+
+    frontend_url = os.getenv("FRONTEND_URL")
+    if not frontend_url:
+        raise RuntimeError("FRONTEND_URL env var is not set")
+
+    token = _create_verification_token(db_user.id, db_user.email, "password_reset")
+    try:
+        send_password_reset_email(db_user.email, token, frontend_url)
+    except Exception:
+        logger.warning("password reset email send failed for user %s", db_user.id, exc_info=True)
+
+    return MessageResponse(message=_ANTI_ENUM_MSG)
+
+
+@router.post("/reset-password", response_model=MessageResponse)
+@limiter.limit("5/hour", key_func=get_real_ip)
+def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        payload = jwt.decode(body.token, SECRET_KEY, algorithms=["HS256"])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Reset link has expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Invalid reset link")
+
+    if payload.get("purpose") != "password_reset":
+        raise HTTPException(status_code=400, detail="Invalid reset link")
+
+    jti = payload.get("jti")
+    if not jti:
+        raise HTTPException(status_code=400, detail="Invalid reset link")
+
+    user_id = payload.get("sub")
+    token_email = payload.get("email")
+    if not user_id or not token_email:
+        raise HTTPException(status_code=400, detail="Invalid reset link")
+
+    if db.query(UsedVerificationToken).filter(UsedVerificationToken.jti == jti).first():
+        raise HTTPException(status_code=400, detail="Reset link already used")
+
+    db_user = db.query(User).filter(User.id == int(user_id)).first()
+    if not db_user or db_user.email != token_email:
+        raise HTTPException(status_code=400, detail="Invalid reset link")
+
+    now = datetime.now(tz=timezone.utc)
+    db_user.password_hash = hash_password(body.new_password)
+    db.query(RefreshToken).filter(
+        RefreshToken.user_id == db_user.id,
+        RefreshToken.revoked == False,
+    ).update({"revoked": True, "revoked_at": now})
+    db.add(UsedVerificationToken(jti=jti, expires_at=datetime.fromtimestamp(payload["exp"], tz=timezone.utc)))
+    db.commit()
+    return MessageResponse(message="Password updated successfully")
+
+
+@router.post("/send-change-email-intent", response_model=MessageResponse)
+@limiter.limit("3/hour", key_func=get_user_or_ip_key)
+def send_change_email_intent(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: UserSearch = Depends(authenthicate_access_token),
+):
+    db_user = db.query(User).filter(User.id == user.user_id).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if db_user.google_id is not None:
+        raise HTTPException(status_code=400, detail="Google accounts cannot change email here")
+
+    frontend_url = os.getenv("FRONTEND_URL")
+    if not frontend_url:
+        raise RuntimeError("FRONTEND_URL env var is not set")
+
+    # Build 15-minute intent token manually — _create_verification_token hardcodes 1 hour
+    intent_payload = {
+        "sub": str(db_user.id),
+        "email": db_user.email,
+        "purpose": "change_email_intent",
+        "jti": secrets.token_hex(16),
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=15),
+        "type": "email_verify",
+    }
+    token = jwt.encode(intent_payload, SECRET_KEY, algorithm="HS256")
+
+    try:
+        send_change_email_intent_email(db_user.email, token, frontend_url)
+    except Exception:
+        logger.warning("change-email intent email send failed for user %s", db_user.id, exc_info=True)
+
+    return MessageResponse(message="Check your inbox to continue")
