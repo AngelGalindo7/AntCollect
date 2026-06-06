@@ -57,6 +57,9 @@ def update_profile(
     if updates.bio is not None:
         db_user.bio = updates.bio
 
+    if updates.sticker_count is not None:
+        db_user.sticker_count = updates.sticker_count
+
     db.commit()
     db.refresh(db_user)
     return db_user
