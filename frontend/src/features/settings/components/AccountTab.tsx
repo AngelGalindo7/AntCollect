@@ -1,8 +1,12 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 import { getSession, clearSession } from '@/shared/auth/session';
+
+interface UserMe {
+  has_password: boolean;
+}
 
 function passwordStrength(pw: string): 'weak' | 'medium' | 'strong' {
   if (pw.length < 8) return 'weak';
@@ -24,6 +28,13 @@ const strengthConfig = {
 export default function AccountTab() {
   const navigate = useNavigate();
   const email = getSession()?.email || '—';
+
+  const { data: me } = useQuery<UserMe>({
+    queryKey: ['me'],
+    queryFn: () => fetchWithAuth(`${API_BASE}/users/me`).then((r) => r.json()),
+    staleTime: 5 * 60 * 1000,
+  });
+  const hasPassword = me?.has_password ?? true;
 
   const [open, setOpen] = useState(false);
   const [currentPw, setCurrentPw] = useState('');
@@ -101,94 +112,103 @@ export default function AccountTab() {
         </div>
       )}
 
-      {/* Change password accordion */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <button
-          onClick={() => { setOpen((v) => !v); setLocalError(''); setSuccessMsg(''); }}
-          className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          Change Password
-          <svg
-            className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+      {/* Change password */}
+      {hasPassword ? (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <button
+            onClick={() => { setOpen((v) => !v); setLocalError(''); setSuccessMsg(''); }}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-
-        {open && (
-          <div className="px-4 pb-4 space-y-3 border-t border-gray-200 pt-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Current password</label>
-              <input
-                type="password"
-                value={currentPw}
-                onChange={(e) => setCurrentPw(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">New password</label>
-              <div className="relative">
-                <input
-                  type={showNew ? 'text' : 'password'}
-                  value={newPw}
-                  onChange={(e) => setNewPw(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNew((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showNew ? '🙈' : '👁️'}
-                </button>
-              </div>
-              {strength && (
-                <div className="mt-1.5">
-                  <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${strengthConfig[strength].color} ${strengthConfig[strength].width}`} />
-                  </div>
-                  <p className={`text-xs mt-0.5 ${strength === 'weak' ? 'text-red-500' : strength === 'medium' ? 'text-yellow-600' : 'text-green-600'}`}>
-                    {strengthConfig[strength].label}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Confirm new password</label>
-              <div className="relative">
-                <input
-                  type={showConfirm ? 'text' : 'password'}
-                  value={confirmPw}
-                  onChange={(e) => setConfirmPw(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showConfirm ? '🙈' : '👁️'}
-                </button>
-              </div>
-            </div>
-
-            {localError && <p className="text-xs text-red-500">{localError}</p>}
-            {successMsg && <p className="text-xs text-green-600">{successMsg}</p>}
-
-            <button
-              onClick={handlePasswordSubmit}
-              disabled={passwordMutation.isPending}
-              className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            Change Password
+            <svg
+              className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
-              {passwordMutation.isPending ? 'Updating…' : 'Update Password'}
-            </button>
-          </div>
-        )}
-      </div>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {open && (
+            <div className="px-4 pb-4 space-y-3 border-t border-gray-200 pt-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Current password</label>
+                <input
+                  type="password"
+                  value={currentPw}
+                  onChange={(e) => setCurrentPw(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">New password</label>
+                <div className="relative">
+                  <input
+                    type={showNew ? 'text' : 'password'}
+                    value={newPw}
+                    onChange={(e) => setNewPw(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNew((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showNew ? '🙈' : '👁️'}
+                  </button>
+                </div>
+                {strength && (
+                  <div className="mt-1.5">
+                    <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${strengthConfig[strength].color} ${strengthConfig[strength].width}`} />
+                    </div>
+                    <p className={`text-xs mt-0.5 ${strength === 'weak' ? 'text-red-500' : strength === 'medium' ? 'text-yellow-600' : 'text-green-600'}`}>
+                      {strengthConfig[strength].label}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Confirm new password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirm ? 'text' : 'password'}
+                    value={confirmPw}
+                    onChange={(e) => setConfirmPw(e.target.value)}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirm ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+
+              {localError && <p className="text-xs text-red-500">{localError}</p>}
+              {successMsg && <p className="text-xs text-green-600">{successMsg}</p>}
+
+              <button
+                onClick={handlePasswordSubmit}
+                disabled={passwordMutation.isPending}
+                className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                {passwordMutation.isPending ? 'Updating…' : 'Update Password'}
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="border border-gray-200 rounded-lg px-4 py-3 bg-gray-50">
+          <p className="text-sm font-medium text-gray-700 mb-0.5">Password</p>
+          <p className="text-sm text-gray-500">
+            You signed in with Google. Manage your password through your Google account.
+          </p>
+        </div>
+      )}
 
       {/* Logout */}
       <div className="pt-2 border-t border-gray-100">
