@@ -12,6 +12,7 @@ from backend.models import User, RefreshToken, Post, PostLike, PostImage, Engage
 from backend.models.user_sticker import UserSticker
 from ..schemas import UserCreate, UserResponse, UserLogin, TokenResponse, RefreshRequest, AuthorizeTokenResponse, SearchRequest, SearchResponse, UserProfileResponse, PostBase, UserPostLikesResponse, GetUserByIdRequest, UserSearch, GetUserByUsernameRequest, PostWithEngagement, UserResult, UserMeResponse, UpdateProfileRequest, AvatarUpdateResponse, BackgroundUpdateResponse, BackgroundPositionRequest, BackgroundPositionResponse, ChangePasswordRequest, EmailChangeRequest, MessageResponse
 from ..utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, authenthicate_access_token, optional_auth_token, _create_verification_token
+from ..utils.email import send_verification_email, send_email_change_verification
 from ..utils.files import process_and_save_image, delete_file
 from typing import List
 
@@ -215,7 +216,6 @@ def create_user(
     try:
         frontend_url = os.getenv("FRONTEND_URL", "")
         if frontend_url:
-            from ..utils.email import send_verification_email
             token = _create_verification_token(new_user.id, new_user.email, "signup_verify")
             send_verification_email(new_user.email, token, frontend_url)
     except Exception:
@@ -584,7 +584,6 @@ def change_email(
     token = _create_verification_token(db_user.id, new_email, "email_change")
     frontend_url = os.getenv("FRONTEND_URL", "")
     if frontend_url:
-        from ..utils.email import send_email_change_verification
         send_email_change_verification(new_email, token, frontend_url)
 
     return MessageResponse(message="If that address is available, a confirmation email has been sent")
