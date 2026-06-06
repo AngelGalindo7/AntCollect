@@ -47,6 +47,10 @@ const UserProfile: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Sticker count inline edit state
+  const [editingStickers, setEditingStickers] = useState(false);
+  const [stickerInput, setStickerInput] = useState('');
+
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
@@ -258,13 +262,51 @@ const UserProfile: React.FC = () => {
             ) : null}
 
             <div className="flex items-center gap-3 flex-wrap" data-testid="profile-stats">
-              <button
-                onClick={() => navigate(`/${profile.username}/stickers`)}
-                className="flex flex-col items-center bg-white/60 rounded-md px-2 py-0.5 hover:bg-white/80 transition-colors"
-              >
-                <span className="text-xs text-espresso/60">Stickers</span>
-                <span className="text-sm font-semibold text-espresso">{profile.sticker_count}</span>
-              </button>
+              {profile.is_owner ? (
+                <div className="flex flex-col items-center bg-white/60 rounded-md px-2 py-0.5">
+                  <span className="text-xs text-espresso/60">Stickers</span>
+                  {editingStickers ? (
+                    <input
+                      type="number"
+                      className="text-sm font-semibold text-espresso w-14 text-center bg-transparent outline-none"
+                      value={stickerInput}
+                      min={0}
+                      autoFocus
+                      onChange={(e) => setStickerInput(e.target.value)}
+                      onKeyDown={async (e) => {
+                        if (e.key === 'Enter') {
+                          const val = Math.max(0, parseInt(stickerInput, 10) || 0);
+                          setProfile((prev) => prev ? { ...prev, sticker_count: val } : prev);
+                          setEditingStickers(false);
+                          await fetchWithAuth(`${API_BASE}/users/me/profile`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ sticker_count: val }),
+                          });
+                        } else if (e.key === 'Escape') {
+                          setEditingStickers(false);
+                        }
+                      }}
+                      onBlur={() => setEditingStickers(false)}
+                    />
+                  ) : (
+                    <span
+                      className="text-sm font-semibold text-espresso cursor-pointer"
+                      onClick={() => { setStickerInput(String(profile.sticker_count)); setEditingStickers(true); }}
+                    >
+                      {profile.sticker_count}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => navigate(`/${profile.username}/stickers`)}
+                  className="flex flex-col items-center bg-white/60 rounded-md px-2 py-0.5 hover:bg-white/80 transition-colors"
+                >
+                  <span className="text-xs text-espresso/60">Stickers</span>
+                  <span className="text-sm font-semibold text-espresso">{profile.sticker_count}</span>
+                </button>
+              )}
               <div className="flex flex-col items-center bg-white/60 rounded-md px-2 py-0.5">
                 <span className="text-xs text-espresso/60">Folders</span>
                 <span className="text-sm font-semibold text-espresso">{folders.length}</span>
