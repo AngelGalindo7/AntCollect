@@ -201,6 +201,7 @@ class UserMeResponse(BaseModel):
 class UpdateProfileRequest(BaseModel):
     username: Optional[str] = Field(default=None, min_length=3, max_length=50, pattern=_USERNAME_PATTERN)
     bio: Optional[str] = Field(default=None, max_length=500)
+    sticker_count: Optional[int] = Field(default=None, ge=0)
 
     @field_validator('username', mode='before')
     @classmethod
