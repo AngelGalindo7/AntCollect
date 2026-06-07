@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import Depends, HTTPException, APIRouter, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -20,6 +22,8 @@ from ..schemas import UserSearch
 from typing import List
 
 MAX_IMAGES_PER_POST = 5
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/folders",
@@ -327,7 +331,7 @@ def upload_folder_avatar(
 
     old_avatar = folder.avatar_path
     result = process_and_save_image(file, user.user_id)
-    folder.avatar_path = result["paths"]["thumbnail"]
+    folder.avatar_path = result["paths"]["medium"]
     db.commit()
 
     if old_avatar:
@@ -512,7 +516,8 @@ def upload_stickers_to_folder(
                 delete_file(path)
             except Exception:
                 pass
+        logger.error("folder upload failed", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"An error occurred during upload: {e}",
+            detail="An error occurred during upload",
         )
