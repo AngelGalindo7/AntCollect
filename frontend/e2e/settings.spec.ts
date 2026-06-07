@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 test('/settings?tab=profile loads with current username pre-filled', async ({ page }) => {
   await page.goto('/settings?tab=profile');
   // ProfileTab queries GET /users/me and initialises the username input.
-  await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'My Profile' })).toBeVisible();
   // Scope to the settings card within main content to avoid matching the global Search
   // input in the header.
   const usernameInput = page.getByTestId('main-content').locator('input[type="text"]');
@@ -33,10 +33,10 @@ test.describe('username change', () => {
     await expect(usernameInput).toBeVisible({ timeout: 15_000 });
     await usernameInput.clear();
     await usernameInput.fill(newUsername);
-    await page.getByRole('button', { name: 'Save changes' }).click();
+    await page.getByRole('button', { name: 'Save Changes' }).click();
 
-    // Wait for the mutation to succeed (button returns to "Save changes").
-    await expect(page.getByRole('button', { name: 'Save changes' })).toBeVisible();
+    // Wait for the mutation to succeed (button returns to "Save Changes").
+    await expect(page.getByRole('button', { name: 'Save Changes' })).toBeVisible();
 
     await page.reload();
 
