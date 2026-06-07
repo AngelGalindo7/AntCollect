@@ -572,54 +572,16 @@ def change_email(
             detail="Google accounts cannot change email here. Use your Google account settings.",
         )
 
-    jti: str | None = None
-    intent_exp: int | None = None
-
-    if db_user.email_verified:
-        # Verified users must prove inbox ownership via the intent token before changing email
-        if not payload.intent_token:
-            raise HTTPException(status_code=400, detail="Intent token required")
-        try:
-            intent = jwt.decode(payload.intent_token, SECRET_KEY, algorithms=["HS256"])
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=400, detail="Intent link has expired")
-        except jwt.InvalidTokenError:
-            raise HTTPException(status_code=400, detail="Invalid intent token")
-
-        if intent.get("purpose") != "change_email_intent":
-            raise HTTPException(status_code=400, detail="Invalid intent token")
-
-        jti = intent.get("jti")
-        if not jti:
-            raise HTTPException(status_code=400, detail="Invalid intent token")
-
-        if db.query(UsedVerificationToken).filter(UsedVerificationToken.jti == jti).first():
-            raise HTTPException(status_code=400, detail="Intent link already used")
-
-        if intent.get("sub") != str(user.user_id):
-            raise HTTPException(status_code=403, detail="Intent token does not match the authenticated user")
-
-        if intent.get("email") != db_user.email:
-            raise HTTPException(status_code=400, detail="Intent token is no longer valid for this account")
-
-        intent_exp = intent.get("exp")
-
     new_email = str(payload.new_email)
 
     if new_email == db_user.email:
         raise HTTPException(status_code=400, detail="New email is the same as the current email")
 
-    # Anti-enumeration: if the address is taken, consume intent jti (if present) and return
-    # the same success-shaped response so attackers cannot enumerate registered addresses.
+    # Anti-enumeration: return success shape even when the address is already taken.
     conflict = db.query(User).filter(User.email == new_email).first()
     if conflict:
-        if jti and intent_exp:
-            db.add(UsedVerificationToken(jti=jti, expires_at=datetime.fromtimestamp(intent_exp, tz=timezone.utc)))
-            db.commit()
         return MessageResponse(message="If that address is available, a confirmation email has been sent")
 
-    if jti and intent_exp:
-        db.add(UsedVerificationToken(jti=jti, expires_at=datetime.fromtimestamp(intent_exp, tz=timezone.utc)))
     old_email = db_user.email
     db_user.pending_email = new_email
     db.commit()
