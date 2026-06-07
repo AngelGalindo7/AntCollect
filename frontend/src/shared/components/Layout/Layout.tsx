@@ -63,7 +63,7 @@ const AuthenticatedLayout: React.FC = () => {
             </div>
           )} */}
 
-          {isProfileRoute ? (
+          {isProfileRoute || isSettingsRoute ? (
             <main data-testid="main-content" className="flex-1 bg-warm-cream overflow-auto text-espresso">
               <Outlet />
             </main>
