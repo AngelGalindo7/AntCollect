@@ -331,7 +331,7 @@ def upload_folder_avatar(
 
     old_avatar = folder.avatar_path
     result = process_and_save_image(file, user.user_id)
-    folder.avatar_path = result["paths"]["medium"]
+    folder.avatar_path = result["paths"]["original"]
     db.commit()
 
     if old_avatar:
