@@ -29,6 +29,11 @@ function fetchMe(): Promise<UserMe> {
   });
 }
 
+const inputCls =
+  'w-full bg-white border border-warm-gray rounded-lg px-3 py-2.5 text-sm text-espresso placeholder:text-espresso/30 focus:outline-none focus:border-uci-blue focus:ring-1 focus:ring-uci-blue/20 transition-colors';
+
+const labelCls = 'block text-xs font-semibold uppercase tracking-wide text-espresso/50 mb-1.5';
+
 export default function ProfileTab() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,7 +52,6 @@ export default function ProfileTab() {
 
   const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null);
 
-  // Initialise fields once data loads
   const [initialised, setInitialised] = useState(false);
   if (user && !initialised) {
     setUsername(user.username);
@@ -181,11 +185,7 @@ export default function ProfileTab() {
     bgEditMode === 'upload' ? pendingBgUrl ?? '' : bgEditMode === 'reposition' ? user?.background_path ?? '' : '';
   const editInitial =
     bgEditMode === 'reposition' && user
-      ? {
-          offsetX: user.background_offset_x,
-          offsetY: user.background_offset_y,
-          scale: user.background_scale,
-        }
+      ? { offsetX: user.background_offset_x, offsetY: user.background_offset_y, scale: user.background_scale }
       : undefined;
 
   const {
@@ -201,45 +201,54 @@ export default function ProfileTab() {
     initial: editInitial,
   });
 
-  if (isLoading) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (isLoading) return <p className="text-sm text-espresso/50">Loading…</p>;
   if (!user) return null;
 
   const avatarUrl = user.avatar_path ?? null;
   const initials = user.username.slice(0, 2).toUpperCase();
 
   return (
-    <div className="space-y-6">
-      {/* Avatar */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="w-16 h-16 rounded-full overflow-hidden bg-blue-500 flex items-center justify-center text-white font-semibold text-lg shrink-0 hover:opacity-80 transition-opacity"
-          title="Change photo"
-        >
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-          ) : (
-            initials
-          )}
-        </button>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="text-sm text-blue-500 hover:text-blue-600 font-medium"
-        >
-          {avatarMutation.isPending ? 'Uploading…' : 'Change photo'}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) setPendingAvatarFile(file);
-            e.target.value = '';
-          }}
-        />
-      </div>
+    <div className="space-y-8">
+
+      {/* Profile Picture */}
+      <section>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-espresso/40 mb-4">
+          Profile Picture
+        </p>
+        <div className="flex items-center gap-5">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-20 h-20 rounded-full overflow-hidden bg-uci-blue flex items-center justify-center text-white font-semibold text-xl shrink-0 hover:opacity-80 transition-opacity"
+            title="Change photo"
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+              initials
+            )}
+          </button>
+          <div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="text-sm font-semibold text-uci-blue hover:text-uci-navy transition-colors"
+            >
+              {avatarMutation.isPending ? 'Uploading…' : 'Change Photo'}
+            </button>
+            <p className="mt-1 text-xs text-espresso/45">JPG, PNG, or GIF.</p>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) setPendingAvatarFile(file);
+              e.target.value = '';
+            }}
+          />
+        </div>
+      </section>
 
       {pendingAvatarFile && (
         <AvatarCropModal
@@ -253,12 +262,16 @@ export default function ProfileTab() {
         />
       )}
 
-      {/* Background image */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">Profile Background</label>
+      <div className="border-t border-warm-gray" />
+
+      {/* Profile Background */}
+      <section>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-espresso/40 mb-4">
+          Profile Background
+        </p>
         <div
           ref={bgEditMode ? attachBgFrameRef : undefined}
-          className="relative w-full aspect-[6/1] rounded-lg overflow-hidden bg-gray-100 border border-gray-200"
+          className="relative w-full aspect-6/1 rounded-xl overflow-hidden bg-warm-gray/30 border border-warm-gray"
           style={{
             cursor: bgEditMode ? (bgIsDragging ? 'grabbing' : 'grab') : 'default',
             touchAction: bgEditMode ? 'none' : 'auto',
@@ -282,23 +295,23 @@ export default function ProfileTab() {
               scale={user.background_scale}
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400">
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-espresso/35">
               No background set
             </div>
           )}
           {!bgEditMode && (
-            <div className="absolute bottom-2 right-2 z-10 flex gap-2">
+            <div className="absolute bottom-2 right-2 z-10 flex gap-1.5">
               {user.background_path && (
                 <button
                   onClick={handleBackgroundReposition}
-                  className="bg-white/90 hover:bg-white text-sm text-gray-700 font-medium px-3 py-1 rounded-md border border-gray-200 transition-colors"
+                  className="bg-white/90 hover:bg-white text-xs font-semibold text-espresso/80 px-3 py-1.5 rounded-md border border-warm-gray transition-colors"
                 >
                   {backgroundPositionMutation.isPending ? 'Saving…' : 'Reposition'}
                 </button>
               )}
               <button
                 onClick={() => bgFileInputRef.current?.click()}
-                className="bg-white/90 hover:bg-white text-sm text-gray-700 font-medium px-3 py-1 rounded-md border border-gray-200 transition-colors"
+                className="bg-white/90 hover:bg-white text-xs font-semibold text-espresso/80 px-3 py-1.5 rounded-md border border-warm-gray transition-colors"
               >
                 {backgroundUploadMutation.isPending
                   ? 'Uploading…'
@@ -310,19 +323,19 @@ export default function ProfileTab() {
           )}
         </div>
         {bgEditMode && (
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-xs text-gray-500">Drag to reposition · scroll to zoom</span>
+          <div className="mt-2.5 flex items-center justify-between">
+            <span className="text-xs text-espresso/45">Drag to reposition · scroll to zoom</span>
             <div className="flex gap-2">
               <button
                 onClick={handleBackgroundPositionCancel}
-                className="text-sm text-gray-600 hover:text-gray-800 font-medium px-3 py-1 rounded-md transition-colors"
+                className="text-sm font-medium text-espresso/60 hover:text-espresso px-3 py-1.5 rounded-md border border-warm-gray hover:bg-warm-gray/30 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleBackgroundPositionApply(editPosition)}
                 disabled={!editNaturalSize}
-                className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-medium px-3 py-1 rounded-md transition-colors"
+                className="bg-uci-blue hover:bg-uci-navy disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-md transition-colors"
               >
                 Apply
               </button>
@@ -337,57 +350,68 @@ export default function ProfileTab() {
           onChange={handleBackgroundFileChange}
         />
         {bgError && <p className="mt-2 text-xs text-red-500">{bgError}</p>}
-      </div>
+      </section>
 
-      {/* Username */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => {
-            setUsername(e.target.value);
-            setUsernameError('');
-          }}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <p className="mt-1 text-xs text-gray-400">3–50 characters. Lowercase letters, numbers, and underscores only.</p>
-        {usernameError && <p className="mt-1 text-xs text-red-500">{usernameError}</p>}
-      </div>
+      <div className="border-t border-warm-gray" />
 
-      {/* Bio */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Bio
-          <span className="float-right text-gray-400 font-normal">{bio.length}/500</span>
-        </label>
-        <textarea
-          value={bio}
-          maxLength={500}
-          rows={3}
-          onChange={(e) => setBio(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      {/* Profile Details */}
+      <section>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-espresso/40 mb-5">
+          Profile Details
+        </p>
+        <div className="space-y-5">
+          <div>
+            <label className={labelCls}>Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => { setUsername(e.target.value); setUsernameError(''); }}
+              className={inputCls}
+            />
+            <p className="mt-1.5 text-xs text-espresso/45">
+              3–50 characters · lowercase letters, numbers, and underscores only.
+            </p>
+            {usernameError && <p className="mt-1.5 text-xs text-red-500">{usernameError}</p>}
+          </div>
 
-      {profileMutation.isError && !(usernameError) && (
-        <p className="text-sm text-red-500">Failed to save. Please try again.</p>
-      )}
+          <div>
+            <label className={labelCls}>
+              Bio
+              <span className="float-right font-normal text-espresso/35 normal-case tracking-normal">
+                {bio.length}/500
+              </span>
+            </label>
+            <textarea
+              value={bio}
+              maxLength={500}
+              rows={4}
+              onChange={(e) => setBio(e.target.value)}
+              className={`${inputCls} resize-none`}
+            />
+          </div>
+        </div>
 
-      <button
-        onClick={() => {
-          const valid = /^[a-z0-9_]{3,50}$/.test(username);
-          if (!valid) {
-            setUsernameError('Username must be 3–50 characters: lowercase letters, numbers, and underscores only.');
-            return;
-          }
-          profileMutation.mutate();
-        }}
-        disabled={profileMutation.isPending}
-        className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-      >
-        {profileMutation.isPending ? 'Saving…' : 'Save changes'}
-      </button>
+        {profileMutation.isError && !usernameError && (
+          <p className="mt-3 text-sm text-red-500">Failed to save. Please try again.</p>
+        )}
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={() => {
+              const valid = /^[a-z0-9_]{3,50}$/.test(username);
+              if (!valid) {
+                setUsernameError('Username must be 3–50 characters: lowercase letters, numbers, and underscores only.');
+                return;
+              }
+              profileMutation.mutate();
+            }}
+            disabled={profileMutation.isPending}
+            className="bg-uci-blue hover:bg-uci-navy disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+          >
+            {profileMutation.isPending ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </section>
 
     </div>
   );
