@@ -51,10 +51,7 @@ export default function AccountTab() {
   // Resend verification inline feedback
   const [resendMsg, setResendMsg] = useState('');
 
-  // Send-intent button feedback
-  const [intentError, setIntentError] = useState('');
-
-  // Direct email change (unverified users only)
+  // Direct email change
   const [directNewEmail, setDirectNewEmail] = useState('');
   const [directEmailError, setDirectEmailError] = useState('');
 
@@ -99,18 +96,6 @@ export default function AccountTab() {
       }),
     onSuccess: () => setResendMsg('Check your inbox — email sent.'),
     onError: () => setResendMsg('Failed to send. Try again shortly.'),
-  });
-
-  const sendIntentMutation = useMutation({
-    mutationFn: () =>
-      fetchWithAuth(`${API_BASE}/auth/send-change-email-intent`, { method: 'POST' }).then(async (r) => {
-        if (!r.ok) {
-          const data = await r.json().catch(() => ({}));
-          throw new Error(data.detail ?? 'Failed to send link. Try again.');
-        }
-        return r.json();
-      }),
-    onError: (err: Error) => setIntentError(err.message),
   });
 
   const directEmailMutation = useMutation({
@@ -195,33 +180,11 @@ export default function AccountTab() {
 
         {/* Change email */}
         <div className="mt-3">
-          {emailVerified ? (
-            // Verified: send intent link to current inbox to prove ownership
-            sendIntentMutation.isSuccess ? (
-              <p className="text-sm text-green-600">
-                Check your inbox — a link to change your email has been sent.
-              </p>
-            ) : (
-              <>
-                <button
-                  onClick={() => { setIntentError(''); sendIntentMutation.mutate(); }}
-                  disabled={sendIntentMutation.isPending}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
-                >
-                  {sendIntentMutation.isPending ? 'Sending…' : 'Send change email link'}
-                </button>
-                {intentError && (
-                  <p className="mt-1 text-xs text-red-500">{intentError}</p>
-                )}
-              </>
-            )
-          ) : directEmailMutation.isSuccess ? (
-            // Unverified success
+          {directEmailMutation.isSuccess ? (
             <p className="text-sm text-green-600">
               Confirmation sent to {directNewEmail}. Click the link in that email to complete the change.
             </p>
           ) : (
-            // Unverified: current email is untrusted, allow direct change
             <div className="space-y-2">
               <input
                 type="email"
