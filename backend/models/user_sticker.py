@@ -17,10 +17,16 @@ class UserSticker(Base):
     source_post_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("posts.id", ondelete="SET NULL"), nullable=True
     )
+    bg_removed_asset_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("media_assets.id", ondelete="SET NULL"), nullable=True
+    )
     favorite: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
     for_trade: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    bg_removed: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
     condition: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -41,6 +47,7 @@ class UserSticker(Base):
     user: Mapped["User"] = relationship("User")
     library_sticker: Mapped["StickerLibrary | None"] = relationship("StickerLibrary")
     source_post: Mapped["Post | None"] = relationship("Post")
+    bg_removed_asset: Mapped["MediaAsset | None"] = relationship("MediaAsset")
     images: Mapped[list["UserStickerImage"]] = relationship(
         "UserStickerImage",
         back_populates="user_sticker",
