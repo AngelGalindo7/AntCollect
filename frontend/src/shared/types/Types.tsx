@@ -134,6 +134,8 @@ export type UserSticker = {
   source_post_id: number | null;
   favorite: boolean;
   for_trade: boolean;
+  bg_removed: boolean;
+  bg_removed_file_url: string | null;
   condition: string | null;
   note: string | null;
   acquired_at: string | null;
