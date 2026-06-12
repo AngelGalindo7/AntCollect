@@ -518,6 +518,8 @@ class UserStickerOut(BaseModel):
     source_post_id: Optional[int] = None
     favorite: bool
     for_trade: bool
+    bg_removed: bool = False
+    bg_removed_file_url: Optional[str] = None
     condition: Optional[str] = None
     note: Optional[str] = None
     acquired_at: Optional[datetime] = None
@@ -540,6 +542,7 @@ class UserStickerCreate(BaseModel):
 class UserStickerUpdate(BaseModel):
     favorite: Optional[bool] = None
     for_trade: Optional[bool] = None
+    bg_removed: Optional[bool] = None
     condition: Optional[str] = Field(default=None, max_length=100)
     note: Optional[str] = Field(default=None, max_length=500)
     acquired_at: Optional[datetime] = None
