@@ -1,7 +1,6 @@
 import io
 import uuid
 import logging
-import urllib.request
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Response
 from PIL import Image, ImageOps
@@ -12,11 +11,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from backend.database import get_db
 from backend.models import User
 from backend.models.workspace import Workspace, Panel
-from backend.routers.canvas import (
-    _validate_external_image_url,
-    _get_rembg_session,
-    _REMOVE_BG_FETCH_TIMEOUT,
-)
+from backend.utils.background_removal import fetch_and_remove_background
 from backend.schemas import (
     CanvasAssetUploadResponse,
     PanelCreateRequest,
@@ -279,22 +274,7 @@ def remove_workspace_image_background(
     body: RemoveBgRequest,
     user: UserSearch = Depends(authenthicate_access_token),
 ):
-    _validate_external_image_url(body.image_url)
-
-    try:
-        req = urllib.request.Request(body.image_url, headers={"User-Agent": "PetrCollect/1.0"})
-        with urllib.request.urlopen(req, timeout=_REMOVE_BG_FETCH_TIMEOUT) as resp:
-            image_bytes = resp.read()
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(400, "Could not fetch image")
-
-    try:
-        from rembg import remove as rembg_remove
-        output_bytes = rembg_remove(image_bytes, session=_get_rembg_session())
-    except BaseException:
-        raise HTTPException(500, "Background removal failed")
+    output_bytes = fetch_and_remove_background(body.image_url)
 
     key = f"canvas_assets/{user.user_id}/{uuid.uuid4()}.png"
     processed_url = upload_image_bytes(key, output_bytes, "image/png")
