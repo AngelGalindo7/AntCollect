@@ -107,9 +107,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from backend.routers.canvas import _get_rembg_session
+    from backend.utils.background_removal import get_rembg_session
     try:
-        _get_rembg_session()
+        get_rembg_session()
         logger.info("rembg session pre-warmed")
     except Exception:
         logger.warning("rembg session pre-warm failed; will retry on first request")
