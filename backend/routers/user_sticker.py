@@ -1,4 +1,5 @@
 import logging
+import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -7,9 +8,12 @@ from sqlalchemy.orm import Session, selectinload
 
 from backend.database import get_db
 from backend.models import User, MediaAsset
+from backend.models.media_assets import AssetStatus
 from backend.models.user_sticker import UserSticker, UserStickerImage
 from backend.schemas import UserStickerCreate, UserStickerUpdate, UserStickerOut, UserStickerImageOut
 from backend.utils.auth import authenthicate_access_token, optional_auth_token
+from backend.utils.background_removal import fetch_and_remove_background
+from backend.utils.s3 import upload_image_bytes
 from backend.utils.rate_limit import limiter, get_user_or_ip_key
 from backend.schemas import UserSearch
 
@@ -37,6 +41,8 @@ def _build_sticker_out(sticker: UserSticker) -> UserStickerOut:
         source_post_id=sticker.source_post_id,
         favorite=sticker.favorite,
         for_trade=sticker.for_trade,
+        bg_removed=sticker.bg_removed,
+        bg_removed_file_url=sticker.bg_removed_asset.file_url if sticker.bg_removed_asset else None,
         condition=sticker.condition,
         note=sticker.note,
         acquired_at=sticker.acquired_at,
@@ -51,7 +57,8 @@ def _load_stickers(user_id: int, db: Session) -> List[UserSticker]:
         select(UserSticker)
         .where(UserSticker.user_id == user_id)
         .options(
-            selectinload(UserSticker.images).selectinload(UserStickerImage.asset)
+            selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
+            selectinload(UserSticker.bg_removed_asset),
         )
         .order_by(UserSticker.created_at.desc())
     ).scalars().all()
@@ -135,7 +142,10 @@ def create_sticker(
     sticker = db.execute(
         select(UserSticker)
         .where(UserSticker.id == sticker.id)
-        .options(selectinload(UserSticker.images).selectinload(UserStickerImage.asset))
+        .options(
+            selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
+            selectinload(UserSticker.bg_removed_asset),
+        )
     ).scalar_one()
 
     return _build_sticker_out(sticker)
@@ -153,7 +163,10 @@ def update_sticker(
     sticker = db.execute(
         select(UserSticker)
         .where(UserSticker.id == sticker_id, UserSticker.user_id == current_user.user_id)
-        .options(selectinload(UserSticker.images).selectinload(UserStickerImage.asset))
+        .options(
+            selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
+            selectinload(UserSticker.bg_removed_asset),
+        )
     ).scalar_one_or_none()
     if not sticker:
         raise HTTPException(status_code=404, detail="Sticker not found")
@@ -162,6 +175,13 @@ def update_sticker(
         sticker.favorite = body.favorite
     if body.for_trade is not None:
         sticker.for_trade = body.for_trade
+    if body.bg_removed is not None:
+        if body.bg_removed and sticker.bg_removed_asset_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="No background-removed image is available; run remove-bg first.",
+            )
+        sticker.bg_removed = body.bg_removed
     if body.condition is not None:
         sticker.condition = body.condition
     if body.note is not None:
@@ -175,7 +195,10 @@ def update_sticker(
     sticker = db.execute(
         select(UserSticker)
         .where(UserSticker.id == sticker_id)
-        .options(selectinload(UserSticker.images).selectinload(UserStickerImage.asset))
+        .options(
+            selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
+            selectinload(UserSticker.bg_removed_asset),
+        )
     ).scalar_one()
 
     return _build_sticker_out(sticker)
@@ -200,3 +223,60 @@ def delete_sticker(
 
     db.delete(sticker)
     db.commit()
+
+
+@router.post("/me/{sticker_id}/remove-bg", response_model=UserStickerOut)
+@limiter.limit("10/minute", key_func=get_user_or_ip_key)
+def remove_sticker_background(
+    request: Request,
+    sticker_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserSearch = Depends(authenthicate_access_token),
+):
+    sticker = db.execute(
+        select(UserSticker)
+        .where(UserSticker.id == sticker_id, UserSticker.user_id == current_user.user_id)
+        .options(
+            selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
+            selectinload(UserSticker.bg_removed_asset),
+        )
+    ).scalar_one_or_none()
+    if not sticker:
+        raise HTTPException(status_code=404, detail="Sticker not found")
+
+    if sticker.bg_removed_asset_id is None:
+        source_url = sticker.images[0].asset.file_url if sticker.images else None
+        if not source_url:
+            raise HTTPException(
+                status_code=400,
+                detail="This sticker has no image to remove a background from.",
+            )
+
+        output_bytes = fetch_and_remove_background(source_url)
+        key = f"stickers/{current_user.user_id}/cutout/{uuid.uuid4()}.png"
+        processed_url = upload_image_bytes(key, output_bytes, "image/png")
+
+        asset = MediaAsset(
+            uploader_id=current_user.user_id,
+            file_url=processed_url,
+            s3_key=key,
+            json_metadata={"kind": "bg_removed"},
+            status=AssetStatus.ATTACHED,
+        )
+        db.add(asset)
+        db.flush()
+        sticker.bg_removed_asset_id = asset.id
+
+    sticker.bg_removed = True
+    db.commit()
+
+    sticker = db.execute(
+        select(UserSticker)
+        .where(UserSticker.id == sticker_id)
+        .options(
+            selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
+            selectinload(UserSticker.bg_removed_asset),
+        )
+    ).scalar_one()
+
+    return _build_sticker_out(sticker)
