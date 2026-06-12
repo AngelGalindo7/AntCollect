@@ -16,6 +16,19 @@ const TrashIcon = () => (
   </svg>
 );
 
+const ScissorsIcon = () => (
+  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
+  </svg>
+);
+
+const SpinnerIcon = () => (
+  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+  </svg>
+);
+
 interface TrackFormState {
   sticker_id: string;
   condition: string;
@@ -46,6 +59,7 @@ const StickersPage: React.FC = () => {
   const [form, setForm] = useState<TrackFormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [bgBusyId, setBgBusyId] = useState<number | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -74,6 +88,27 @@ const StickersPage: React.FC = () => {
     const res = await fetchWithAuth(`${API_BASE}/stickers/me/${id}`, { method: 'DELETE' });
     if (res.ok || res.status === 204) {
       setStickers((prev) => prev.filter((s) => s.id !== id));
+    }
+  };
+
+  const handleToggleBg = async (sticker: UserSticker) => {
+    setBgBusyId(sticker.id);
+    try {
+      // First time cuts the image (heavy rembg call, persisted server-side); afterwards
+      // the cut-out is cached, so we just flip which image the card displays via PATCH.
+      const res = sticker.bg_removed_file_url
+        ? await fetchWithAuth(`${API_BASE}/stickers/me/${sticker.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bg_removed: !sticker.bg_removed }),
+          })
+        : await fetchWithAuth(`${API_BASE}/stickers/me/${sticker.id}/remove-bg`, { method: 'POST' });
+      if (res.ok) {
+        const updated: UserSticker = await res.json();
+        setStickers((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      }
+    } finally {
+      setBgBusyId(null);
     }
   };
 
@@ -115,7 +150,9 @@ const StickersPage: React.FC = () => {
   };
 
   const primaryImage = (s: UserSticker) =>
-    s.images.find((i) => i.order_index === 1)?.file_url ?? s.images[0]?.file_url ?? null;
+    s.bg_removed && s.bg_removed_file_url
+      ? s.bg_removed_file_url
+      : s.images.find((i) => i.order_index === 1)?.file_url ?? s.images[0]?.file_url ?? null;
 
   return (
     <div className="px-10 py-7 max-w-6xl mx-auto">
@@ -297,17 +334,38 @@ const StickersPage: React.FC = () => {
                   {sticker.for_trade && (
                     <span className="text-[10px] px-1.5 py-0.5 bg-uci-blue text-white font-bold rounded-full">trade</span>
                   )}
+                  {sticker.bg_removed && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-uci-navy text-white font-bold rounded-full">cut</span>
+                  )}
                 </div>
 
-                {/* Owner: delete button */}
+                {/* Owner: per-sticker actions */}
                 {isOwner && (
-                  <button
-                    onClick={() => handleDelete(sticker.id)}
-                    className="absolute top-2 right-2 p-1.5 bg-white/80 text-red-400 hover:text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Remove"
-                  >
-                    <TrashIcon />
-                  </button>
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {sticker.images.length > 0 && (
+                      <button
+                        onClick={() => handleToggleBg(sticker)}
+                        disabled={bgBusyId === sticker.id}
+                        className="p-1.5 bg-white/80 text-uci-navy hover:text-uci-blue rounded-full disabled:opacity-50"
+                        title={
+                          sticker.bg_removed_file_url
+                            ? sticker.bg_removed
+                              ? 'Show original background'
+                              : 'Show cut-out'
+                            : 'Remove background'
+                        }
+                      >
+                        {bgBusyId === sticker.id ? <SpinnerIcon /> : <ScissorsIcon />}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(sticker.id)}
+                      className="p-1.5 bg-white/80 text-red-400 hover:text-red-600 rounded-full"
+                      title="Remove"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
                 )}
 
                 {/* Bottom info overlay */}
