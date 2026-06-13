@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'motion/react';
 import { ChevronLeft, ChevronRight, Crown, Star, Share2, Sparkles } from 'lucide-react';
 
