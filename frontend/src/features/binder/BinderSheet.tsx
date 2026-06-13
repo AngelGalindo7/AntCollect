@@ -9,7 +9,7 @@ interface BinderSheetProps {
   username?: string;
 }
 
-export default function BinderSheet({ isOpen, onClose, username }: BinderSheetProps) {
+export default function BinderSheet({ isOpen, onClose }: BinderSheetProps) {
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -39,22 +39,14 @@ export default function BinderSheet({ isOpen, onClose, username }: BinderSheetPr
             transition={{ duration: 0.45, ease: [0.45, 0, 0.55, 1] }}
             className="fixed inset-0 z-50 bg-[#1c1c1e] flex flex-col overflow-hidden"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-8 py-5 border-b border-white/10 shrink-0">
-              <div className="flex items-center gap-2 text-slate-200">
-                <Sparkles className="w-5 h-5 text-amber-400" />
-                <span className="font-semibold text-lg tracking-tight">
-                  {username ? `${username}'s Binder` : 'Sticker Binder'}
-                </span>
-              </div>
-              <button
-                onClick={onClose}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-slate-300 hover:text-white"
-                aria-label="Close binder"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            {/* Floating close button */}
+            <button
+              onClick={onClose}
+              className="absolute top-5 right-6 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-slate-300 hover:text-white"
+              aria-label="Close binder"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
             {/* Binder visual */}
             <div className="flex-1 flex items-center justify-center px-8 py-6 overflow-hidden">

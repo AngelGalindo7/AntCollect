@@ -55,7 +55,7 @@ export default function BinderViewer() {
   return (
     <motion.div
       onPanEnd={handlePanEnd}
-      className="relative w-full max-w-[1100px] h-[560px] flex items-center justify-center cursor-grab active:cursor-grabbing"
+      className="relative w-full max-w-[1100px] h-[85vh] max-h-[820px] flex items-center justify-center cursor-grab active:cursor-grabbing"
       style={{ perspective: 2500 }}
     >
       <div className="relative w-full h-full flex [transform-style:preserve-3d]">
