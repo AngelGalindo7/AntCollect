@@ -6,6 +6,9 @@ from backend.database import Base
 
 class UserSticker(Base):
     __tablename__ = "user_sticker"
+    __table_args__ = (
+        UniqueConstraint("binder_page_id", "slot_index", name="uq_user_sticker_binder_slot"),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
@@ -20,6 +23,10 @@ class UserSticker(Base):
     bg_removed_asset_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("media_assets.id", ondelete="SET NULL"), nullable=True
     )
+    binder_page_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("binder_page.id", ondelete="SET NULL"), nullable=True
+    )
+    slot_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     favorite: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
@@ -48,6 +55,7 @@ class UserSticker(Base):
     library_sticker: Mapped["StickerLibrary | None"] = relationship("StickerLibrary")
     source_post: Mapped["Post | None"] = relationship("Post")
     bg_removed_asset: Mapped["MediaAsset | None"] = relationship("MediaAsset")
+    binder_page: Mapped["BinderPage | None"] = relationship("BinderPage", back_populates="stickers")
     images: Mapped[list["UserStickerImage"]] = relationship(
         "UserStickerImage",
         back_populates="user_sticker",
