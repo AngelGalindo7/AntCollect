@@ -45,7 +45,7 @@ export default function BinderViewer() {
     setIsFlipping(false);
   };
 
-  const handlePanEnd = (_e: React.PointerEvent, info: { offset: { x: number } }) => {
+  const handlePanEnd = (_e: PointerEvent, info: { offset: { x: number } }) => {
     if (isFlipping) return;
     const SWIPE_THRESHOLD = 50;
     if (info.offset.x < -SWIPE_THRESHOLD && activeIndex < TABS.length - 1) handleTabClick(activeIndex + 1);

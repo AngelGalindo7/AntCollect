@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Sparkles } from 'lucide-react';
 import BinderViewer from './BinderViewer';
