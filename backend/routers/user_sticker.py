@@ -1,8 +1,9 @@
 import logging
 import uuid
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session, selectinload
 
@@ -13,6 +14,7 @@ from backend.models.user_sticker import UserSticker, UserStickerImage
 from backend.schemas import UserStickerCreate, UserStickerUpdate, UserStickerOut
 from backend.utils.auth import authenthicate_access_token, optional_auth_token
 from backend.utils.background_removal import fetch_and_remove_background
+from backend.utils.files import process_and_save_image, delete_file
 from backend.utils.s3 import upload_image_bytes
 from backend.utils.sticker_serialization import build_user_sticker_out
 from backend.utils.rate_limit import limiter, get_user_or_ip_key
@@ -122,6 +124,80 @@ def create_sticker(
         )
     ).scalar_one()
 
+    return build_user_sticker_out(sticker)
+
+
+@router.post("/me/upload", response_model=UserStickerOut, status_code=201)
+@limiter.limit("30/hour", key_func=get_user_or_ip_key)
+def upload_sticker(
+    request: Request,
+    file: UploadFile = File(...),
+    sticker_id: Optional[int] = Form(None),
+    favorite: bool = Form(False),
+    for_trade: bool = Form(False),
+    condition: Optional[str] = Form(None),
+    note: Optional[str] = Form(None),
+    acquired_at: Optional[datetime] = Form(None),
+    db: Session = Depends(get_db),
+    current_user: UserSearch = Depends(authenthicate_access_token),
+):
+    """Upload a user's own photo of a sticker they own: processes the image through the
+    shared pipeline, stores it as a MediaAsset the user owns, and creates a user_sticker
+    row pointing at it. The result can then be background-removed and placed in a binder."""
+    created_files: List[str] = []
+    try:
+        image_data = process_and_save_image(file, current_user.user_id, folder_prefix="stickers")
+        created_files.extend(image_data["paths"].values())
+
+        asset = MediaAsset(
+            uploader_id=current_user.user_id,
+            file_url=image_data["paths"]["original"],
+            s3_key=f"stickers/{current_user.user_id}/original/{image_data['filename']}",
+            json_metadata={"paths": image_data["paths"], "dimensions": image_data["dimensions"]},
+            status=AssetStatus.ATTACHED,
+        )
+        db.add(asset)
+        db.flush()
+
+        sticker = UserSticker(
+            user_id=current_user.user_id,
+            sticker_id=sticker_id,
+            favorite=favorite,
+            for_trade=for_trade,
+            condition=condition,
+            note=note,
+            acquired_at=acquired_at,
+        )
+        db.add(sticker)
+        db.flush()
+        db.add(UserStickerImage(user_sticker_id=sticker.id, asset_id=asset.id, order_index=1))
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        for path in created_files:
+            try:
+                delete_file(path)
+            except Exception:
+                pass
+        raise
+    except Exception as e:
+        db.rollback()
+        for path in created_files:
+            try:
+                delete_file(path)
+            except Exception:
+                pass
+        logger.error(f"Sticker upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Could not save sticker image")
+
+    sticker = db.execute(
+        select(UserSticker)
+        .where(UserSticker.id == sticker.id)
+        .options(
+            selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
+            selectinload(UserSticker.bg_removed_asset),
+        )
+    ).scalar_one()
     return build_user_sticker_out(sticker)
 
 
