@@ -4,9 +4,11 @@ import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import { Workspace } from "@/features/workspace/components/Workspace";
 import { SpotlightViewer } from "@/features/workspace/components/SpotlightViewer";
 import { PositionedBackgroundImage } from "@/shared/components/PositionedBackgroundImage";
+import BinderSheet from "@/features/binder/BinderSheet";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchPublic, fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { BookOpen } from "lucide-react";
 
 type TabValue = "showcase" | "collection" | "looking_for" | "trading";
 type ViewMode = "posts" | "folders";
@@ -46,6 +48,9 @@ const UserProfile: React.FC = () => {
   // Avatar upload state
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Binder modal state
+  const [binderOpen, setBinderOpen] = useState(false);
 
   // Sticker count inline edit state
   const [editingStickers, setEditingStickers] = useState(false);
@@ -185,6 +190,8 @@ const UserProfile: React.FC = () => {
 
   return (
     <div className="w-full">
+      <BinderSheet isOpen={binderOpen} onClose={() => setBinderOpen(false)} username={profile.username} />
+
       {/* ── Section 1: Profile header with background ── */}
       <div className="relative w-full overflow-hidden aspect-[6/1] min-h-[200px] bg-warm-gray/20">
         {profile.background_path && (
@@ -195,6 +202,16 @@ const UserProfile: React.FC = () => {
             scale={profile.background_scale}
           />
         )}
+
+        {/* Binder icon — top-right of header, visible to all visitors */}
+        <button
+          onClick={() => setBinderOpen(true)}
+          className="absolute top-3 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 hover:bg-white/90 backdrop-blur-sm shadow-md transition-colors text-espresso"
+          title="Open sticker binder"
+        >
+          <BookOpen className="w-4 h-4" />
+          <span className="text-xs font-medium">Binder</span>
+        </button>
 
         <div className="absolute inset-0 z-10 flex items-start gap-6 px-4 py-8 max-w-6xl mx-auto">
           <div className="shrink-0">
