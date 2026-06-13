@@ -520,6 +520,8 @@ class UserStickerOut(BaseModel):
     for_trade: bool
     bg_removed: bool = False
     bg_removed_file_url: Optional[str] = None
+    binder_page_id: Optional[int] = None
+    slot_index: Optional[int] = None
     condition: Optional[str] = None
     note: Optional[str] = None
     acquired_at: Optional[datetime] = None
@@ -546,3 +548,41 @@ class UserStickerUpdate(BaseModel):
     condition: Optional[str] = Field(default=None, max_length=100)
     note: Optional[str] = Field(default=None, max_length=500)
     acquired_at: Optional[datetime] = None
+
+
+class BinderPageCreate(BaseModel):
+    title: Optional[str] = Field(default=None, max_length=80)
+    rows: int = Field(default=3, ge=1, le=8)
+    cols: int = Field(default=3, ge=1, le=8)
+
+
+class BinderPageUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, max_length=80)
+    rows: Optional[int] = Field(default=None, ge=1, le=8)
+    cols: Optional[int] = Field(default=None, ge=1, le=8)
+    page_index: Optional[int] = Field(default=None, ge=0)
+    background: Optional[dict] = None
+
+
+class BinderPageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    page_index: int
+    title: Optional[str] = None
+    rows: int
+    cols: int
+    background: Optional[dict] = None
+    stickers: List[UserStickerOut] = Field(default_factory=list)
+
+
+class BinderOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    title: Optional[str] = None
+    pages: List[BinderPageOut] = Field(default_factory=list)
+
+
+class BinderSlotAssign(BaseModel):
+    user_sticker_id: int
+    binder_page_id: Optional[int] = None
+    slot_index: Optional[int] = Field(default=None, ge=0)
