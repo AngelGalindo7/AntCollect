@@ -10,10 +10,11 @@ from backend.database import get_db
 from backend.models import User, MediaAsset
 from backend.models.media_assets import AssetStatus
 from backend.models.user_sticker import UserSticker, UserStickerImage
-from backend.schemas import UserStickerCreate, UserStickerUpdate, UserStickerOut, UserStickerImageOut
+from backend.schemas import UserStickerCreate, UserStickerUpdate, UserStickerOut
 from backend.utils.auth import authenthicate_access_token, optional_auth_token
 from backend.utils.background_removal import fetch_and_remove_background
 from backend.utils.s3 import upload_image_bytes
+from backend.utils.sticker_serialization import build_user_sticker_out
 from backend.utils.rate_limit import limiter, get_user_or_ip_key
 from backend.schemas import UserSearch
 
@@ -23,33 +24,6 @@ router = APIRouter(
     prefix="/stickers",
     tags=["User Stickers"],
 )
-
-
-def _build_sticker_out(sticker: UserSticker) -> UserStickerOut:
-    images = [
-        UserStickerImageOut(
-            id=img.id,
-            asset_id=img.asset_id,
-            order_index=img.order_index,
-            file_url=img.asset.file_url,
-        )
-        for img in sticker.images
-    ]
-    return UserStickerOut(
-        id=sticker.id,
-        sticker_id=sticker.sticker_id,
-        source_post_id=sticker.source_post_id,
-        favorite=sticker.favorite,
-        for_trade=sticker.for_trade,
-        bg_removed=sticker.bg_removed,
-        bg_removed_file_url=sticker.bg_removed_asset.file_url if sticker.bg_removed_asset else None,
-        condition=sticker.condition,
-        note=sticker.note,
-        acquired_at=sticker.acquired_at,
-        created_at=sticker.created_at,
-        updated_at=sticker.updated_at,
-        images=images,
-    )
 
 
 def _load_stickers(user_id: int, db: Session) -> List[UserSticker]:
@@ -72,7 +46,7 @@ def list_my_stickers(
     current_user: UserSearch = Depends(authenthicate_access_token),
 ):
     stickers = _load_stickers(current_user.user_id, db)
-    return [_build_sticker_out(s) for s in stickers]
+    return [build_user_sticker_out(s) for s in stickers]
 
 
 @router.get("/{username}", response_model=List[UserStickerOut])
@@ -89,7 +63,7 @@ def list_user_stickers(
         raise HTTPException(status_code=404, detail="User not found")
 
     stickers = _load_stickers(user.id, db)
-    return [_build_sticker_out(s) for s in stickers]
+    return [build_user_sticker_out(s) for s in stickers]
 
 
 @router.post("/me", response_model=UserStickerOut, status_code=201)
@@ -148,7 +122,7 @@ def create_sticker(
         )
     ).scalar_one()
 
-    return _build_sticker_out(sticker)
+    return build_user_sticker_out(sticker)
 
 
 @router.patch("/me/{sticker_id}", response_model=UserStickerOut)
@@ -201,7 +175,7 @@ def update_sticker(
         )
     ).scalar_one()
 
-    return _build_sticker_out(sticker)
+    return build_user_sticker_out(sticker)
 
 
 @router.delete("/me/{sticker_id}", status_code=204)
@@ -279,4 +253,4 @@ def remove_sticker_background(
         )
     ).scalar_one()
 
-    return _build_sticker_out(sticker)
+    return build_user_sticker_out(sticker)
