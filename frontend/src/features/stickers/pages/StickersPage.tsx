@@ -116,10 +116,6 @@ const StickersPage: React.FC = () => {
     e.preventDefault();
     setFormError(null);
     const stickerId = form.sticker_id ? parseInt(form.sticker_id, 10) : null;
-    if (!stickerId) {
-      setFormError('A library sticker ID is required for Wave A manual tracking.');
-      return;
-    }
     setSubmitting(true);
     try {
       const res = await fetchWithAuth(`${API_BASE}/stickers/me`, {
@@ -198,15 +194,14 @@ const StickersPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="col-span-2 sm:col-span-1">
-              <label className="block text-xs text-espresso/60 mb-1">Library sticker ID *</label>
+              <label className="block text-xs text-espresso/60 mb-1">Library sticker ID</label>
               <input
                 type="number"
                 min={1}
                 value={form.sticker_id}
                 onChange={(e) => setForm((f) => ({ ...f, sticker_id: e.target.value }))}
-                placeholder="e.g. 42"
+                placeholder="optional"
                 className="w-full px-3 py-2 text-sm rounded-lg border border-warm-gray/40 bg-white outline-none focus:border-uci-blue"
-                required
               />
             </div>
 
