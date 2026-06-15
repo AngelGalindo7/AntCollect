@@ -550,6 +550,15 @@ class UserStickerUpdate(BaseModel):
     acquired_at: Optional[datetime] = None
 
 
+class PromoteToStickerRequest(BaseModel):
+    post_id: int
+    groups: List[List[int]] = Field(..., min_length=1)
+    favorite: bool = False
+    for_trade: bool = False
+    condition: Optional[str] = Field(default=None, max_length=100)
+    note: Optional[str] = Field(default=None, max_length=500)
+
+
 class BinderPageCreate(BaseModel):
     title: Optional[str] = Field(default=None, max_length=80)
     rows: int = Field(default=3, ge=1, le=8)
