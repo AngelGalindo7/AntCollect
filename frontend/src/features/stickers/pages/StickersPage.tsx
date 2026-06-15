@@ -364,8 +364,11 @@ const StickersPage: React.FC = () => {
                 )}
 
                 {/* Bottom info overlay */}
-                {(sticker.condition || sticker.note) && (
+                {(sticker.condition || sticker.note || sticker.source_post_id !== null) && (
                   <div className="absolute inset-x-0 bottom-0 px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm">
+                    {sticker.source_post_id !== null && (
+                      <p className="text-[10px] text-uci-blue/70 truncate">from a post</p>
+                    )}
                     {sticker.condition && (
                       <p className="text-[10px] text-uci-navy/70 font-semibold truncate">{sticker.condition}</p>
                     )}
