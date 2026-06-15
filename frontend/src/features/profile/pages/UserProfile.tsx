@@ -190,7 +190,7 @@ const UserProfile: React.FC = () => {
 
   return (
     <div className="w-full">
-      <BinderSheet isOpen={binderOpen} onClose={() => setBinderOpen(false)} username={profile.username} />
+      <BinderSheet isOpen={binderOpen} onClose={() => setBinderOpen(false)} username={profile.username} isOwner={profile.is_owner} />
 
       {/* ── Section 1: Profile header with background ── */}
       <div className="relative w-full overflow-hidden aspect-[6/1] min-h-[200px] bg-warm-gray/20">
