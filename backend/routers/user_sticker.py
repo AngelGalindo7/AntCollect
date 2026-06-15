@@ -11,7 +11,8 @@ from backend.database import get_db
 from backend.models import User, MediaAsset
 from backend.models.media_assets import AssetStatus
 from backend.models.user_sticker import UserSticker, UserStickerImage
-from backend.schemas import UserStickerCreate, UserStickerUpdate, UserStickerOut
+from backend.schemas import UserStickerCreate, UserStickerUpdate, UserStickerOut, PromoteToStickerRequest
+from backend.models.post import Post, PostImage, PostType
 from backend.utils.auth import authenthicate_access_token, optional_auth_token
 from backend.utils.background_removal import fetch_and_remove_background
 from backend.utils.files import process_and_save_image, delete_file
@@ -199,6 +200,82 @@ def upload_sticker(
         )
     ).scalar_one()
     return build_user_sticker_out(sticker)
+
+
+@router.post("/me/from-post", response_model=List[UserStickerOut], status_code=201)
+@limiter.limit("30/hour", key_func=get_user_or_ip_key)
+def promote_post_to_stickers(
+    request: Request,
+    body: PromoteToStickerRequest,
+    db: Session = Depends(get_db),
+    current_user: UserSearch = Depends(authenthicate_access_token),
+):
+    post = db.execute(
+        select(Post).where(Post.id == body.post_id, Post.user_id == current_user.user_id)
+    ).scalar_one_or_none()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if post.type == PostType.looking_for:
+        raise HTTPException(
+            status_code=422,
+            detail="Cannot promote looking_for posts — these represent wanted items, not owned ones.",
+        )
+
+    post_images = db.execute(
+        select(PostImage)
+        .where(PostImage.post_id == post.id)
+        .order_by(PostImage.order_index)
+    ).scalars().all()
+    image_by_order: dict[int, PostImage] = {img.order_index: img for img in post_images}
+
+    created_ids: List[int] = []
+    for group in body.groups:
+        if not group:
+            continue
+        resolved: list[PostImage] = []
+        for order_idx in group:
+            img = image_by_order.get(order_idx)
+            if img is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Post has no image at order_index {order_idx}.",
+                )
+            resolved.append(img)
+
+        sticker = UserSticker(
+            user_id=current_user.user_id,
+            source_post_id=post.id,
+            favorite=body.favorite,
+            for_trade=body.for_trade,
+            condition=body.condition,
+            note=body.note,
+        )
+        db.add(sticker)
+        db.flush()
+
+        for slot_idx, post_img in enumerate(resolved, start=1):
+            db.add(UserStickerImage(
+                user_sticker_id=sticker.id,
+                asset_id=post_img.asset_id,
+                order_index=slot_idx,
+            ))
+
+        db.flush()
+        created_ids.append(sticker.id)
+
+    db.commit()
+
+    stickers = db.execute(
+        select(UserSticker)
+        .where(UserSticker.id.in_(created_ids))
+        .options(
+            selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
+            selectinload(UserSticker.bg_removed_asset),
+        )
+        .order_by(UserSticker.id)
+    ).scalars().all()
+
+    return [build_user_sticker_out(s) for s in stickers]
 
 
 @router.patch("/me/{sticker_id}", response_model=UserStickerOut)
