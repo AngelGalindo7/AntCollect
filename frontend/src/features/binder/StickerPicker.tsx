@@ -6,13 +6,23 @@ interface StickerPickerProps {
   selectedId: number | null;
   onSelect: (sticker: UserStickerOut | null) => void;
   onPlaceInNextSlot: () => void;
+  showAll: boolean;
+  onToggleShowAll: () => void;
 }
 
-export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceInNextSlot }: StickerPickerProps) {
+export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceInNextSlot, showAll, onToggleShowAll }: StickerPickerProps) {
   return (
     <div className="w-72 shrink-0 flex flex-col bg-[#2c2c2e] border-r border-white/10 overflow-hidden">
       <div className="px-4 pt-4 pb-3 shrink-0">
-        <p className="text-white text-sm font-semibold">Your Stickers</p>
+        <div className="flex items-center justify-between mb-0.5">
+          <p className="text-white text-sm font-semibold">Your Stickers</p>
+          <button
+            onClick={onToggleShowAll}
+            className="text-[10px] px-2 py-0.5 rounded-full border border-white/20 text-[#8e8e93] hover:text-white hover:border-white/40 transition-colors shrink-0"
+          >
+            {showAll ? 'Unfiled only' : 'Show all'}
+          </button>
+        </div>
         <p className="text-[#8e8e93] text-xs mt-0.5">
           {selectedId ? 'Click a binder slot to place' : 'Select a sticker to place'}
         </p>

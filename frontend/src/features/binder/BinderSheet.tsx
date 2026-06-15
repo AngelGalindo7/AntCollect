@@ -16,6 +16,7 @@ interface BinderSheetProps {
 
 export default function BinderSheet({ isOpen, onClose, username, isOwner }: BinderSheetProps) {
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showAllStickers, setShowAllStickers] = useState(false);
   const [selectedSticker, setSelectedSticker] = useState<UserStickerOut | null>(null);
   const [pendingPlacement, setPendingPlacement] = useState<{
     pageId: number;
@@ -36,6 +37,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
   useEffect(() => {
     if (!isOpen) {
       setIsEditMode(false);
+      setShowAllStickers(false);
       setSelectedSticker(null);
       setPendingPlacement(null);
     }
@@ -102,9 +104,14 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
 
   const handleExitEdit = () => {
     setIsEditMode(false);
+    setShowAllStickers(false);
     setSelectedSticker(null);
     setPendingPlacement(null);
   };
+
+  const pickerStickers = showAllStickers
+    ? myStickers
+    : myStickers.filter(s => s.binder_page_id === null);
 
   return (
     <AnimatePresence>
@@ -155,10 +162,12 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
             {isEditMode ? (
               <div className="flex-1 flex overflow-hidden">
                 <StickerPicker
-                  stickers={myStickers}
+                  stickers={pickerStickers}
                   selectedId={selectedSticker?.id ?? null}
                   onSelect={setSelectedSticker}
                   onPlaceInNextSlot={handlePlaceInNextSlot}
+                  showAll={showAllStickers}
+                  onToggleShowAll={() => setShowAllStickers(v => !v)}
                 />
                 <div className="flex-1 flex items-center justify-center px-6 py-6 overflow-hidden">
                   <BinderViewer
