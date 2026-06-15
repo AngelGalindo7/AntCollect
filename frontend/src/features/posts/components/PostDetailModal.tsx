@@ -33,12 +33,46 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
   const navigate = useNavigate();
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const images = post.images ?? [];
+  const showPromote = (() => {
+    const session = getSession();
+    const own = postOwnerId !== undefined && String(postOwnerId) === session?.userId;
+    return own && folderType != null && folderType !== 'looking_for' && images.length > 0;
+  })();
+  const [selectedIdxs, setSelectedIdxs] = useState<number[]>(() =>
+    images.map((_, i) => i)
+  );
+  const [promoting, setPromoting] = useState(false);
+  const [promotedCount, setPromotedCount] = useState<number | null>(null);
+
+  const toggleIdx = (i: number) =>
+    setSelectedIdxs((prev) =>
+      prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i].sort((a, b) => a - b)
+    );
+
+  const handlePromote = async () => {
+    if (!selectedIdxs.length || promoting) return;
+    setPromoting(true);
+    try {
+      const groups = selectedIdxs.map((idx) => [idx + 1]);
+      const res = await fetchWithAuth(`${API_BASE}/stickers/me/from-post`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: post.post_id, groups }),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setPromotedCount(created.length);
+      }
+    } finally {
+      setPromoting(false);
+    }
+  };
+
   const session = getSession();
   const isOwn = postOwnerId !== undefined && String(postOwnerId) === session?.userId;
-  void folderType;
   const canAdminDelete = !isOwn && canModeratePosts(session) && !!onDeleteSuccess;
 
-  const images = post.images ?? [];
   const [activeIdx, setActiveIdx] = useState(0);
   const currentImg = images[activeIdx];
   const canNav = images.length > 1;
@@ -223,6 +257,58 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
           <p className="mt-3 text-center text-sm text-white/70 max-w-xl line-clamp-2 px-2">
             {post.caption}
           </p>
+        )}
+
+        {/* Promote to sticker — owner only, collection/trading only */}
+        {showPromote && (
+          <div className="mt-4 flex flex-col items-center gap-2.5 max-w-[90vw]">
+            {promotedCount !== null ? (
+              <p className="text-sm font-semibold text-emerald-400">
+                ✓ {promotedCount} sticker{promotedCount !== 1 ? 's' : ''} added to your collection
+              </p>
+            ) : (
+              <>
+                {images.length > 1 && (
+                  <div className="flex gap-2 flex-wrap justify-center">
+                    {images.map((img, i) => {
+                      const thumb = img.paths?.thumbnail ?? img.paths?.original;
+                      const checked = selectedIdxs.includes(i);
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => toggleIdx(i)}
+                          className={`relative w-12 h-12 rounded-md overflow-hidden ring-2 transition-all ${checked ? 'ring-uci-gold opacity-100' : 'ring-transparent opacity-40 hover:opacity-70'}`}
+                          aria-label={`${checked ? 'Deselect' : 'Select'} image ${i + 1}`}
+                        >
+                          {thumb && <img src={thumb} alt="" className="w-full h-full object-cover" draggable={false} />}
+                          {checked && (
+                            <span className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-uci-gold flex items-center justify-center">
+                              <svg className="w-2.5 h-2.5 text-uci-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handlePromote}
+                  disabled={promoting || selectedIdxs.length === 0}
+                  className="px-4 py-1.5 rounded-full text-xs font-bold text-uci-navy bg-uci-gold hover:brightness-105 disabled:opacity-40 transition-all"
+                >
+                  {promoting
+                    ? 'Saving…'
+                    : images.length > 1
+                      ? `Save ${selectedIdxs.length} as individual sticker${selectedIdxs.length !== 1 ? 's' : ''}`
+                      : 'Add to my stickers'}
+                </button>
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>,

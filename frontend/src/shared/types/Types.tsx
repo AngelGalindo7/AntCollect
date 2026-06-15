@@ -132,6 +132,8 @@ export type UserSticker = {
   id: number;
   sticker_id: number | null;
   source_post_id: number | null;
+  binder_page_id: number | null;
+  slot_index: number | null;
   favorite: boolean;
   for_trade: boolean;
   bg_removed: boolean;
