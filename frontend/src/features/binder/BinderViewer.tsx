@@ -10,9 +10,12 @@ const TAB_COLORS = [
 
 interface BinderViewerProps {
   binder?: BinderOut;
+  isEditMode?: boolean;
+  selectedStickerId?: number | null;
+  onSlotClick?: (page: BinderPageOut, slotIndex: number, occupant: UserStickerOut | null) => void;
 }
 
-export default function BinderViewer({ binder }: BinderViewerProps) {
+export default function BinderViewer({ binder, isEditMode, selectedStickerId, onSlotClick }: BinderViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
   const [flippingToIndex, setFlippingToIndex] = useState<number | null>(null);
@@ -65,7 +68,7 @@ export default function BinderViewer({ binder }: BinderViewerProps) {
 
         {/* STATIC LEFT PAGE */}
         <div className="w-1/2 h-full relative z-10">
-          <Page page={spreads[A_index].left} side="left" interactive={!isFlipping} />
+          <Page page={spreads[A_index].left} side="left" interactive={!isFlipping} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} />
           {isFlipping && (
             <motion.div className="absolute inset-0 bg-black pointer-events-none rounded-l-md" style={{ opacity: leftStaticShadow }} />
           )}
@@ -83,7 +86,7 @@ export default function BinderViewer({ binder }: BinderViewerProps) {
 
         {/* STATIC RIGHT PAGE */}
         <div className="w-1/2 h-full relative z-10">
-          <Page page={spreads[B_index].right} side="right" interactive={!isFlipping} />
+          <Page page={spreads[B_index].right} side="right" interactive={!isFlipping} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} />
           {isFlipping && (
             <motion.div className="absolute inset-0 bg-black pointer-events-none rounded-r-md" style={{ opacity: rightStaticShadow }} />
           )}
@@ -189,7 +192,14 @@ export default function BinderViewer({ binder }: BinderViewerProps) {
   );
 }
 
-function Page({ page, side, interactive }: { page: BinderPageOut | null; side: 'left' | 'right'; interactive: boolean }) {
+function Page({ page, side, interactive, isEditMode, selectedStickerId, onSlotClick }: {
+  page: BinderPageOut | null;
+  side: 'left' | 'right';
+  interactive: boolean;
+  isEditMode?: boolean;
+  selectedStickerId?: number | null;
+  onSlotClick?: (page: BinderPageOut, slotIndex: number, occupant: UserStickerOut | null) => void;
+}) {
   return (
     <div className={`
       w-full h-full bg-[#fdfbf7] flex flex-col relative
@@ -207,13 +217,19 @@ function Page({ page, side, interactive }: { page: BinderPageOut | null; side: '
       `} />
       <div className={`absolute ${side === 'left' ? 'right-0 bg-gradient-to-l' : 'left-0 bg-gradient-to-r'} top-0 bottom-0 w-16 from-black/10 to-transparent pointer-events-none z-20`} />
       <div className="relative z-30 p-6 md:p-10 h-full flex flex-col overflow-hidden">
-        <PageContent page={page} interactive={interactive} />
+        <PageContent page={page} interactive={interactive} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} />
       </div>
     </div>
   );
 }
 
-function PageContent({ page, interactive: _interactive }: { page: BinderPageOut | null; interactive: boolean }) {
+function PageContent({ page, interactive, isEditMode, selectedStickerId, onSlotClick }: {
+  page: BinderPageOut | null;
+  interactive: boolean;
+  isEditMode?: boolean;
+  selectedStickerId?: number | null;
+  onSlotClick?: (page: BinderPageOut, slotIndex: number, occupant: UserStickerOut | null) => void;
+}) {
   const rows = page?.rows ?? 3;
   const cols = page?.cols ?? 3;
   const total = rows * cols;
@@ -244,14 +260,19 @@ function PageContent({ page, interactive: _interactive }: { page: BinderPageOut 
                   ? sticker.bg_removed_file_url
                   : sticker.images[0]?.file_url ?? null)
               : null;
+            const isClickable = isEditMode && interactive && !!page && !!onSlotClick;
+            const isSelectedSlot = !!sticker && sticker.id === selectedStickerId;
 
             return (
               <div
                 key={i}
+                onClick={isClickable ? () => onSlotClick!(page!, i, sticker ?? null) : undefined}
                 className={`
                   w-full h-full flex items-center justify-center relative z-10 overflow-hidden
                   ${!isRightCol ? 'border-r border-white/40' : ''}
                   ${!isBottomRow ? 'border-b border-white/40' : ''}
+                  ${isClickable ? 'cursor-pointer hover:bg-amber-400/10' : ''}
+                  ${isSelectedSlot ? 'ring-2 ring-amber-400 ring-inset' : ''}
                 `}
               >
                 {imgUrl ? (
