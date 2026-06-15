@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select, desc, tuple_, literal, or_
 from backend.database import get_db
 from backend.models import PostImage, User, Post, PostLike, PostComment, EngagementLog, EngagementType, MediaAsset, Folder, FolderPost
+from backend.models.user_sticker import UserStickerImage as _UserStickerImage, UserSticker as _UserSticker
 from backend.schemas import TopPostsResponse, PostWithEngagement, LikeImageRequest, UserSearch
 from ..utils.files import delete_file, process_and_save_image
 from ..utils.posts_creation import create_post_with_images
@@ -331,8 +332,13 @@ def comment(
     )
     db.add(new_comment)
     db.add(new_engagement)
-    db.commit()
-    db.refresh(new_comment)
+    try:
+        db.commit()
+        db.refresh(new_comment)
+    except Exception:
+        db.rollback()
+        logger.error("comment insert failed", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save comment")
 
     return {
         "comment_id": new_comment.id,
@@ -369,9 +375,23 @@ def delete_post(
     # 2. Delete the post (this will cascade to PostImage, PostLike, PostComment, EngagementLog, etc.)
     db.delete(post)
 
-    # 3. Cleanup files and MediaAsset records
-    # Since each post upload currently creates unique MediaAsset records, it's safe to delete them here.
+    # 3. Cleanup files and MediaAsset records.
+    # An asset may now be shared with a promoted user_sticker_image; skip deletion
+    # in that case — the sticker owns it and source_post_id nulls via SET NULL.
     for asset in media_assets:
+        sticker_image_refs = db.execute(
+            select(func.count(_UserStickerImage.id)).where(
+                _UserStickerImage.asset_id == asset.id
+            )
+        ).scalar_one()
+        bg_removed_refs = db.execute(
+            select(func.count(_UserSticker.id)).where(
+                _UserSticker.bg_removed_asset_id == asset.id
+            )
+        ).scalar_one()
+        if sticker_image_refs > 0 or bg_removed_refs > 0:
+            continue
+
         if asset.json_metadata and "paths" in asset.json_metadata:
             paths = asset.json_metadata["paths"]
             for path in paths.values():
@@ -379,7 +399,7 @@ def delete_post(
                     delete_file(path)
                 except Exception as e:
                     logger.error(f"Failed to delete file {path}: {e}")
-        
+
         db.delete(asset)
 
     db.commit()
