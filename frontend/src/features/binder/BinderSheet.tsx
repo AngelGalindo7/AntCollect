@@ -1,21 +1,31 @@
 import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Sparkles } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import BinderViewer from './BinderViewer';
+import { getMyBinder, getPublicBinder } from './api/binderApi';
+import type { BinderOut } from './types';
 
 interface BinderSheetProps {
   isOpen: boolean;
   onClose: () => void;
   username?: string;
+  isOwner?: boolean;
 }
 
-export default function BinderSheet({ isOpen, onClose }: BinderSheetProps) {
+export default function BinderSheet({ isOpen, onClose, username, isOwner }: BinderSheetProps) {
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
+
+  const { data: binder } = useQuery<BinderOut>({
+    queryKey: ['binder', username],
+    queryFn: () => isOwner ? getMyBinder() : getPublicBinder(username!),
+    enabled: isOpen && !!username,
+  });
 
   return (
     <AnimatePresence>
@@ -50,7 +60,7 @@ export default function BinderSheet({ isOpen, onClose }: BinderSheetProps) {
 
             {/* Binder visual */}
             <div className="flex-1 flex items-center justify-center px-8 py-6 overflow-hidden">
-              <BinderViewer />
+              <BinderViewer binder={binder} />
             </div>
 
             {/* Footer hint */}

@@ -1,29 +1,32 @@
 import { useState } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'motion/react';
-import { ChevronLeft, ChevronRight, Crown, Star, Share2, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { BinderOut, BinderPageOut, UserStickerOut } from './types';
 
-const TABS = [
-  { id: 'showcase',   label: 'Showcase',     color: 'bg-amber-500',   icon: Crown },
-  { id: 'collection', label: 'Collection',   color: 'bg-blue-500',    icon: Star },
-  { id: 'trading',    label: 'Trading Away', color: 'bg-emerald-500', icon: Share2 },
-  { id: 'looking',    label: 'Looking For',  color: 'bg-rose-500',    icon: Sparkles },
+const TAB_COLORS = [
+  'bg-amber-500', 'bg-blue-500', 'bg-emerald-500',
+  'bg-rose-500', 'bg-purple-500', 'bg-orange-500',
 ];
 
-const EMPTY_PAGE = Array<null>(9).fill(null);
+interface BinderViewerProps {
+  binder?: BinderOut;
+}
 
-const BINDER_PAGES: Record<string, { left: null[]; right: null[] }> = {
-  showcase:   { left: EMPTY_PAGE, right: EMPTY_PAGE },
-  collection: { left: EMPTY_PAGE, right: EMPTY_PAGE },
-  trading:    { left: EMPTY_PAGE, right: EMPTY_PAGE },
-  looking:    { left: EMPTY_PAGE, right: EMPTY_PAGE },
-};
-
-export default function BinderViewer() {
+export default function BinderViewer({ binder }: BinderViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
   const [flippingToIndex, setFlippingToIndex] = useState<number | null>(null);
 
   const rotateY = useMotionValue(0);
+
+  const pages = binder?.pages ?? [];
+  const spreadCount = Math.max(1, Math.ceil(pages.length / 2));
+  const spreads = Array.from({ length: spreadCount }, (_, k) => ({
+    left: pages[k * 2] ?? null,
+    right: pages[k * 2 + 1] ?? null,
+    label: pages[k * 2]?.title ?? `Page ${k + 1}`,
+    color: TAB_COLORS[k % TAB_COLORS.length],
+  }));
 
   const A_index = isFlipping && flippingToIndex !== null ? Math.min(activeIndex, flippingToIndex) : activeIndex;
   const B_index = isFlipping && flippingToIndex !== null ? Math.max(activeIndex, flippingToIndex) : activeIndex;
@@ -48,7 +51,7 @@ export default function BinderViewer() {
   const handlePanEnd = (_e: PointerEvent, info: { offset: { x: number } }) => {
     if (isFlipping) return;
     const SWIPE_THRESHOLD = 50;
-    if (info.offset.x < -SWIPE_THRESHOLD && activeIndex < TABS.length - 1) handleTabClick(activeIndex + 1);
+    if (info.offset.x < -SWIPE_THRESHOLD && activeIndex < spreadCount - 1) handleTabClick(activeIndex + 1);
     else if (info.offset.x > SWIPE_THRESHOLD && activeIndex > 0) handleTabClick(activeIndex - 1);
   };
 
@@ -62,7 +65,7 @@ export default function BinderViewer() {
 
         {/* STATIC LEFT PAGE */}
         <div className="w-1/2 h-full relative z-10">
-          <Page items={BINDER_PAGES[TABS[A_index].id].left} side="left" interactive={!isFlipping} />
+          <Page page={spreads[A_index].left} side="left" interactive={!isFlipping} />
           {isFlipping && (
             <motion.div className="absolute inset-0 bg-black pointer-events-none rounded-l-md" style={{ opacity: leftStaticShadow }} />
           )}
@@ -80,11 +83,11 @@ export default function BinderViewer() {
 
         {/* STATIC RIGHT PAGE */}
         <div className="w-1/2 h-full relative z-10">
-          <Page items={BINDER_PAGES[TABS[B_index].id].right} side="right" interactive={!isFlipping} />
+          <Page page={spreads[B_index].right} side="right" interactive={!isFlipping} />
           {isFlipping && (
             <motion.div className="absolute inset-0 bg-black pointer-events-none rounded-r-md" style={{ opacity: rightStaticShadow }} />
           )}
-          {activeIndex < TABS.length - 1 && !isFlipping && (
+          {activeIndex < spreadCount - 1 && !isFlipping && (
             <div
               className="absolute bottom-0 right-0 w-24 h-24 cursor-pointer group z-40"
               onClick={(e) => { e.stopPropagation(); handleTabClick(activeIndex + 1); }}
@@ -103,11 +106,11 @@ export default function BinderViewer() {
             className="absolute top-0 right-0 w-1/2 h-full z-50 origin-left pointer-events-none"
           >
             <div className="absolute inset-0 [backface-visibility:hidden]">
-              <Page items={BINDER_PAGES[TABS[A_index].id].right} side="right" interactive={false} />
+              <Page page={spreads[A_index].right} side="right" interactive={false} />
               <motion.div className="absolute inset-0 bg-black pointer-events-none rounded-r-md" style={{ opacity: frontShadowOpacity }} />
             </div>
             <div className="absolute inset-0 [backface-visibility:hidden]" style={{ transform: 'rotateY(180deg)' }}>
-              <Page items={BINDER_PAGES[TABS[B_index].id].left} side="left" interactive={false} />
+              <Page page={spreads[B_index].left} side="left" interactive={false} />
               <motion.div className="absolute inset-0 bg-black pointer-events-none rounded-l-md" style={{ opacity: backShadowOpacity }} />
             </div>
           </motion.div>
@@ -115,23 +118,24 @@ export default function BinderViewer() {
 
         {/* Side Tabs */}
         <div className="absolute -right-14 top-12 flex flex-col gap-2 z-0">
-          {TABS.map((tab, idx) => {
+          {spreads.map((spread, idx) => {
             const isActive = activeIndex === idx;
-            const Icon = tab.icon;
             return (
               <button
-                key={tab.id}
+                key={idx}
                 onClick={(e) => { e.stopPropagation(); handleTabClick(idx); }}
                 className={`
                   relative h-16 rounded-r-xl transition-all duration-300 flex items-center justify-center
                   border-y border-r border-black/20 shadow-[4px_0_10px_rgba(0,0,0,0.1)] group
                   ${isActive ? 'w-16 z-10 opacity-100 translate-x-2' : 'w-12 hover:w-14 z-0 opacity-80 hover:opacity-100'}
-                  ${tab.color}
+                  ${spread.color}
                 `}
-                title={tab.label}
+                title={spread.label}
               >
                 <span className="absolute left-0 top-0 bottom-0 w-4 bg-black/10 mix-blend-overlay" />
-                <Icon className={`w-5 h-5 text-white drop-shadow-sm ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`} />
+                <span className={`text-white text-xs font-bold drop-shadow-sm ${isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'}`}>
+                  {idx + 1}
+                </span>
               </button>
             );
           })}
@@ -185,7 +189,7 @@ export default function BinderViewer() {
   );
 }
 
-function Page({ items, side, interactive }: { items: null[]; side: 'left' | 'right'; interactive: boolean }) {
+function Page({ page, side, interactive }: { page: BinderPageOut | null; side: 'left' | 'right'; interactive: boolean }) {
   return (
     <div className={`
       w-full h-full bg-[#fdfbf7] flex flex-col relative
@@ -203,20 +207,44 @@ function Page({ items, side, interactive }: { items: null[]; side: 'left' | 'rig
       `} />
       <div className={`absolute ${side === 'left' ? 'right-0 bg-gradient-to-l' : 'left-0 bg-gradient-to-r'} top-0 bottom-0 w-16 from-black/10 to-transparent pointer-events-none z-20`} />
       <div className="relative z-30 p-6 md:p-10 h-full flex flex-col overflow-hidden">
-        <PageContent items={items} interactive={interactive} />
+        <PageContent page={page} interactive={interactive} />
       </div>
     </div>
   );
 }
 
-function PageContent({ items: _items, interactive: _interactive }: { items: null[]; interactive: boolean }) {
+function PageContent({ page, interactive: _interactive }: { page: BinderPageOut | null; interactive: boolean }) {
+  const rows = page?.rows ?? 3;
+  const cols = page?.cols ?? 3;
+  const total = rows * cols;
+
+  const slotMap = new Map<number, UserStickerOut>(
+    (page?.stickers ?? [])
+      .filter((s): s is UserStickerOut & { slot_index: number } => s.slot_index !== null)
+      .map(s => [s.slot_index, s])
+  );
+
   return (
     <div className="w-full h-full relative flex items-center justify-center">
       <div className="w-full h-full bg-white/20 rounded-xl border-[1.5px] border-white/40 shadow-[0_4px_15px_rgba(0,0,0,0.03),inset_0_0_20px_rgba(255,255,255,0.5)] p-2 md:p-3 relative">
-        <div className="grid grid-cols-3 grid-rows-3 gap-0 h-full relative z-10 border border-white/30 rounded-[6px] overflow-hidden bg-black/[0.02]">
-          {Array.from({ length: 9 }).map((_, i) => {
-            const isRightCol = i % 3 === 2;
-            const isBottomRow = i >= 6;
+        <div
+          className="h-full relative z-10 border border-white/30 rounded-[6px] overflow-hidden bg-black/[0.02]"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${cols}, 1fr)`,
+            gridTemplateRows: `repeat(${rows}, 1fr)`,
+          }}
+        >
+          {Array.from({ length: total }).map((_, i) => {
+            const isRightCol = (i % cols) === cols - 1;
+            const isBottomRow = i >= (rows - 1) * cols;
+            const sticker = slotMap.get(i);
+            const imgUrl = sticker
+              ? (sticker.bg_removed && sticker.bg_removed_file_url
+                  ? sticker.bg_removed_file_url
+                  : sticker.images[0]?.file_url ?? null)
+              : null;
+
             return (
               <div
                 key={i}
@@ -226,8 +254,19 @@ function PageContent({ items: _items, interactive: _interactive }: { items: null
                   ${!isBottomRow ? 'border-b border-white/40' : ''}
                 `}
               >
-                <div className="absolute inset-0 border-[1px] border-black/5 pointer-events-none mix-blend-overlay" />
-                <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-black/5 opacity-40 pointer-events-none z-20" />
+                {imgUrl ? (
+                  <img
+                    src={imgUrl}
+                    alt=""
+                    className="w-full h-full object-contain"
+                    draggable={false}
+                  />
+                ) : (
+                  <>
+                    <div className="absolute inset-0 border-[1px] border-black/5 pointer-events-none mix-blend-overlay" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-black/5 opacity-40 pointer-events-none z-20" />
+                  </>
+                )}
               </div>
             );
           })}
