@@ -258,6 +258,15 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
     if (newId) setSelectedId(newId);
   };
 
+  const handleReplaceNode = (id: string, newUrl: string) => {
+    updateNode(id, {
+      image_url: newUrl,
+      originalUrl: newUrl,
+      bgRemoved: false,
+      removedBgUrl: undefined,
+    });
+  };
+
   const stickerCountLabel = `${nodes.length} ${nodes.length === 1 ? 'sticker' : 'stickers'}`;
   const savedLabel = isSaving
     ? 'saving…'
@@ -292,7 +301,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
-        background: 'var(--pw-bg)',
+        background: '#ffffff',
       }}
     >
       {/* Top bar */}
@@ -303,8 +312,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          background: 'var(--pw-paper)',
-          borderBottom: '1px solid var(--pw-line)',
+          background: '#18181b',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
           flexShrink: 0,
         }}
       >
@@ -316,7 +325,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             alignItems: 'center',
             gap: 6,
             height: 32,
-            color: 'var(--pw-ink2)',
+            color: 'rgba(255,255,255,0.7)',
             fontSize: 13,
             fontWeight: 500,
           }}
@@ -325,7 +334,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
           Back
         </button>
 
-        <span style={{ width: 1, height: 18, background: 'var(--pw-line)', margin: '0 4px' }} />
+        <span style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.12)', margin: '0 4px' }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, marginLeft: 4, minWidth: 0 }}>
           <input
@@ -338,7 +347,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             className="pw-display"
             style={{
               fontSize: 17,
-              color: 'var(--pw-ink)',
+              color: '#ffffff',
               background: 'transparent',
               border: 'none',
               outline: 'none',
@@ -347,12 +356,25 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
               width: 240,
               minWidth: 0,
             }}
-            onFocus={(e) => { e.currentTarget.style.background = 'var(--pw-surface2)'; }}
+            onFocus={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; }}
             onBlur={(e) => { e.currentTarget.style.background = 'transparent'; }}
             onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
           />
-          <span style={{ fontSize: 11, color: 'var(--pw-ink3)', paddingLeft: 4 }}>
-            {stickerCountLabel} · {savedLabel}
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              marginTop: 2,
+              marginLeft: 4,
+              padding: '1px 8px',
+              background: 'rgba(255,255,255,0.09)',
+              color: 'rgba(255,255,255,0.55)',
+              fontSize: 11,
+              fontWeight: 500,
+              borderRadius: 99,
+            }}
+          >
+            {stickerCountLabel} added
           </span>
         </div>
 
@@ -373,11 +395,11 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            color: 'var(--pw-ink2)',
+            color: 'rgba(255,255,255,0.65)',
             fontSize: 12,
             fontWeight: 500,
             borderRadius: 6,
-            background: isSizePreviewOpen ? 'var(--pw-surface2)' : 'transparent',
+            background: isSizePreviewOpen ? 'rgba(255,255,255,0.1)' : 'transparent',
           }}
         >
           <Crop size={14} strokeWidth={1.6} />
@@ -394,11 +416,12 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            color: isHoloPreview ? 'var(--pw-paper)' : 'var(--pw-ink2)',
+            color: isHoloPreview ? '#18181b' : 'rgba(255,255,255,0.65)',
             fontSize: 12,
             fontWeight: 500,
             borderRadius: 6,
-            background: isHoloPreview ? 'var(--pw-ink)' : 'transparent',
+            background: isHoloPreview ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.08)',
+            border: '1px solid rgba(255,255,255,0.15)',
           }}
         >
           <Eye size={14} strokeWidth={1.6} />
@@ -416,8 +439,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--pw-ink2)',
-            opacity: canUndo ? 1 : 0.4,
+            color: 'rgba(255,255,255,0.65)',
+            opacity: canUndo ? 1 : 0.3,
             cursor: canUndo ? 'pointer' : 'default',
           }}
         >
@@ -434,8 +457,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'var(--pw-ink2)',
-            opacity: canRedo ? 1 : 0.4,
+            color: 'rgba(255,255,255,0.65)',
+            opacity: canRedo ? 1 : 0.3,
             cursor: canRedo ? 'pointer' : 'default',
           }}
         >
@@ -449,7 +472,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             height: 34,
             padding: '0 14px',
             background: 'transparent',
-            color: 'var(--pw-ink2)',
+            color: '#f87171',
             fontSize: 13,
             fontWeight: 500,
             borderRadius: 8,
@@ -464,10 +487,10 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
           style={{
             height: 34,
             padding: '0 18px',
-            background: 'var(--pw-ink)',
-            color: 'var(--pw-paper)',
+            background: '#f5c518',
+            color: '#18181b',
             fontSize: 13,
-            fontWeight: 600,
+            fontWeight: 700,
             borderRadius: 8,
             opacity: isSaving ? 0.6 : 1,
             transition: 'opacity 120ms ease',
@@ -487,14 +510,29 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
 
         <div
           ref={canvasAreaRef}
-          className="pw-canvas-dots"
           style={{
             flex: 1,
             position: 'relative',
             overflow: 'hidden',
-            background: 'var(--pw-bg)',
+            background: '#ffffff',
           }}
         >
+          <span
+            style={{
+              position: 'absolute',
+              top: 12,
+              left: 16,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: 'rgba(0,0,0,0.2)',
+              pointerEvents: 'none',
+              zIndex: 1,
+            }}
+          >
+            Canvas
+          </span>
           <div
             style={{
               position: 'absolute',
@@ -560,7 +598,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
                   top: 12,
                   right: 16,
                   fontSize: 12,
-                  color: 'rgba(0,0,0,.18)',
+                  color: 'rgba(0,0,0,0.15)',
                   pointerEvents: 'none',
                 }}
               >
@@ -713,6 +751,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
           onUploadAsset={uploadWorkspaceAsset}
           frameWidth={width}
           frameHeight={height}
+          onSelectNode={setSelectedId}
+          onReplaceNode={handleReplaceNode}
         />
       </div>
     </div>
