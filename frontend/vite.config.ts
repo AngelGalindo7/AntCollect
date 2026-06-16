@@ -12,6 +12,17 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      // Forward all backend API paths to the local backend container.
+      // Matches /auth, /users, /posts, /folders, /library, /reports,
+      //          /canvas, /workspace, /oauth, /stickers, /binders, /health, /internal
+      '^/(auth|users|posts|folders|library|reports|canvas|workspace|oauth|stickers|binders|health|internal)(/|$)': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,
