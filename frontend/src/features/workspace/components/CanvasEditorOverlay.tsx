@@ -51,9 +51,9 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
-  const [removeBgError, setRemoveBgError] = useState<string | null>(null);
+  const [, setRemoveBgError] = useState<string | null>(null);
   const [cropTargetId, setCropTargetId] = useState<string | null>(null);
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [, setLastSavedAt] = useState<number | null>(null);
   const [liveBounds, setLiveBounds] = useState<LiveBounds | null>(null);
   const [title, setTitle] = useState(panel.title ?? '');
   const [isSizePreviewOpen, setIsSizePreviewOpen] = useState(false);
@@ -62,18 +62,6 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
   const canvasAreaRef = useRef<HTMLDivElement>(null);
 
   const [bgEditUrl, setBgEditUrl] = useState<string | null>(null);
-
-  const handleStartBackgroundEdit = (newImageUrl?: string) => {
-    if (newImageUrl) {
-      setBgEditUrl(newImageUrl);
-      setSelectedId(null);
-      return;
-    }
-    if (background.type === 'image' && background.imageUrl) {
-      setBgEditUrl(background.imageUrl);
-      setSelectedId(null);
-    }
-  };
 
   const isExistingImageBg = background.type === 'image' && background.imageUrl === bgEditUrl;
   const bgEditInitial = isExistingImageBg
@@ -268,14 +256,6 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
   };
 
   const stickerCountLabel = `${nodes.length} ${nodes.length === 1 ? 'sticker' : 'stickers'}`;
-  const savedLabel = isSaving
-    ? 'saving…'
-    : isDirty || titleDirty
-      ? 'unsaved changes'
-      : lastSavedAt
-        ? 'saved a moment ago'
-        : 'draft';
-
   // Bounding box of selected node, in artboard pixels (not yet scaled).
   // Use live bounds during drag/transform, otherwise fall back to committed state.
   const overlayBox = (() => {
