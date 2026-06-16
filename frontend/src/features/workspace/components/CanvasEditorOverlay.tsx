@@ -312,8 +312,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          background: '#18181b',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          background: '#0064A4',
+          borderBottom: '1px solid rgba(255,255,255,0.12)',
           flexShrink: 0,
         }}
       >
@@ -416,7 +416,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            color: isHoloPreview ? '#18181b' : 'rgba(255,255,255,0.65)',
+            color: isHoloPreview ? '#0064A4' : 'rgba(255,255,255,0.65)',
             fontSize: 12,
             fontWeight: 500,
             borderRadius: 6,
@@ -472,7 +472,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             height: 34,
             padding: '0 14px',
             background: 'transparent',
-            color: '#f87171',
+            color: 'rgba(255,255,255,0.7)',
             fontSize: 13,
             fontWeight: 500,
             borderRadius: 8,
@@ -487,8 +487,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
           style={{
             height: 34,
             padding: '0 18px',
-            background: '#f5c518',
-            color: '#18181b',
+            background: '#FFD200',
+            color: '#332D2A',
             fontSize: 13,
             fontWeight: 700,
             borderRadius: 8,
@@ -734,25 +734,18 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
         </div>
 
         <StickerControls
-          background={background}
-          onChangeBackground={changeBackground}
-          onStartBackgroundEdit={handleStartBackgroundEdit}
-          isEditingBackground={bgEditUrl !== null}
           selectedId={selectedId}
           nodes={nodes}
-          isRemovingBg={isRemovingBg}
-          removeBgError={removeBgError}
-          onToggleRemoveBg={handleToggleRemoveBg}
-          onToggleHolo={(id) => {
-            const n = nodes.find((nn) => nn.id === id);
-            updateNode(id, { holo: !n?.holo });
-          }}
-          onChangeHoloVariant={(id, variant) => updateNode(id, { holoVariant: variant })}
-          onUploadAsset={uploadWorkspaceAsset}
-          frameWidth={width}
-          frameHeight={height}
           onSelectNode={setSelectedId}
           onReplaceNode={handleReplaceNode}
+          onMoveUp={() => { if (selectedId) moveNodeUp(selectedId); }}
+          onMoveDown={() => { if (selectedId) moveNodeDown(selectedId); }}
+          onFlipHorizontal={() => {
+            if (!selectedId) return;
+            const n = nodes.find((nn) => nn.id === selectedId);
+            if (n) updateNode(selectedId, { flipX: !n.flipX });
+          }}
+          onDelete={() => { if (selectedId) { removeNode(selectedId); setSelectedId(null); } }}
         />
       </div>
     </div>
