@@ -7,17 +7,18 @@ export interface Session {
   role: Role;
 }
 
-const KEYS = ['userId', 'username', 'email', 'role'] as const;
+let _memRole: Role | null = null;
+
+const KEYS = ['userId', 'username', 'email'] as const;
 
 export function getSession(): Session | null {
   const userId = localStorage.getItem('userId');
   if (!userId) return null;
-  const role = (localStorage.getItem('role') as Role | null) ?? 'user';
   return {
     userId,
     username: localStorage.getItem('username') ?? '',
     email: localStorage.getItem('email') ?? '',
-    role,
+    role: (_memRole ?? 'user') as Role,
   };
 }
 
@@ -25,9 +26,10 @@ export function setSession(s: Session): void {
   localStorage.setItem('userId', s.userId);
   localStorage.setItem('username', s.username);
   localStorage.setItem('email', s.email);
-  localStorage.setItem('role', s.role);
+  _memRole = s.role;
 }
 
 export function clearSession(): void {
   for (const k of KEYS) localStorage.removeItem(k);
+  _memRole = null;
 }
