@@ -39,9 +39,11 @@ def get_library(
                 )
             except Exception as e:
                 logger.warning("semantic search failed, falling back to ILIKE: %s", e)
-                query = query.where(StickerLibrary.title.ilike(f"%{search}%"))
+                safe_search = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+                query = query.where(StickerLibrary.title.ilike(f"%{safe_search}%", escape="\\"))
         else:
-            query = query.where(StickerLibrary.title.ilike(f"%{search}%"))
+            safe_search = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            query = query.where(StickerLibrary.title.ilike(f"%{safe_search}%", escape="\\"))
 
     results = db.execute(query).scalars().all()
     
