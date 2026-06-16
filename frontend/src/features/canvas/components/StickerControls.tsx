@@ -1,7 +1,9 @@
-import { useState, type CSSProperties } from 'react';
+import { useState, useRef, type ChangeEvent, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchWithAuth, API_BASE } from '../../../shared/api/api';
-import type { CanvasNode } from '../types/canvas';
+import { uploadCanvasAsset } from '../api/canvasApi';
+import type { CanvasNode, BackgroundConfig, HoloVariant } from '../types/canvas';
+import { HOLO_VARIANTS } from '../types/canvas';
 
 interface LibrarySticker {
   id: number;
@@ -15,12 +17,17 @@ type RightTab = 'reposition' | 'replace';
 interface RightPanelProps {
   selectedId: string | null;
   nodes: CanvasNode[];
+  background: BackgroundConfig;
   onSelectNode: (id: string) => void;
   onReplaceNode: (id: string, newUrl: string) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
   onFlipHorizontal: () => void;
   onDelete: () => void;
+  onChangeBackground: (bg: BackgroundConfig) => void;
+  onStartBgImageEdit: (url: string) => void;
+  onUploadBgImage?: (file: File) => Promise<string>;
+  onChangeHoloVariant: (id: string, variant: HoloVariant) => void;
 }
 
 const CARD_COLORS = [
@@ -32,6 +39,17 @@ const CARD_COLORS = [
   '#f3e0fa',
   '#fdebd0',
   '#d5f5e3',
+];
+
+const BG_COLOR_PRESETS = [
+  '#f5f0e8',
+  '#ffffff',
+  '#f0f4f8',
+  '#1c1a16',
+  '#0064A4',
+  '#FFD200',
+  '#e8e0fa',
+  '#fce4ef',
 ];
 
 function cardColor(id: number) {
@@ -66,14 +84,21 @@ const actionBtn = (danger = false): CSSProperties => ({
 export function StickerControls({
   selectedId,
   nodes,
+  background,
   onSelectNode,
   onReplaceNode,
   onMoveUp,
   onMoveDown,
   onFlipHorizontal,
   onDelete,
+  onChangeBackground,
+  onStartBgImageEdit,
+  onUploadBgImage,
+  onChangeHoloVariant,
 }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<RightTab>('reposition');
+  const [bgUploading, setBgUploading] = useState(false);
+  const bgFileInputRef = useRef<HTMLInputElement>(null);
   const selectedNode = nodes.find((n) => n.id === selectedId) ?? null;
 
   const { data: libraryStickers = [] } = useQuery<LibrarySticker[]>({
@@ -98,6 +123,22 @@ export function StickerControls({
   const isTop = nodeIdx === nodes.length - 1;
   const isBottom = nodeIdx === 0;
 
+  const handleBgFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBgUploading(true);
+    try {
+      const upload = onUploadBgImage ?? uploadCanvasAsset;
+      const url = await upload(file);
+      onStartBgImageEdit(url);
+    } catch {
+      // silent
+    } finally {
+      setBgUploading(false);
+      if (bgFileInputRef.current) bgFileInputRef.current.value = '';
+    }
+  };
+
   const tabBtn = (tab: RightTab): CSSProperties => ({
     flex: 1,
     height: 44,
@@ -118,7 +159,6 @@ export function StickerControls({
     transition: 'border-color 120ms ease, transform 120ms ease',
   };
 
-  // Shared sections rendered in both tabs
   const onCanvasSection = (
     <div style={{ padding: '14px 16px 10px' }}>
       <p style={{ ...eyebrow, marginBottom: 10 }}>On Canvas</p>
@@ -190,6 +230,137 @@ export function StickerControls({
     </div>
   );
 
+  const holoVariantSection = selectedNode?.holo ? (
+    <div style={{ padding: '10px 16px 12px', borderTop: '1px solid var(--pw-line)' }}>
+      <p style={{ ...eyebrow, marginBottom: 10 }}>Foil Style</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+        {HOLO_VARIANTS.map(({ value, label, hint }) => {
+          const isActive = (selectedNode.holoVariant ?? 'regular') === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              title={hint}
+              onClick={() => onChangeHoloVariant(selectedNode.id, value)}
+              style={{
+                height: 32,
+                fontSize: 11,
+                fontWeight: isActive ? 600 : 400,
+                borderRadius: 7,
+                border: `1.5px solid ${isActive ? 'var(--pw-accent)' : 'var(--pw-line)'}`,
+                background: isActive ? 'var(--pw-accent-tint)' : 'var(--pw-surface2)',
+                color: isActive ? 'var(--pw-accent)' : 'var(--pw-ink)',
+                cursor: 'pointer',
+                transition: 'all 120ms ease',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
+
+  const bgSection = (
+    <div style={{ padding: '10px 16px 16px', borderTop: '1px solid var(--pw-line)' }}>
+      <p style={{ ...eyebrow, marginBottom: 10 }}>Canvas Background</p>
+
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        {BG_COLOR_PRESETS.map((color) => {
+          const isActive = background.type === 'color' && background.value === color;
+          return (
+            <button
+              key={color}
+              type="button"
+              title={color}
+              onClick={() => onChangeBackground({ type: 'color', value: color })}
+              style={{
+                width: 26,
+                height: 26,
+                borderRadius: '50%',
+                background: color,
+                border: isActive ? '2.5px solid var(--pw-accent)' : '1.5px solid var(--pw-line)',
+                cursor: 'pointer',
+                boxShadow: isActive ? '0 0 0 2px var(--pw-accent-tint)' : 'none',
+                transition: 'box-shadow 120ms ease, border-color 120ms ease',
+                flexShrink: 0,
+              }}
+            />
+          );
+        })}
+        <label
+          title="Custom color"
+          style={{
+            width: 26,
+            height: 26,
+            borderRadius: '50%',
+            border: '1.5px solid var(--pw-line)',
+            cursor: 'pointer',
+            overflow: 'hidden',
+            position: 'relative',
+            flexShrink: 0,
+            background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)',
+          }}
+        >
+          <input
+            type="color"
+            defaultValue={background.type === 'color' ? background.value : '#f5f0e8'}
+            onChange={(e) => onChangeBackground({ type: 'color', value: e.target.value })}
+            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+          />
+        </label>
+      </div>
+
+      {background.type === 'image' && background.imageUrl && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+          <div style={{
+            height: 48, borderRadius: 8, overflow: 'hidden',
+            border: '1.5px solid var(--pw-line)', background: '#f0f0ee',
+          }}>
+            <img
+              src={background.imageUrl}
+              alt="Background"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              type="button"
+              onClick={() => onStartBgImageEdit(background.imageUrl!)}
+              style={{ ...actionBtn(), flex: 1, height: 32, fontSize: 12 }}
+            >
+              Reposition
+            </button>
+            <button
+              type="button"
+              onClick={() => onChangeBackground({ type: 'color', value: '#f5f0e8' })}
+              style={{ ...actionBtn(true), flex: 1, height: 32, border: 'none', fontSize: 12 }}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => bgFileInputRef.current?.click()}
+        disabled={bgUploading}
+        style={{ ...actionBtn(), height: 36, fontSize: 12, opacity: bgUploading ? 0.5 : 1 }}
+      >
+        {bgUploading ? 'Uploading…' : 'Set background image…'}
+      </button>
+      <input
+        ref={bgFileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleBgFileChange}
+      />
+    </div>
+  );
+
   return (
     <div
       className="paper-workshop pw-neutral"
@@ -203,7 +374,6 @@ export function StickerControls({
         overflow: 'hidden',
       }}
     >
-      {/* Tab bar */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--pw-line)', flexShrink: 0 }}>
         <button type="button" onClick={() => setActiveTab('reposition')} style={tabBtn('reposition')}>
           Reposition
@@ -213,50 +383,43 @@ export function StickerControls({
         </button>
       </div>
 
-      {/* Reposition tab */}
       {activeTab === 'reposition' && (
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {onCanvasSection}
           {selectedSection}
 
-          {selectedNode && (
-            <div style={{ padding: '10px 16px 20px', borderTop: '1px solid var(--pw-line)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button
-                type="button"
-                onClick={onMoveUp}
-                disabled={isTop}
-                style={{ ...actionBtn(), opacity: isTop ? 0.4 : 1 }}
-              >
-                Move Up
-              </button>
-              <button
-                type="button"
-                onClick={onMoveDown}
-                disabled={isBottom}
-                style={{ ...actionBtn(), opacity: isBottom ? 0.4 : 1 }}
-              >
-                Move Down
-              </button>
-              <button type="button" onClick={onFlipHorizontal} style={actionBtn()}>
-                Flip Horizontal
-              </button>
-              <button type="button" onClick={onDelete} style={actionBtn(true)}>
-                Remove sticker
-              </button>
-            </div>
-          )}
-
-          {!selectedNode && (
-            <div style={{ padding: '10px 16px', borderTop: '1px solid var(--pw-line)' }}>
-              <p style={{ fontSize: 12, color: 'var(--pw-ink3)' }}>
-                Click a sticker on the canvas to see actions.
-              </p>
-            </div>
-          )}
+          {selectedNode ? (
+            <>
+              {holoVariantSection}
+              <div style={{ padding: '10px 16px 20px', borderTop: '1px solid var(--pw-line)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={onMoveUp}
+                  disabled={isTop}
+                  style={{ ...actionBtn(), opacity: isTop ? 0.4 : 1 }}
+                >
+                  Move Up
+                </button>
+                <button
+                  type="button"
+                  onClick={onMoveDown}
+                  disabled={isBottom}
+                  style={{ ...actionBtn(), opacity: isBottom ? 0.4 : 1 }}
+                >
+                  Move Down
+                </button>
+                <button type="button" onClick={onFlipHorizontal} style={actionBtn()}>
+                  Flip Horizontal
+                </button>
+                <button type="button" onClick={onDelete} style={actionBtn(true)}>
+                  Remove sticker
+                </button>
+              </div>
+            </>
+          ) : bgSection}
         </div>
       )}
 
-      {/* Replace tab */}
       {activeTab === 'replace' && (
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {onCanvasSection}
