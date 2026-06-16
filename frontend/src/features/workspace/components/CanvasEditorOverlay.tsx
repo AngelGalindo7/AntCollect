@@ -716,6 +716,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
         <StickerControls
           selectedId={selectedId}
           nodes={nodes}
+          background={background}
           onSelectNode={setSelectedId}
           onReplaceNode={handleReplaceNode}
           onMoveUp={() => { if (selectedId) moveNodeUp(selectedId); }}
@@ -726,6 +727,10 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
             if (n) updateNode(selectedId, { flipX: !n.flipX });
           }}
           onDelete={() => { if (selectedId) { removeNode(selectedId); setSelectedId(null); } }}
+          onChangeBackground={changeBackground}
+          onStartBgImageEdit={(url) => setBgEditUrl(url)}
+          onUploadBgImage={uploadWorkspaceAsset}
+          onChangeHoloVariant={(id, variant) => updateNode(id, { holoVariant: variant })}
         />
       </div>
     </div>
