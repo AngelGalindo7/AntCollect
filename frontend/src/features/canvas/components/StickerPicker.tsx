@@ -6,6 +6,21 @@ import { uploadCanvasAsset } from '../api/canvasApi';
 import type { Post } from '../../../shared/types/Types';
 import type { NodeSource } from '../types/canvas';
 
+const CARD_COLORS = [
+  '#e8e0fa',
+  '#fef5cc',
+  '#cff5ec',
+  '#fce4ef',
+  '#dceeff',
+  '#f3e0fa',
+  '#fdebd0',
+  '#d5f5e3',
+];
+
+function cardColor(id: number) {
+  return CARD_COLORS[id % CARD_COLORS.length];
+}
+
 interface LibrarySticker {
   id: number;
   title: string;
@@ -13,7 +28,7 @@ interface LibrarySticker {
   is_favorite?: boolean;
 }
 
-type Tab = 'library' | 'posts' | 'upload';
+type Tab = 'library' | 'photo' | 'upload';
 
 export function StickerPicker({
   posts,
@@ -77,8 +92,8 @@ export function StickerPicker({
     borderRadius: 7,
     fontSize: 12,
     fontWeight: active ? 600 : 500,
-    color: active ? 'var(--pw-ink)' : 'var(--pw-ink3)',
-    background: active ? 'var(--pw-paper)' : 'transparent',
+    color: active ? '#fff' : 'var(--pw-ink3)',
+    background: active ? 'var(--pw-accent)' : 'transparent',
     boxShadow: active ? '0 1px 0 rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.08)' : 'none',
     transition: 'background 120ms ease, color 120ms ease',
   });
@@ -105,7 +120,7 @@ export function StickerPicker({
 
   return (
     <div
-      className="paper-workshop"
+      className="paper-workshop pw-neutral"
       style={{
         width: 280,
         flexShrink: 0,
@@ -126,8 +141,8 @@ export function StickerPicker({
           <button type="button" onClick={() => setTab('library')} style={segmentBtn(tab === 'library')}>
             Library
           </button>
-          <button type="button" onClick={() => setTab('posts')} style={segmentBtn(tab === 'posts')}>
-            Posts
+          <button type="button" onClick={() => setTab('photo')} style={segmentBtn(tab === 'photo')}>
+            Photo
           </button>
           <button type="button" onClick={() => setTab('upload')} style={segmentBtn(tab === 'upload')}>
             Upload
@@ -138,7 +153,7 @@ export function StickerPicker({
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 12px' }}>
         {tab === 'library' && (
           isLoading ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
               {Array.from({ length: 12 }).map((_, i) => (
                 <div
                   key={i}
@@ -160,15 +175,15 @@ export function StickerPicker({
             <>
               {favorites.length > 0 && (
                 <>
-                  <p style={eyebrow}>Favorites · {favorites.length} pinned</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 14 }}>
+                  <p style={eyebrow}>Favorites</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
                     {favorites.map((s) => (
                       <button
                         key={`fav-${s.id}`}
                         type="button"
                         onClick={() => onNodeAdd(s.thumbnail!, 'library')}
                         title={s.title}
-                        style={stickerCard}
+                        style={{ ...stickerCard, background: cardColor(s.id) }}
                       >
                         <img src={s.thumbnail!} alt={s.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                         <span
@@ -193,15 +208,18 @@ export function StickerPicker({
                 </>
               )}
 
-              <p style={eyebrow}>All stickers · {allStickers.length}</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              <p style={{ ...eyebrow, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>All Stickers</span>
+                <span style={{ fontWeight: 400, fontSize: 11, letterSpacing: 0 }}>▾</span>
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                 {allStickers.map((s) => (
                   <button
                     key={s.id}
                     type="button"
                     onClick={() => onNodeAdd(s.thumbnail!, 'library')}
                     title={s.title}
-                    style={stickerCard}
+                    style={{ ...stickerCard, background: cardColor(s.id) }}
                   >
                     <img src={s.thumbnail!} alt={s.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   </button>
@@ -211,15 +229,15 @@ export function StickerPicker({
           )
         )}
 
-        {tab === 'posts' && (
+        {tab === 'photo' && (
           postImages.length === 0 ? (
             <p style={{ color: 'var(--pw-ink3)', fontSize: 12, textAlign: 'center', padding: '32px 0' }}>
               No post images yet
             </p>
           ) : (
             <>
-              <p style={eyebrow}>Your posts · {postImages.length}</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              <p style={eyebrow}>Your Photos</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
                 {postImages.map((img, i) => (
                   <button
                     key={i}
