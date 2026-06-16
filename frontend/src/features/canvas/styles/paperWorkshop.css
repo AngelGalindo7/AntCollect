@@ -10,9 +10,9 @@
   --pw-ink3: #8a8378;
   --pw-line: #d9d2c2;
   --pw-line2: #c5bda9;
-  --pw-accent: #1d4ed8;
-  --pw-accent-tint: color-mix(in oklch, #1d4ed8 12%, transparent);
-  --pw-gold: #f1b32a;
+  --pw-accent: #0064A4;
+  --pw-accent-tint: color-mix(in oklch, #0064A4 12%, transparent);
+  --pw-gold: #FFD200;
   --pw-danger: #b4310f;
 
   --pw-font-display: 'Instrument Serif', Georgia, serif;
@@ -98,4 +98,16 @@
 
 .paper-workshop .pw-handle-shadow {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Neutral-white palette — apply alongside paper-workshop on side panels
+   when the surrounding UI is dark (e.g. dark-navy canvas editor). */
+.paper-workshop.pw-neutral {
+  --pw-bg: #f8fafc;
+  --pw-paper: #ffffff;
+  --pw-surface: #f8fafc;
+  --pw-surface2: #f1f5f9;
+  --pw-line: #e2e8f0;
+  --pw-line2: #cbd5e1;
+  --pw-ink3: #64748b;
 }
