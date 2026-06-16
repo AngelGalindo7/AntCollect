@@ -193,14 +193,14 @@ export function StickerPicker({
                             right: 4,
                             width: 18,
                             height: 18,
-                            background: 'var(--pw-gold)',
+                            background: 'var(--pw-accent)',
                             borderRadius: 4,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                           }}
                         >
-                          <Star size={10} fill="var(--pw-ink)" stroke="var(--pw-ink)" strokeWidth={1.6} />
+                          <Star size={10} fill="#fff" stroke="#fff" strokeWidth={1.6} />
                         </span>
                       </button>
                     ))}
@@ -263,8 +263,8 @@ export function StickerPicker({
               style={{
                 width: '100%',
                 padding: '10px 14px',
-                background: 'var(--pw-ink)',
-                color: 'var(--pw-paper)',
+                background: '#FFD200',
+                color: '#332D2A',
                 fontSize: 13,
                 fontWeight: 600,
                 borderRadius: 8,
