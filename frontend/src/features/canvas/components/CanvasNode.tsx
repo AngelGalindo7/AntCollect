@@ -67,17 +67,25 @@ export function CanvasNode({ node, isSelected, keepRatio, boundsW, boundsH, onSe
     const n = imageRef.current;
     if (!n) return;
     onLiveBoundsChange?.(null);
+    const rawScaleX = n.scaleX();
+    const rawScaleY = n.scaleY();
+    // When flipped, Konva's scaleX is negative; bake in the absolute size.
+    const newWidth = Math.max(30, Math.abs(n.width() * rawScaleX));
+    const newHeight = Math.max(30, n.height() * rawScaleY);
     onUpdate({
       x: n.x(),
       y: n.y(),
-      width: Math.max(30, n.width() * n.scaleX()),
-      height: Math.max(30, n.height() * n.scaleY()),
+      width: newWidth,
+      height: newHeight,
       rotation: n.rotation(),
       scaleX: 1,
       scaleY: 1,
     });
-    n.scaleX(1);
+    n.width(newWidth);
+    n.height(newHeight);
+    n.scaleX(node.flipX ? -1 : 1);
     n.scaleY(1);
+    n.offsetX(node.flipX ? newWidth : 0);
   };
 
   return (
@@ -102,8 +110,9 @@ export function CanvasNode({ node, isSelected, keepRatio, boundsW, boundsH, onSe
           width={node.width}
           height={node.height}
           rotation={node.rotation}
-          scaleX={node.scaleX}
+          scaleX={node.scaleX * (node.flipX ? -1 : 1)}
           scaleY={node.scaleY}
+          offsetX={node.flipX ? node.width : 0}
           draggable
           onClick={onSelect}
           onTap={onSelect}

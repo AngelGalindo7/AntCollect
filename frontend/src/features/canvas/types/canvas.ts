@@ -15,6 +15,7 @@ export interface CanvasNode {
   rotation: number;
   scaleX: number;
   scaleY: number;
+  flipX?: boolean;
   bgRemoved?: boolean;
   originalUrl?: string;
   removedBgUrl?: string;
