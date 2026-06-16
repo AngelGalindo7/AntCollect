@@ -1,9 +1,12 @@
+import logging
 import os
 from urllib.parse import urlparse
 
 import boto3
 from botocore.exceptions import ClientError
 from fastapi import HTTPException
+
+logger = logging.getLogger(__name__)
 
 _s3_client = None
 
@@ -36,8 +39,9 @@ def upload_image_bytes(key: str, image_bytes: bytes, content_type: str) -> str:
             Body=image_bytes,
             ContentType=content_type,
         )
-    except ClientError as e:
-        raise HTTPException(status_code=500, detail=f"S3 upload failed: {e}")
+    except ClientError:
+        logger.error("S3 upload failed", exc_info=True)
+        raise HTTPException(status_code=500, detail="S3 upload failed")
 
     # Use a separate public-facing URL for local dev if configured,
     # otherwise fall back to the internal endpoint.
@@ -62,7 +66,8 @@ def delete_s3_object(key: str) -> None:
         error_code = e.response["Error"]["Code"]
         if error_code == "NoSuchKey":
             return
-        raise HTTPException(status_code=500, detail=f"S3 delete failed: {e}")
+        logger.error("S3 delete failed", exc_info=True)
+        raise HTTPException(status_code=500, detail="S3 delete failed")
 
 
 def s3_key_from_url(url: str) -> str | None:
