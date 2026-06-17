@@ -273,6 +273,7 @@ function PageContent({ page, interactive, isEditMode, selectedStickerId, onSlotC
                   ${!isBottomRow ? 'border-b border-white/40' : ''}
                   ${isClickable ? 'cursor-pointer hover:bg-amber-400/10' : ''}
                   ${isSelectedSlot ? 'ring-2 ring-amber-400 ring-inset' : ''}
+                  ${isEditMode && !sticker && selectedStickerId != null ? 'animate-pulse ring-1 ring-amber-400/40 ring-inset' : ''}
                 `}
               >
                 {imgUrl ? (
