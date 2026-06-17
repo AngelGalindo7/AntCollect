@@ -35,9 +35,14 @@ def _ensure_binder(db: Session, user_id: int) -> Binder:
         .values(user_id=user_id)
         .on_conflict_do_nothing(constraint="uq_binder_user")
     )
-    db.execute(stmt)
+    result = db.execute(stmt)
+    is_new = result.rowcount == 1
+    binder = db.execute(select(Binder).where(Binder.user_id == user_id)).scalar_one()
+    if is_new:
+        db.add(BinderPage(binder_id=binder.id, page_index=0, rows=3, cols=3))
+        db.add(BinderPage(binder_id=binder.id, page_index=1, rows=3, cols=3))
     db.commit()
-    return db.execute(select(Binder).where(Binder.user_id == user_id)).scalar_one()
+    return binder
 
 
 def _load_binder(db: Session, user_id: int) -> Binder | None:
