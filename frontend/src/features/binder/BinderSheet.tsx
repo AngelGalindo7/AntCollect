@@ -49,7 +49,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
     enabled: isOpen && !!username,
   });
 
-  const { data: myStickers = [] } = useQuery<UserStickerOut[]>({
+  const { data: myStickers = [], isLoading: stickersLoading } = useQuery<UserStickerOut[]>({
     queryKey: ['my-stickers'],
     queryFn: getUserStickers,
     enabled: isOpen && !!isOwner && isEditMode,
@@ -204,6 +204,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
                     selectedId={selectedSticker?.id ?? null}
                     onSelect={setSelectedSticker}
                     onPlaceInNextSlot={handlePlaceInNextSlot}
+                    isLoading={stickersLoading}
                   />
                 )}
               </motion.div>
