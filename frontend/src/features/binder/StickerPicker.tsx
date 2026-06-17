@@ -38,7 +38,7 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
 
   return (
     <div
-      className="paper-workshop pw-neutral w-72 shrink-0 flex flex-col overflow-hidden"
+      className="paper-workshop pw-neutral w-72 h-full shrink-0 flex flex-col overflow-hidden"
       style={{ background: 'var(--pw-paper)', borderRight: '1px solid var(--pw-line)' }}
     >
       {/* Header */}

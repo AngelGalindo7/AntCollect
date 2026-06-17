@@ -196,7 +196,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
                 initial={false}
                 animate={{ width: isEditMode ? PANEL_WIDTH : 0 }}
                 transition={{ duration: 0.35, ease: [0.45, 0, 0.55, 1] }}
-                className="shrink-0 overflow-hidden"
+                className="shrink-0 overflow-hidden flex"
               >
                 {isOwner && (
                   <StickerPicker
