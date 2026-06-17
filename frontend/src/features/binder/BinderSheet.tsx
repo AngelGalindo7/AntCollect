@@ -7,6 +7,8 @@ import StickerPicker from './StickerPicker';
 import { getMyBinder, getPublicBinder, getUserStickers, assignSlot, createPage } from './api/binderApi';
 import type { BinderOut, BinderPageOut, UserStickerOut } from './types';
 
+const PANEL_WIDTH = 288;
+
 interface BinderSheetProps {
   isOpen: boolean;
   onClose: () => void;
@@ -33,7 +35,6 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onClose]);
 
-  // Reset edit state when sheet closes
   useEffect(() => {
     if (!isOpen) {
       setIsEditMode(false);
@@ -83,12 +84,10 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
     if (!isEditMode) return;
 
     if (!selectedSticker) {
-      // Clicking an occupied slot selects that sticker for moving
       if (occupant) setSelectedSticker(occupant);
       return;
     }
 
-    // Clicking the sticker's own slot deselects it
     if (occupant?.id === selectedSticker.id) {
       setSelectedSticker(null);
       return;
@@ -146,96 +145,117 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
             transition={{ duration: 0.45, ease: [0.45, 0, 0.55, 1] }}
             className="fixed inset-0 z-50 bg-[#1c1c1e] flex flex-col overflow-hidden"
           >
-            {/* Edit Binder / Done + Add Page — owner only */}
-            {isOwner && (
-              <div className="absolute top-5 left-6 z-50 flex items-center gap-2">
-                <button
-                  onClick={isEditMode ? handleExitEdit : () => setIsEditMode(true)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    isEditMode
-                      ? 'bg-amber-500 hover:bg-amber-400 text-white'
-                      : 'bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white'
-                  }`}
-                >
-                  {isEditMode ? 'Done' : 'Edit Binder'}
-                </button>
-
-                {isEditMode && hasPages && (
+            {/* Header row */}
+            <div className="shrink-0 h-16 flex items-center px-6 gap-3 border-b border-white/10">
+              {isOwner && (
+                <>
                   <button
-                    onClick={handleAddPage}
-                    disabled={isCreatingPage}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
-                  >
-                    + Page
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Close button */}
-            <button
-              onClick={onClose}
-              className="absolute top-5 right-6 z-50 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-slate-300 hover:text-white"
-              aria-label="Close binder"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {/* Content area — layout shifts when editing */}
-            {isEditMode ? (
-              <div className="flex-1 flex overflow-hidden">
-                <StickerPicker
-                  stickers={myStickers}
-                  selectedId={selectedSticker?.id ?? null}
-                  onSelect={setSelectedSticker}
-                  onPlaceInNextSlot={handlePlaceInNextSlot}
-                />
-                {hasPages ? (
-                  <div className="flex-1 flex items-center justify-center px-6 py-6 overflow-hidden">
-                    <BinderViewer
-                      binder={binder}
+                    onClick={isEditMode ? handleExitEdit : () => setIsEditMode(true)}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
                       isEditMode
-                      selectedStickerId={selectedSticker?.id ?? null}
-                      onSlotClick={handleSlotClick}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center px-6 py-6">
-                    <div className="flex flex-col items-center gap-4 text-center">
-                      <Package className="w-12 h-12 text-white/20" />
-                      <div>
-                        <p className="text-white text-sm font-medium mb-1">No pages yet</p>
-                        <p className="text-[#8e8e93] text-xs">Create a page to start filing stickers</p>
-                      </div>
-                      <button
+                        ? 'bg-amber-500 hover:bg-amber-400 text-white'
+                        : 'bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {isEditMode ? 'Done' : 'Edit Binder'}
+                  </button>
+
+                  <AnimatePresence>
+                    {isEditMode && hasPages && (
+                      <motion.button
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.85 }}
+                        transition={{ duration: 0.15 }}
                         onClick={handleAddPage}
                         disabled={isCreatingPage}
-                        className="px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+                        className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
                       >
-                        {isCreatingPage ? 'Creating…' : 'Add Page'}
-                      </button>
+                        + Page
+                      </motion.button>
+                    )}
+                  </AnimatePresence>
+                </>
+              )}
+
+              <div className="flex-1" />
+
+              <button
+                onClick={onClose}
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-slate-300 hover:text-white"
+                aria-label="Close binder"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content — single layout with animated left panel */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* Left panel animates width 0 ↔ PANEL_WIDTH */}
+              <motion.div
+                initial={false}
+                animate={{ width: isEditMode ? PANEL_WIDTH : 0 }}
+                transition={{ duration: 0.35, ease: [0.45, 0, 0.55, 1] }}
+                className="shrink-0 overflow-hidden"
+              >
+                {isOwner && (
+                  <StickerPicker
+                    stickers={myStickers}
+                    selectedId={selectedSticker?.id ?? null}
+                    onSelect={setSelectedSticker}
+                    onPlaceInNextSlot={handlePlaceInNextSlot}
+                  />
+                )}
+              </motion.div>
+
+              {/* Right area */}
+              <div className="flex-1 flex items-center justify-center px-6 py-6 overflow-hidden">
+                {isEditMode && !hasPages ? (
+                  <div className="flex flex-col items-center gap-4 text-center">
+                    <Package className="w-12 h-12 text-white/20" />
+                    <div>
+                      <p className="text-white text-sm font-medium mb-1">No pages yet</p>
+                      <p className="text-[#8e8e93] text-xs">Create a page to start filing stickers</p>
                     </div>
+                    <button
+                      onClick={handleAddPage}
+                      disabled={isCreatingPage}
+                      className="px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+                    >
+                      {isCreatingPage ? 'Creating…' : 'Add Page'}
+                    </button>
                   </div>
+                ) : (
+                  <BinderViewer
+                    binder={binder}
+                    isEditMode={isEditMode}
+                    selectedStickerId={selectedSticker?.id ?? null}
+                    onSlotClick={handleSlotClick}
+                  />
                 )}
               </div>
-            ) : (
-              <div className="flex-1 flex items-center justify-center px-8 py-6 overflow-hidden">
-                <BinderViewer binder={binder} />
-              </div>
-            )}
+            </div>
 
-            {/* Footer hint — hidden in edit mode to save space */}
-            {!isEditMode && (
-              <div className="shrink-0 pb-5 flex items-center justify-center gap-2 text-[#8e8e93] text-sm opacity-70">
-                <Sparkles className="w-4 h-4" />
-                Swipe or click the corners to turn pages
-              </div>
-            )}
+            {/* Footer hint — fades out in edit mode */}
+            <AnimatePresence>
+              {!isEditMode && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.7 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="shrink-0 pb-5 flex items-center justify-center gap-2 text-[#8e8e93] text-sm"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Swipe or click the corners to turn pages
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
 
-          {/* Confirmation dialog for occupied slots */}
+          {/* Swap confirmation dialog */}
           {pendingPlacement && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
+            <div className="fixed inset-0 z-60 flex items-center justify-center pointer-events-none">
               <div className="bg-[#2c2c2e] rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 border border-white/10 pointer-events-auto">
                 <p className="text-white font-semibold text-center mb-2">Slot is occupied</p>
                 <p className="text-[#8e8e93] text-sm text-center mb-6">
