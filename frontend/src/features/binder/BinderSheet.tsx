@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Sparkles } from 'lucide-react';
+import { X, Sparkles, Package } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BinderViewer from './BinderViewer';
 import StickerPicker from './StickerPicker';
-import { getMyBinder, getPublicBinder, getUserStickers, assignSlot } from './api/binderApi';
+import { getMyBinder, getPublicBinder, getUserStickers, assignSlot, createPage } from './api/binderApi';
 import type { BinderOut, BinderPageOut, UserStickerOut } from './types';
 
 interface BinderSheetProps {
@@ -16,13 +16,13 @@ interface BinderSheetProps {
 
 export default function BinderSheet({ isOpen, onClose, username, isOwner }: BinderSheetProps) {
   const [isEditMode, setIsEditMode] = useState(false);
-  const [showAllStickers, setShowAllStickers] = useState(false);
   const [selectedSticker, setSelectedSticker] = useState<UserStickerOut | null>(null);
   const [pendingPlacement, setPendingPlacement] = useState<{
     pageId: number;
     slotIndex: number;
     occupant: UserStickerOut;
   } | null>(null);
+  const [isCreatingPage, setIsCreatingPage] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -37,7 +37,6 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
   useEffect(() => {
     if (!isOpen) {
       setIsEditMode(false);
-      setShowAllStickers(false);
       setSelectedSticker(null);
       setPendingPlacement(null);
     }
@@ -104,14 +103,26 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
 
   const handleExitEdit = () => {
     setIsEditMode(false);
-    setShowAllStickers(false);
     setSelectedSticker(null);
     setPendingPlacement(null);
   };
 
-  const pickerStickers = showAllStickers
-    ? myStickers
-    : myStickers.filter(s => s.binder_page_id === null);
+  const handleAddPage = async () => {
+    setIsCreatingPage(true);
+    try {
+      const newPage = await createPage(3, 3);
+      queryClient.setQueryData(['binder', username], (old: BinderOut) => ({
+        ...old,
+        pages: [...old.pages, newPage],
+      }));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsCreatingPage(false);
+    }
+  };
+
+  const hasPages = (binder?.pages.length ?? 0) > 0;
 
   return (
     <AnimatePresence>
@@ -135,18 +146,30 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
             transition={{ duration: 0.45, ease: [0.45, 0, 0.55, 1] }}
             className="fixed inset-0 z-50 bg-[#1c1c1e] flex flex-col overflow-hidden"
           >
-            {/* Edit Binder / Done button — owner only */}
+            {/* Edit Binder / Done + Add Page — owner only */}
             {isOwner && (
-              <button
-                onClick={isEditMode ? handleExitEdit : () => setIsEditMode(true)}
-                className={`absolute top-5 left-6 z-50 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  isEditMode
-                    ? 'bg-amber-500 hover:bg-amber-400 text-white'
-                    : 'bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white'
-                }`}
-              >
-                {isEditMode ? 'Done' : 'Edit Binder'}
-              </button>
+              <div className="absolute top-5 left-6 z-50 flex items-center gap-2">
+                <button
+                  onClick={isEditMode ? handleExitEdit : () => setIsEditMode(true)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    isEditMode
+                      ? 'bg-amber-500 hover:bg-amber-400 text-white'
+                      : 'bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {isEditMode ? 'Done' : 'Edit Binder'}
+                </button>
+
+                {isEditMode && hasPages && (
+                  <button
+                    onClick={handleAddPage}
+                    disabled={isCreatingPage}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    + Page
+                  </button>
+                )}
+              </div>
             )}
 
             {/* Close button */}
@@ -162,21 +185,38 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
             {isEditMode ? (
               <div className="flex-1 flex overflow-hidden">
                 <StickerPicker
-                  stickers={pickerStickers}
+                  stickers={myStickers}
                   selectedId={selectedSticker?.id ?? null}
                   onSelect={setSelectedSticker}
                   onPlaceInNextSlot={handlePlaceInNextSlot}
-                  showAll={showAllStickers}
-                  onToggleShowAll={() => setShowAllStickers(v => !v)}
                 />
-                <div className="flex-1 flex items-center justify-center px-6 py-6 overflow-hidden">
-                  <BinderViewer
-                    binder={binder}
-                    isEditMode
-                    selectedStickerId={selectedSticker?.id ?? null}
-                    onSlotClick={handleSlotClick}
-                  />
-                </div>
+                {hasPages ? (
+                  <div className="flex-1 flex items-center justify-center px-6 py-6 overflow-hidden">
+                    <BinderViewer
+                      binder={binder}
+                      isEditMode
+                      selectedStickerId={selectedSticker?.id ?? null}
+                      onSlotClick={handleSlotClick}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center px-6 py-6">
+                    <div className="flex flex-col items-center gap-4 text-center">
+                      <Package className="w-12 h-12 text-white/20" />
+                      <div>
+                        <p className="text-white text-sm font-medium mb-1">No pages yet</p>
+                        <p className="text-[#8e8e93] text-xs">Create a page to start filing stickers</p>
+                      </div>
+                      <button
+                        onClick={handleAddPage}
+                        disabled={isCreatingPage}
+                        className="px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+                      >
+                        {isCreatingPage ? 'Creating…' : 'Add Page'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex-1 flex items-center justify-center px-8 py-6 overflow-hidden">
