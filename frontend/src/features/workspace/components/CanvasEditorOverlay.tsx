@@ -731,6 +731,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
           onStartBgImageEdit={(url) => setBgEditUrl(url)}
           onUploadBgImage={uploadWorkspaceAsset}
           onChangeHoloVariant={(id, variant) => updateNode(id, { holoVariant: variant })}
+          onToggleRemoveBg={handleToggleRemoveBg}
+          isRemovingBg={isRemovingBg}
         />
       </div>
     </div>

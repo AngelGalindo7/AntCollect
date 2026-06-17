@@ -28,6 +28,8 @@ interface RightPanelProps {
   onStartBgImageEdit: (url: string) => void;
   onUploadBgImage?: (file: File) => Promise<string>;
   onChangeHoloVariant: (id: string, variant: HoloVariant) => void;
+  onToggleRemoveBg: () => void;
+  isRemovingBg: boolean;
 }
 
 const CARD_COLORS = [
@@ -95,6 +97,8 @@ export function StickerControls({
   onStartBgImageEdit,
   onUploadBgImage,
   onChangeHoloVariant,
+  onToggleRemoveBg,
+  isRemovingBg,
 }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<RightTab>('reposition');
   const [bgUploading, setBgUploading] = useState(false);
@@ -410,6 +414,18 @@ export function StickerControls({
                 </button>
                 <button type="button" onClick={onFlipHorizontal} style={actionBtn()}>
                   Flip Horizontal
+                </button>
+                <button
+                  type="button"
+                  onClick={onToggleRemoveBg}
+                  disabled={isRemovingBg}
+                  style={{ ...actionBtn(), opacity: isRemovingBg ? 0.5 : 1 }}
+                >
+                  {isRemovingBg
+                    ? 'Removing…'
+                    : selectedNode?.bgRemoved
+                      ? 'Restore background'
+                      : 'Remove background'}
                 </button>
                 <button type="button" onClick={onDelete} style={actionBtn(true)}>
                   Remove sticker
