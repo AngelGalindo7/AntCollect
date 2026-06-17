@@ -2,6 +2,16 @@ import { useState } from 'react';
 import { Package, Check } from 'lucide-react';
 import type { UserStickerOut } from './types';
 
+const CARD_COLORS = [
+  '#e8e0fa', '#fef5cc', '#cff5ec',
+  '#fce4ef', '#dceeff', '#f3e0fa',
+  '#fdebd0', '#d5f5e3',
+];
+
+function cardColor(id: number) {
+  return CARD_COLORS[id % CARD_COLORS.length];
+}
+
 interface StickerPickerProps {
   stickers: UserStickerOut[];
   selectedId: number | null;
@@ -27,21 +37,46 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
     : null;
 
   return (
-    <div className="w-72 shrink-0 flex flex-col bg-[#2c2c2e] border-r border-white/10 overflow-hidden">
-      <div className="px-4 pt-4 shrink-0">
-        <p className="text-white text-sm font-semibold mb-3">Your Stickers</p>
+    <div
+      className="paper-workshop pw-neutral w-72 shrink-0 flex flex-col overflow-hidden"
+      style={{ background: 'var(--pw-paper)', borderRight: '1px solid var(--pw-line)' }}
+    >
+      {/* Header */}
+      <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid var(--pw-line)' }}>
+        <p
+          className="pw-display"
+          style={{ fontSize: 20, lineHeight: 1.1, margin: '0 0 10px', color: 'var(--pw-ink)' }}
+        >
+          Add to binder
+        </p>
 
-        {/* Tab bar */}
-        <div className="flex border-b border-white/10">
+        {/* Pill segment control */}
+        <div style={{
+          display: 'flex',
+          background: 'var(--pw-surface2)',
+          border: '1px solid var(--pw-line)',
+          borderRadius: 9,
+          padding: 2,
+          gap: 2,
+        }}>
           {(['unfiled', 'all'] as Tab[]).map(tab => (
             <button
               key={tab}
+              type="button"
               onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px ${
-                activeTab === tab
-                  ? 'border-amber-400 text-white'
-                  : 'border-transparent text-[#8e8e93] hover:text-white'
-              }`}
+              style={{
+                flex: 1,
+                height: 28,
+                borderRadius: 7,
+                fontSize: 12,
+                fontWeight: activeTab === tab ? 600 : 500,
+                color: activeTab === tab ? '#fff' : 'var(--pw-ink3)',
+                background: activeTab === tab ? 'var(--pw-accent)' : 'transparent',
+                boxShadow: activeTab === tab
+                  ? '0 1px 0 rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.08)'
+                  : 'none',
+                transition: 'background 120ms ease, color 120ms ease',
+              }}
             >
               {tab === 'unfiled' ? 'Unfiled' : 'All'}
             </button>
@@ -49,32 +84,23 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
         </div>
       </div>
 
-      {/* Contextual instruction bar */}
-      <div className="px-4 pt-2 pb-1 shrink-0 min-h-7 flex items-center">
-        {selectedId !== null ? (
-          <div className="flex items-center gap-2 min-w-0">
-            {selectedImgUrl && (
-              <div className="w-6 h-6 shrink-0 rounded overflow-hidden border border-amber-400/60 bg-white/5">
-                <img src={selectedImgUrl} alt="" className="w-full h-full object-contain" draggable={false} />
-              </div>
-            )}
-            <p className="text-amber-400 text-xs truncate">→ Tap a binder slot to place it</p>
-          </div>
-        ) : (
-          <p className="text-[#8e8e93] text-xs">Tap a sticker to select it</p>
-        )}
-      </div>
-
       {/* Grid */}
-      <div className="flex-1 overflow-y-auto px-3 pb-3">
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 12px' }}>
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 pt-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="aspect-square rounded-lg bg-white/5 animate-pulse" />
+              <div
+                key={i}
+                className="aspect-square animate-pulse rounded-[10px]"
+                style={{ background: 'var(--pw-surface2)', border: '1px solid var(--pw-line)' }}
+              />
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-[#8e8e93] text-xs text-center gap-2">
+          <div
+            className="flex flex-col items-center justify-center h-32 text-xs text-center gap-2"
+            style={{ color: 'var(--pw-ink3)' }}
+          >
             {activeTab === 'unfiled' ? (
               <>
                 <Check className="w-8 h-8 opacity-40" />
@@ -88,7 +114,7 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 pt-3">
             {filtered.map(s => {
               const imgUrl = s.bg_removed && s.bg_removed_file_url
                 ? s.bg_removed_file_url
@@ -97,20 +123,30 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
               return (
                 <button
                   key={s.id}
+                  type="button"
                   onClick={() => onSelect(isSelected ? null : s)}
-                  className={`
-                    aspect-square rounded-lg overflow-hidden border-2 transition-all bg-white/5
-                    ${isSelected
-                      ? 'border-amber-400 shadow-[0_0_0_2px_rgba(251,191,36,0.3)]'
-                      : 'border-transparent hover:border-white/30'
-                    }
-                  `}
+                  style={{
+                    position: 'relative',
+                    aspectRatio: '1 / 1',
+                    background: cardColor(s.id),
+                    border: `2px solid ${isSelected ? 'var(--pw-accent)' : 'var(--pw-line)'}`,
+                    borderRadius: 10,
+                    padding: 6,
+                    cursor: 'pointer',
+                    transition: 'transform 120ms ease, border-color 120ms ease',
+                    boxShadow: isSelected ? '0 0 0 2px rgba(0,100,164,0.2)' : 'none',
+                  }}
                 >
                   {imgUrl ? (
-                    <img src={imgUrl} alt="" className="w-full h-full object-contain p-1" draggable={false} />
+                    <img
+                      src={imgUrl}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                      draggable={false}
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <Package className="w-6 h-6 text-white/20" />
+                      <Package className="w-6 h-6" style={{ color: 'var(--pw-ink3)' }} />
                     </div>
                   )}
                 </button>
@@ -120,16 +156,60 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
         )}
       </div>
 
-      {selectedId !== null && (
-        <div className="shrink-0 p-3 border-t border-white/10">
+      {/* Footer — instruction state + action */}
+      <div style={{
+        background: 'var(--pw-surface2)',
+        borderTop: '1px solid var(--pw-line)',
+        padding: '10px 12px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+      }}>
+        <div style={{
+          fontSize: 11,
+          color: selectedId !== null ? 'var(--pw-accent)' : 'var(--pw-ink3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+        }}>
+          {selectedId !== null ? (
+            <>
+              {selectedImgUrl && (
+                <div style={{
+                  width: 22, height: 22, flexShrink: 0,
+                  borderRadius: 4, overflow: 'hidden',
+                  border: '1px solid var(--pw-line)',
+                  background: selectedSticker ? cardColor(selectedSticker.id) : 'var(--pw-surface2)',
+                }}>
+                  <img src={selectedImgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} draggable={false} />
+                </div>
+              )}
+              <span style={{ fontWeight: 500 }}>→ Tap a binder slot to place it</span>
+            </>
+          ) : (
+            <span>Tap a sticker to select it</span>
+          )}
+        </div>
+
+        {selectedId !== null && (
           <button
+            type="button"
             onClick={onPlaceInNextSlot}
-            className="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold transition-colors"
+            style={{
+              width: '100%',
+              padding: '8px 14px',
+              background: 'var(--pw-accent)',
+              color: '#fff',
+              fontSize: 13,
+              fontWeight: 600,
+              borderRadius: 8,
+              transition: 'opacity 120ms ease',
+            }}
           >
             Place in next open slot
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
