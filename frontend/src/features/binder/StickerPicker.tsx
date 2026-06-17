@@ -1,4 +1,5 @@
-import { Package } from 'lucide-react';
+import { useState } from 'react';
+import { Package, Check } from 'lucide-react';
 import type { UserStickerOut } from './types';
 
 interface StickerPickerProps {
@@ -6,37 +7,64 @@ interface StickerPickerProps {
   selectedId: number | null;
   onSelect: (sticker: UserStickerOut | null) => void;
   onPlaceInNextSlot: () => void;
-  showAll: boolean;
-  onToggleShowAll: () => void;
 }
 
-export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceInNextSlot, showAll, onToggleShowAll }: StickerPickerProps) {
+type Tab = 'unfiled' | 'all';
+
+export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceInNextSlot }: StickerPickerProps) {
+  const [activeTab, setActiveTab] = useState<Tab>('unfiled');
+
+  const filtered = activeTab === 'unfiled'
+    ? stickers.filter(s => s.binder_page_id === null)
+    : stickers;
+
   return (
     <div className="w-72 shrink-0 flex flex-col bg-[#2c2c2e] border-r border-white/10 overflow-hidden">
-      <div className="px-4 pt-4 pb-3 shrink-0">
-        <div className="flex items-center justify-between mb-0.5">
-          <p className="text-white text-sm font-semibold">Your Stickers</p>
-          <button
-            onClick={onToggleShowAll}
-            className="text-[10px] px-2 py-0.5 rounded-full border border-white/20 text-[#8e8e93] hover:text-white hover:border-white/40 transition-colors shrink-0"
-          >
-            {showAll ? 'Unfiled only' : 'Show all'}
-          </button>
+      <div className="px-4 pt-4 shrink-0">
+        <p className="text-white text-sm font-semibold mb-3">Your Stickers</p>
+
+        {/* Tab bar */}
+        <div className="flex border-b border-white/10">
+          {(['unfiled', 'all'] as Tab[]).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors border-b-2 -mb-px ${
+                activeTab === tab
+                  ? 'border-amber-400 text-white'
+                  : 'border-transparent text-[#8e8e93] hover:text-white'
+              }`}
+            >
+              {tab === 'unfiled' ? 'Unfiled' : 'All'}
+            </button>
+          ))}
         </div>
-        <p className="text-[#8e8e93] text-xs mt-0.5">
-          {selectedId ? 'Click a binder slot to place' : 'Select a sticker to place'}
-        </p>
       </div>
 
+      {/* Section header */}
+      <div className="px-4 pt-2 pb-1 shrink-0">
+        <p className="text-[#8e8e93] text-xs">{filtered.length} stickers</p>
+      </div>
+
+      {/* Grid */}
       <div className="flex-1 overflow-y-auto px-3 pb-3">
-        {stickers.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-[#8e8e93] text-xs text-center gap-2">
-            <Package className="w-8 h-8 opacity-40" />
-            No stickers yet
+            {activeTab === 'unfiled' ? (
+              <>
+                <Check className="w-8 h-8 opacity-40" />
+                All stickers are filed
+              </>
+            ) : (
+              <>
+                <Package className="w-8 h-8 opacity-40" />
+                No stickers yet
+              </>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2">
-            {stickers.map(s => {
+            {filtered.map(s => {
               const imgUrl = s.bg_removed && s.bg_removed_file_url
                 ? s.bg_removed_file_url
                 : s.images[0]?.file_url ?? null;
