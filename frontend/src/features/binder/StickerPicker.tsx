@@ -7,16 +7,24 @@ interface StickerPickerProps {
   selectedId: number | null;
   onSelect: (sticker: UserStickerOut | null) => void;
   onPlaceInNextSlot: () => void;
+  isLoading?: boolean;
 }
 
 type Tab = 'unfiled' | 'all';
 
-export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceInNextSlot }: StickerPickerProps) {
+export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceInNextSlot, isLoading }: StickerPickerProps) {
   const [activeTab, setActiveTab] = useState<Tab>('unfiled');
 
   const filtered = activeTab === 'unfiled'
     ? stickers.filter(s => s.binder_page_id === null)
     : stickers;
+
+  const selectedSticker = selectedId !== null ? stickers.find(s => s.id === selectedId) ?? null : null;
+  const selectedImgUrl = selectedSticker
+    ? (selectedSticker.bg_removed && selectedSticker.bg_removed_file_url
+        ? selectedSticker.bg_removed_file_url
+        : selectedSticker.images[0]?.file_url ?? null)
+    : null;
 
   return (
     <div className="w-72 shrink-0 flex flex-col bg-[#2c2c2e] border-r border-white/10 overflow-hidden">
@@ -41,14 +49,31 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
         </div>
       </div>
 
-      {/* Section header */}
-      <div className="px-4 pt-2 pb-1 shrink-0">
-        <p className="text-[#8e8e93] text-xs">{filtered.length} stickers</p>
+      {/* Contextual instruction bar */}
+      <div className="px-4 pt-2 pb-1 shrink-0 min-h-7 flex items-center">
+        {selectedId !== null ? (
+          <div className="flex items-center gap-2 min-w-0">
+            {selectedImgUrl && (
+              <div className="w-6 h-6 shrink-0 rounded overflow-hidden border border-amber-400/60 bg-white/5">
+                <img src={selectedImgUrl} alt="" className="w-full h-full object-contain" draggable={false} />
+              </div>
+            )}
+            <p className="text-amber-400 text-xs truncate">→ Tap a binder slot to place it</p>
+          </div>
+        ) : (
+          <p className="text-[#8e8e93] text-xs">Tap a sticker to select it</p>
+        )}
       </div>
 
       {/* Grid */}
       <div className="flex-1 overflow-y-auto px-3 pb-3">
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="aspect-square rounded-lg bg-white/5 animate-pulse" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-[#8e8e93] text-xs text-center gap-2">
             {activeTab === 'unfiled' ? (
               <>
