@@ -1,13 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { PenLine } from 'lucide-react';
 import type { Post } from '@/shared/types/Types';
 import type { WorkspaceBounds, Rect } from '../types/workspace';
 import { useWorkspaceState } from '../hooks/useWorkspaceState';
 import { PanelFrame } from './PanelFrame';
 import { PanelPreview } from './PanelPreview';
 import { CanvasEditorOverlay } from './CanvasEditorOverlay';
-import { CanvasPickerDrawer } from './CanvasPickerDrawer';
-import { CanvasSizeSetup } from './CanvasSizeSetup';
 import { placementSpot } from '../geometry/placement';
 
 interface Props {
@@ -19,10 +16,7 @@ interface Props {
 export function Workspace({ posts, isOwner }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState<WorkspaceBounds>({ w: 800, h: 600 });
-  const [isWorkspaceEditMode, setIsWorkspaceEditMode] = useState(false);
   const [workspaceH, setWorkspaceH] = useState(600);
-  const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [isSizeSetupOpen, setIsSizeSetupOpen] = useState(false);
   const [editingPanelId, setEditingPanelId] = useState<number | null>(null);
   const freshPanelIdRef = useRef<number | null>(null);
   const pendingCanvasSizeRef = useRef<{ w: number; h: number } | null>(null);
@@ -30,10 +24,8 @@ export function Workspace({ posts, isOwner }: Props) {
   const {
     panels,
     placedPanels,
-    libraryPanels,
     focus,
     blur,
-    createLibraryCanvas,
     placePanel,
     removeFromWorkspace,
     deletePanel,
@@ -81,7 +73,7 @@ export function Workspace({ posts, isOwner }: Props) {
   return (
     <div
       ref={containerRef}
-      className={`relative w-full rounded-xl bg-[#F0EBE5] overflow-hidden ${isWorkspaceEditMode ? 'ring-2 ring-dashed ring-espresso/30' : 'ring-1 ring-black/8 shadow-sm'}`}
+      className="relative w-full rounded-xl bg-[#F0EBE5] overflow-hidden ring-1 ring-black/8 shadow-sm"
       style={{ height: workspaceH, minHeight: 420 }}
       onClick={(e) => {
         if (e.target === containerRef.current) blur();
@@ -98,22 +90,6 @@ export function Workspace({ posts, isOwner }: Props) {
         </div>
       )}
 
-      {!isLoading && placedPanels.length === 0 && !isWorkspaceEditMode && isOwner && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-          <div className="flex flex-col items-center gap-1 text-center">
-            <p className="text-espresso/50 text-sm font-medium">This is your Showcase</p>
-            <p className="text-espresso/35 text-xs max-w-xs">
-              Add canvases here to display your work on your profile.
-            </p>
-          </div>
-          <button
-            onClick={() => setIsWorkspaceEditMode(true)}
-            className="px-5 py-2 rounded-full bg-espresso text-white text-xs font-semibold shadow-md hover:bg-espresso/90 transition-colors"
-          >
-            + Add your first canvas
-          </button>
-        </div>
-      )}
 
       {!isLoading &&
         placedPanels.map((panel) => {
@@ -126,7 +102,7 @@ export function Workspace({ posts, isOwner }: Props) {
               key={panel.id}
               panel={panel}
               isOwner={isOwner}
-              isWorkspaceEditMode={isWorkspaceEditMode}
+              isWorkspaceEditMode={false}
               bounds={bounds}
               others={others}
               onUpdateRect={(id, rect) => updatePanelRect(id, rect)}
@@ -147,73 +123,7 @@ export function Workspace({ posts, isOwner }: Props) {
           );
         })}
 
-      {/* Owner toolbar */}
-      {isOwner && (
-        <div
-          style={{ position: 'absolute', top: 12, right: 12, zIndex: 9999 }}
-          className="flex items-center gap-2"
-        >
-          {isWorkspaceEditMode ? (
-            <>
-              <button
-                onClick={() => setIsPickerOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-espresso text-white text-xs font-semibold shadow-md hover:bg-espresso/90 transition-colors"
-              >
-                + Add Canvas
-              </button>
-              <button
-                onClick={() => {
-                  setIsWorkspaceEditMode(false);
-                  setIsPickerOpen(false);
-                }}
-                className="px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-sm text-espresso text-xs font-semibold shadow-md hover:bg-white transition-colors border border-espresso/10"
-              >
-                Done
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setIsWorkspaceEditMode(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-sm text-espresso text-xs font-semibold shadow-md hover:bg-white transition-colors border border-espresso/10"
-            >
-              <PenLine size={13} />
-              Edit Showcase
-            </button>
-          )}
-        </div>
-      )}
 
-      {/* Canvas size setup — shown before creating a new canvas */}
-      {isSizeSetupOpen && isOwner && (
-        <CanvasSizeSetup
-          onClose={() => setIsSizeSetupOpen(false)}
-          onConfirm={async (w, h) => {
-            pendingCanvasSizeRef.current = { w, h };
-            const panel = await createLibraryCanvas();
-            freshPanelIdRef.current = panel.id;
-            setIsSizeSetupOpen(false);
-            setEditingPanelId(panel.id);
-          }}
-        />
-      )}
-
-      {/* Canvas picker drawer */}
-      {isPickerOpen && isOwner && (
-        <CanvasPickerDrawer
-          libraryPanels={libraryPanels}
-          placedPanels={placedPanels}
-          bounds={bounds}
-          onPlace={async (id, rect) => {
-            await placePanel(id, rect);
-            setIsPickerOpen(false);
-          }}
-          onNewCanvas={() => {
-            setIsPickerOpen(false);
-            setIsSizeSetupOpen(true);
-          }}
-          onClose={() => setIsPickerOpen(false)}
-        />
-      )}
 
       {/* Canvas editor overlay */}
       {editingPanel !== null && isOwner && (
