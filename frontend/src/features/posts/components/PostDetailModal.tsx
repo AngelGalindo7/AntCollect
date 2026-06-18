@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Post, FolderType } from '@/shared/types/Types';
 // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
 // import TradeEntryButton from './TradeEntryButton';
@@ -31,13 +32,15 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
   folderType,
 }) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const images = post.images ?? [];
   const showPromote = (() => {
     const session = getSession();
     const own = postOwnerId !== undefined && String(postOwnerId) === session?.userId;
-    return own && folderType != null && folderType !== 'looking_for' && images.length > 0;
+    return own && folderType !== 'looking_for' && images.length > 0;
   })();
   const [selectedIdxs, setSelectedIdxs] = useState<number[]>(() =>
     images.map((_, i) => i)
@@ -63,6 +66,9 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
       if (res.ok) {
         const created = await res.json();
         setPromotedCount(created.length);
+        queryClient.invalidateQueries({ queryKey: ['my-stickers'] });
+        if (successTimerRef.current) clearTimeout(successTimerRef.current);
+        successTimerRef.current = setTimeout(() => setPromotedCount(null), 2500);
       }
     } finally {
       setPromoting(false);
@@ -80,6 +86,10 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
+  }, []);
+
+  useEffect(() => {
+    return () => { if (successTimerRef.current) clearTimeout(successTimerRef.current); };
   }, []);
 
   useEffect(() => {
