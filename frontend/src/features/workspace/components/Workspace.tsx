@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Post } from '@/shared/types/Types';
 import type { WorkspaceBounds, Rect } from '../types/workspace';
 import { useWorkspaceState } from '../hooks/useWorkspaceState';
@@ -11,15 +11,17 @@ interface Props {
   username: string;
   posts: Post[];
   isOwner: boolean;
+  triggerNewCanvas?: boolean;
 }
 
-export function Workspace({ posts, isOwner }: Props) {
+export function Workspace({ posts, isOwner, triggerNewCanvas }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = useState<WorkspaceBounds>({ w: 800, h: 600 });
   const [workspaceH, setWorkspaceH] = useState(600);
   const [editingPanelId, setEditingPanelId] = useState<number | null>(null);
   const freshPanelIdRef = useRef<number | null>(null);
   const pendingCanvasSizeRef = useRef<{ w: number; h: number } | null>(null);
+  const newCanvasTriggeredRef = useRef(false);
 
   const {
     panels,
@@ -67,6 +69,17 @@ export function Workspace({ posts, isOwner }: Props) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // Auto-open new canvas editor when arriving from the Create menu (+→Canvas)
+  useEffect(() => {
+    if (!isLoading && isOwner && triggerNewCanvas && !newCanvasTriggeredRef.current) {
+      newCanvasTriggeredRef.current = true;
+      createLibraryCanvas().then((panel) => {
+        freshPanelIdRef.current = panel.id;
+        setEditingPanelId(panel.id);
+      }).catch(() => {});
+    }
+  }, [isLoading, isOwner, triggerNewCanvas, createLibraryCanvas]);
 
   const editingPanel = panels.find((p) => p.id === editingPanelId) ?? null;
 
