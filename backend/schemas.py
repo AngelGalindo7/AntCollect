@@ -515,6 +515,7 @@ class UserStickerOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     sticker_id: Optional[int] = None
+    sticker_name: Optional[str] = None
     source_post_id: Optional[int] = None
     favorite: bool
     for_trade: bool

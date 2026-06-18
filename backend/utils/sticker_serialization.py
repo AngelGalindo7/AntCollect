@@ -17,6 +17,7 @@ def build_user_sticker_out(sticker: UserSticker) -> UserStickerOut:
     return UserStickerOut(
         id=sticker.id,
         sticker_id=sticker.sticker_id,
+        sticker_name=sticker.library_sticker.name if sticker.library_sticker else None,
         source_post_id=sticker.source_post_id,
         favorite=sticker.favorite,
         for_trade=sticker.for_trade,
