@@ -60,8 +60,21 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
     try {
       const updated = await assignSlot(selectedSticker.id, pageId, slotIndex);
       queryClient.setQueryData(['binder', username], updated);
+      queryClient.invalidateQueries({ queryKey: ['my-stickers'] });
       setSelectedSticker(null);
       setPendingPlacement(null);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const doUnfile = async () => {
+    if (!selectedSticker) return;
+    try {
+      const updated = await assignSlot(selectedSticker.id, null, null);
+      queryClient.setQueryData(['binder', username], updated);
+      queryClient.invalidateQueries({ queryKey: ['my-stickers'] });
+      setSelectedSticker(null);
     } catch (e) {
       console.error(e);
     }
@@ -122,6 +135,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
   };
 
   const hasPages = (binder?.pages.length ?? 0) > 0;
+  const isFiled = selectedSticker?.binder_page_id != null;
 
   return (
     <AnimatePresence>
@@ -145,20 +159,42 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
             transition={{ duration: 0.45, ease: [0.45, 0, 0.55, 1] }}
             className="fixed inset-0 z-50 bg-[#1c1c1e] flex flex-col overflow-hidden"
           >
-            {/* Header row */}
-            <div className="shrink-0 h-16 flex items-center px-6 gap-3 border-b border-white/10">
+            {/* Header — animates to UCI Blue in edit mode, matching the canvas editor top bar */}
+            <div
+              style={{
+                backgroundColor: isEditMode ? '#0064A4' : '#1c1c1e',
+                borderBottom: `1px solid ${isEditMode ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.1)'}`,
+                transition: 'background-color 0.25s ease',
+              }}
+              className="shrink-0 h-16 flex items-center px-6 gap-3"
+            >
               {isOwner && (
                 <>
-                  <button
-                    onClick={isEditMode ? handleExitEdit : () => setIsEditMode(true)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                      isEditMode
-                        ? 'bg-amber-500 hover:bg-amber-400 text-white'
-                        : 'bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white'
-                    }`}
-                  >
-                    {isEditMode ? 'Done' : 'Edit Binder'}
-                  </button>
+                  {isEditMode ? (
+                    <button
+                      onClick={handleExitEdit}
+                      style={{
+                        height: 34,
+                        padding: '0 18px',
+                        background: '#FFD200',
+                        color: '#332D2A',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        borderRadius: 8,
+                        transition: 'opacity 120ms ease',
+                      }}
+                      className="hover:opacity-90"
+                    >
+                      Done
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setIsEditMode(true)}
+                      className="px-4 py-1.5 rounded-full text-sm font-medium bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors"
+                    >
+                      Edit Binder
+                    </button>
+                  )}
 
                   <AnimatePresence>
                     {isEditMode && hasPages && (
@@ -169,7 +205,17 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
                         transition={{ duration: 0.15 }}
                         onClick={handleAddPage}
                         disabled={isCreatingPage}
-                        className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
+                        style={{
+                          height: 34,
+                          padding: '0 14px',
+                          fontSize: 13,
+                          fontWeight: 500,
+                          borderRadius: 8,
+                          color: 'rgba(255,255,255,0.75)',
+                          background: 'transparent',
+                          transition: 'background 120ms ease, color 120ms ease',
+                        }}
+                        className="hover:bg-white/10 hover:text-white! disabled:opacity-50"
                       >
                         + Page
                       </motion.button>
@@ -182,14 +228,19 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
 
               <button
                 onClick={onClose}
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors text-slate-300 hover:text-white"
+                style={isEditMode ? { color: 'rgba(255,255,255,0.75)' } : undefined}
+                className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
+                  isEditMode
+                    ? 'hover:bg-white/10 hover:text-white!'
+                    : 'bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white'
+                }`}
                 aria-label="Close binder"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Content — single layout with animated left panel */}
+            {/* Content — left panel (picker) + right (binder) */}
             <div className="flex-1 flex overflow-hidden">
               {/* Left panel animates width 0 ↔ PANEL_WIDTH */}
               <motion.div
@@ -202,14 +253,16 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
                   <StickerPicker
                     stickers={myStickers}
                     selectedId={selectedSticker?.id ?? null}
+                    isFiled={isFiled}
                     onSelect={setSelectedSticker}
                     onPlaceInNextSlot={handlePlaceInNextSlot}
+                    onUnfile={doUnfile}
                     isLoading={stickersLoading}
                   />
                 )}
               </motion.div>
 
-              {/* Right area */}
+              {/* Binder area */}
               <div className="flex-1 flex items-center justify-center px-6 py-6 overflow-hidden">
                 {isEditMode && !hasPages ? (
                   <div className="flex flex-col items-center gap-4 text-center">
@@ -237,7 +290,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
               </div>
             </div>
 
-            {/* Footer hint — fades out in edit mode */}
+            {/* Footer hint — only in view mode */}
             <AnimatePresence>
               {!isEditMode && (
                 <motion.div

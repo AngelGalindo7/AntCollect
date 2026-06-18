@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Package, Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Package, Check, Trash2 } from 'lucide-react';
 import type { UserStickerOut } from './types';
 
 const CARD_COLORS = [
@@ -15,15 +15,30 @@ function cardColor(id: number) {
 interface StickerPickerProps {
   stickers: UserStickerOut[];
   selectedId: number | null;
+  isFiled?: boolean;
   onSelect: (sticker: UserStickerOut | null) => void;
   onPlaceInNextSlot: () => void;
+  onUnfile?: () => void;
   isLoading?: boolean;
 }
 
 type Tab = 'unfiled' | 'all';
 
-export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceInNextSlot, isLoading }: StickerPickerProps) {
+export default function StickerPicker({
+  stickers,
+  selectedId,
+  isFiled,
+  onSelect,
+  onPlaceInNextSlot,
+  onUnfile,
+  isLoading,
+}: StickerPickerProps) {
   const [activeTab, setActiveTab] = useState<Tab>('unfiled');
+
+  // When a filed sticker is picked up from the binder, switch to All so it shows highlighted.
+  useEffect(() => {
+    if (isFiled) setActiveTab('all');
+  }, [isFiled]);
 
   const filtered = activeTab === 'unfiled'
     ? stickers.filter(s => s.binder_page_id === null)
@@ -50,7 +65,7 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
           Add to binder
         </p>
 
-        {/* Pill segment control */}
+        {/* Segment control */}
         <div style={{
           display: 'flex',
           background: 'var(--pw-surface2)',
@@ -120,10 +135,12 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
                 ? s.bg_removed_file_url
                 : s.images[0]?.file_url ?? null;
               const isSelected = s.id === selectedId;
+              const isInBinder = s.binder_page_id !== null;
               return (
                 <button
                   key={s.id}
                   type="button"
+                  title={s.note ?? undefined}
                   onClick={() => onSelect(isSelected ? null : s)}
                   style={{
                     position: 'relative',
@@ -137,6 +154,23 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
                     boxShadow: isSelected ? '0 0 0 2px rgba(0,100,164,0.2)' : 'none',
                   }}
                 >
+                  {/* Badge: blue checkmark when the sticker is already filed in the binder */}
+                  {isInBinder && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 4,
+                      right: 4,
+                      width: 16,
+                      height: 16,
+                      borderRadius: 4,
+                      background: 'var(--pw-accent)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Check size={9} strokeWidth={2.5} color="#fff" />
+                    </div>
+                  )}
                   {imgUrl ? (
                     <img
                       src={imgUrl}
@@ -156,7 +190,7 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
         )}
       </div>
 
-      {/* Footer — instruction state + action */}
+      {/* Footer — adapts to selection state */}
       <div style={{
         background: 'var(--pw-surface2)',
         borderTop: '1px solid var(--pw-line)',
@@ -184,7 +218,9 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
                   <img src={selectedImgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} draggable={false} />
                 </div>
               )}
-              <span style={{ fontWeight: 500 }}>→ Tap a binder slot to place it</span>
+              <span style={{ fontWeight: 500 }}>
+                {isFiled ? '→ Tap a slot to move it' : '→ Tap a slot to place it'}
+              </span>
             </>
           ) : (
             <span>Tap a sticker to select it</span>
@@ -192,22 +228,50 @@ export default function StickerPicker({ stickers, selectedId, onSelect, onPlaceI
         </div>
 
         {selectedId !== null && (
-          <button
-            type="button"
-            onClick={onPlaceInNextSlot}
-            style={{
-              width: '100%',
-              padding: '8px 14px',
-              background: 'var(--pw-accent)',
-              color: '#fff',
-              fontSize: 13,
-              fontWeight: 600,
-              borderRadius: 8,
-              transition: 'opacity 120ms ease',
-            }}
-          >
-            Place in next open slot
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onPlaceInNextSlot}
+              style={{
+                width: '100%',
+                padding: '8px 14px',
+                background: 'var(--pw-accent)',
+                color: '#fff',
+                fontSize: 13,
+                fontWeight: 600,
+                borderRadius: 8,
+                transition: 'opacity 120ms ease',
+              }}
+            >
+              {isFiled ? 'Move to next open slot' : 'Place in next open slot'}
+            </button>
+
+            {isFiled && onUnfile && (
+              <button
+                type="button"
+                onClick={onUnfile}
+                style={{
+                  width: '100%',
+                  padding: '8px 14px',
+                  background: 'transparent',
+                  border: '1px solid rgba(180,49,15,0.25)',
+                  color: 'var(--pw-danger)',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  cursor: 'pointer',
+                  transition: 'opacity 120ms ease',
+                }}
+              >
+                <Trash2 size={13} strokeWidth={1.8} />
+                Remove from binder
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
