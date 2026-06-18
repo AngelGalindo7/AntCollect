@@ -127,9 +127,10 @@ export default function AccountTab() {
     try {
       await fetchWithAuth(`${API_BASE}/auth/logout`, { method: 'POST' });
     } catch {
-      // continue regardless
+      // continue regardless — cookies are cleared server-side on success
     }
     clearSession();
+    window.dispatchEvent(new Event('auth:logout'));
     navigate('/Login');
   };
 
