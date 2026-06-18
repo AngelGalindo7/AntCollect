@@ -7,7 +7,7 @@ import { PositionedBackgroundImage } from "@/shared/components/PositionedBackgro
 import BinderSheet from "@/features/binder/BinderSheet";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchPublic, fetchWithAuth, API_BASE } from "@/shared/api/api";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 
 type TabValue = "showcase" | "collection" | "looking_for" | "trading";
@@ -36,6 +36,8 @@ const UserProfile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const triggerNewCanvas = searchParams.get('newCanvas') === '1';
   const initialTab = (location.state as { tab?: TabValue } | null)?.tab ?? "showcase";
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -112,6 +114,15 @@ const UserProfile: React.FC = () => {
       navigate(location.pathname, { replace: true, state: null });
     }
   }, [username]);
+
+  // When arriving via ?newCanvas=1, force showcase tab and strip the param from the URL
+  useEffect(() => {
+    if (triggerNewCanvas) {
+      setActiveTab("showcase");
+      setSearchParams({}, { replace: true });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Reset sub-filter to posts whenever the active tab changes
   useEffect(() => {
@@ -357,7 +368,7 @@ const UserProfile: React.FC = () => {
       {/* ── Section 3: Tab content ── */}
       {activeTab === "showcase" ? (
         profile.is_owner ? (
-          <Workspace username={String(username)} posts={profile.posts} isOwner={true} />
+          <Workspace username={String(username)} posts={profile.posts} isOwner={true} triggerNewCanvas={triggerNewCanvas} />
         ) : (
           <SpotlightViewer username={String(username)} />
         )
