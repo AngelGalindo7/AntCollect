@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'motion/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import type { BinderOut, BinderPageOut, UserStickerOut } from './types';
 
 const TAB_COLORS = [
@@ -13,9 +13,11 @@ interface BinderViewerProps {
   isEditMode?: boolean;
   selectedStickerId?: number | null;
   onSlotClick?: (page: BinderPageOut, slotIndex: number, occupant: UserStickerOut | null) => void;
+  onRenamePage?: (pageId: number, newTitle: string) => void;
+  onDeletePage?: (page: BinderPageOut) => void;
 }
 
-export default function BinderViewer({ binder, isEditMode, selectedStickerId, onSlotClick }: BinderViewerProps) {
+export default function BinderViewer({ binder, isEditMode, selectedStickerId, onSlotClick, onRenamePage, onDeletePage }: BinderViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
   const [flippingToIndex, setFlippingToIndex] = useState<number | null>(null);
@@ -68,7 +70,7 @@ export default function BinderViewer({ binder, isEditMode, selectedStickerId, on
 
         {/* STATIC LEFT PAGE */}
         <div className="w-1/2 h-full relative z-10">
-          <Page page={spreads[A_index].left} side="left" interactive={!isFlipping} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} />
+          <Page page={spreads[A_index].left} side="left" interactive={!isFlipping} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} onRenamePage={onRenamePage} onDeletePage={onDeletePage} />
           {isFlipping && (
             <motion.div className="absolute inset-0 bg-black pointer-events-none rounded-l-md" style={{ opacity: leftStaticShadow }} />
           )}
@@ -86,7 +88,7 @@ export default function BinderViewer({ binder, isEditMode, selectedStickerId, on
 
         {/* STATIC RIGHT PAGE */}
         <div className="w-1/2 h-full relative z-10">
-          <Page page={spreads[B_index].right} side="right" interactive={!isFlipping} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} />
+          <Page page={spreads[B_index].right} side="right" interactive={!isFlipping} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} onRenamePage={onRenamePage} onDeletePage={onDeletePage} />
           {isFlipping && (
             <motion.div className="absolute inset-0 bg-black pointer-events-none rounded-r-md" style={{ opacity: rightStaticShadow }} />
           )}
@@ -192,13 +194,15 @@ export default function BinderViewer({ binder, isEditMode, selectedStickerId, on
   );
 }
 
-function Page({ page, side, interactive, isEditMode, selectedStickerId, onSlotClick }: {
+function Page({ page, side, interactive, isEditMode, selectedStickerId, onSlotClick, onRenamePage, onDeletePage }: {
   page: BinderPageOut | null;
   side: 'left' | 'right';
   interactive: boolean;
   isEditMode?: boolean;
   selectedStickerId?: number | null;
   onSlotClick?: (page: BinderPageOut, slotIndex: number, occupant: UserStickerOut | null) => void;
+  onRenamePage?: (pageId: number, newTitle: string) => void;
+  onDeletePage?: (page: BinderPageOut) => void;
 }) {
   return (
     <div className={`
@@ -217,22 +221,27 @@ function Page({ page, side, interactive, isEditMode, selectedStickerId, onSlotCl
       `} />
       <div className={`absolute ${side === 'left' ? 'right-0 bg-gradient-to-l' : 'left-0 bg-gradient-to-r'} top-0 bottom-0 w-16 from-black/10 to-transparent pointer-events-none z-20`} />
       <div className="relative z-30 p-6 md:p-10 h-full flex flex-col overflow-hidden">
-        <PageContent page={page} interactive={interactive} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} />
+        <PageContent page={page} interactive={interactive} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} onRenamePage={onRenamePage} onDeletePage={onDeletePage} />
       </div>
     </div>
   );
 }
 
-function PageContent({ page, interactive, isEditMode, selectedStickerId, onSlotClick }: {
+function PageContent({ page, interactive, isEditMode, selectedStickerId, onSlotClick, onRenamePage, onDeletePage }: {
   page: BinderPageOut | null;
   interactive: boolean;
   isEditMode?: boolean;
   selectedStickerId?: number | null;
   onSlotClick?: (page: BinderPageOut, slotIndex: number, occupant: UserStickerOut | null) => void;
+  onRenamePage?: (pageId: number, newTitle: string) => void;
+  onDeletePage?: (page: BinderPageOut) => void;
 }) {
   const rows = page?.rows ?? 3;
   const cols = page?.cols ?? 3;
   const total = rows * cols;
+
+  const [editTitle, setEditTitle] = useState(page?.title ?? '');
+  useEffect(() => { setEditTitle(page?.title ?? ''); }, [page?.title]);
 
   const slotMap = new Map<number, UserStickerOut>(
     (page?.stickers ?? [])
@@ -240,8 +249,71 @@ function PageContent({ page, interactive, isEditMode, selectedStickerId, onSlotC
       .map(s => [s.slot_index, s])
   );
 
+  const showPageControls = isEditMode && interactive && page != null;
+
   return (
-    <div className="w-full h-full relative flex items-center justify-center">
+    <div className="w-full h-full flex flex-col">
+      {showPageControls && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+          marginBottom: 8,
+          padding: '2px 0',
+          flexShrink: 0,
+        }}>
+          <input
+            value={editTitle}
+            onChange={e => setEditTitle(e.target.value)}
+            onBlur={() => {
+              const trimmed = editTitle.trim();
+              if (trimmed !== (page.title ?? '')) {
+                onRenamePage?.(page.id, trimmed);
+              }
+            }}
+            onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+            placeholder="Untitled page"
+            maxLength={80}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              fontSize: 11,
+              fontWeight: 600,
+              color: '#1c1c1e',
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              padding: '3px 6px',
+              borderRadius: 5,
+              cursor: 'text',
+            }}
+            className="hover:bg-black/5 focus:bg-black/5 transition-colors"
+          />
+          <button
+            type="button"
+            onClick={() => onDeletePage?.(page)}
+            title="Delete this page"
+            style={{
+              width: 26,
+              height: 26,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 6,
+              background: 'transparent',
+              border: 'none',
+              color: '#b03060',
+              cursor: 'pointer',
+              flexShrink: 0,
+              transition: 'background 120ms ease',
+            }}
+            className="hover:bg-red-100"
+          >
+            <Trash2 size={13} strokeWidth={1.8} />
+          </button>
+        </div>
+      )}
+      <div className="flex-1 flex items-center justify-center min-h-0">
       <div className="w-full h-full bg-white/20 rounded-xl border-[1.5px] border-white/40 shadow-[0_4px_15px_rgba(0,0,0,0.03),inset_0_0_20px_rgba(255,255,255,0.5)] p-2 md:p-3 relative">
         <div
           className="h-full relative z-10 border border-white/30 rounded-[6px] overflow-hidden bg-black/[0.02]"
@@ -293,6 +365,7 @@ function PageContent({ page, interactive, isEditMode, selectedStickerId, onSlotC
             );
           })}
         </div>
+      </div>
       </div>
     </div>
   );
