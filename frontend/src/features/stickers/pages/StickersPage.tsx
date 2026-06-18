@@ -1,8 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchPublic, fetchWithAuth, API_BASE } from '@/shared/api/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSession } from '@/shared/auth/session';
-import type { UserSticker } from '@/shared/types/Types';
+import type { UserStickerOut } from '@/features/binder/types';
+import {
+  listMyStickers,
+  listUserStickers,
+  deleteSticker,
+  removeStickerBackground,
+  updateSticker,
+} from '../api/stickerApi';
+import AddStickerModal from '../components/AddStickerModal';
 
 const BackIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,123 +37,42 @@ const SpinnerIcon = () => (
   </svg>
 );
 
-interface TrackFormState {
-  sticker_id: string;
-  condition: string;
-  note: string;
-  acquired_at: string;
-  favorite: boolean;
-  for_trade: boolean;
-}
-
-const EMPTY_FORM: TrackFormState = {
-  sticker_id: '',
-  condition: '',
-  note: '',
-  acquired_at: '',
-  favorite: false,
-  for_trade: false,
-};
-
 const StickersPage: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const session = getSession();
   const isOwner = session?.username === username;
 
-  const [stickers, setStickers] = useState<UserSticker[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<TrackFormState>(EMPTY_FORM);
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [bgBusyId, setBgBusyId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const url = isOwner
-          ? `${API_BASE}/stickers/me`
-          : `${API_BASE}/stickers/${username}`;
-        const res = isOwner
-          ? await fetchWithAuth(url)
-          : await fetchPublic(url);
-        if (res.ok) {
-          setStickers(await res.json());
-        }
-      } catch {
-        // show empty state
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [username, isOwner]);
+  const { data: stickers = [], isLoading: loading } = useQuery({
+    queryKey: isOwner ? ['my-stickers'] : ['user-stickers', username],
+    queryFn: isOwner ? listMyStickers : () => listUserStickers(username!),
+  });
 
   const handleDelete = async (id: number) => {
     if (!confirm('Remove this sticker from your collection?')) return;
-    const res = await fetchWithAuth(`${API_BASE}/stickers/me/${id}`, { method: 'DELETE' });
-    if (res.ok || res.status === 204) {
-      setStickers((prev) => prev.filter((s) => s.id !== id));
-    }
+    await deleteSticker(id);
+    queryClient.invalidateQueries({ queryKey: ['my-stickers'] });
   };
 
-  const handleToggleBg = async (sticker: UserSticker) => {
+  const handleToggleBg = async (sticker: UserStickerOut) => {
     setBgBusyId(sticker.id);
     try {
-      // First time cuts the image (heavy rembg call, persisted server-side); afterwards
-      // the cut-out is cached, so we just flip which image the card displays via PATCH.
-      const res = sticker.bg_removed_file_url
-        ? await fetchWithAuth(`${API_BASE}/stickers/me/${sticker.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ bg_removed: !sticker.bg_removed }),
-          })
-        : await fetchWithAuth(`${API_BASE}/stickers/me/${sticker.id}/remove-bg`, { method: 'POST' });
-      if (res.ok) {
-        const updated: UserSticker = await res.json();
-        setStickers((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-      }
+      const updated = sticker.bg_removed_file_url
+        ? await updateSticker(sticker.id, { bg_removed: !sticker.bg_removed })
+        : await removeStickerBackground(sticker.id);
+      queryClient.setQueryData<UserStickerOut[]>(['my-stickers'], (prev = []) =>
+        prev.map((s) => (s.id === updated.id ? updated : s)),
+      );
     } finally {
       setBgBusyId(null);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError(null);
-    const stickerId = form.sticker_id ? parseInt(form.sticker_id, 10) : null;
-    setSubmitting(true);
-    try {
-      const res = await fetchWithAuth(`${API_BASE}/stickers/me`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sticker_id: stickerId,
-          condition: form.condition || null,
-          note: form.note || null,
-          acquired_at: form.acquired_at ? new Date(form.acquired_at).toISOString() : null,
-          favorite: form.favorite,
-          for_trade: form.for_trade,
-          asset_ids: [],
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setFormError(body?.error?.message ?? body?.detail ?? 'Failed to track sticker.');
-        return;
-      }
-      const created: UserSticker = await res.json();
-      setStickers((prev) => [created, ...prev]);
-      setForm(EMPTY_FORM);
-      setShowForm(false);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const primaryImage = (s: UserSticker) =>
+  const primaryImage = (s: UserStickerOut) =>
     s.bg_removed && s.bg_removed_file_url
       ? s.bg_removed_file_url
       : s.images.find((i) => i.order_index === 1)?.file_url ?? s.images[0]?.file_url ?? null;
@@ -172,7 +99,7 @@ const StickersPage: React.FC = () => {
 
         {isOwner && (
           <button
-            onClick={() => { setShowForm(true); setFormError(null); }}
+            onClick={() => setShowAddModal(true)}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold text-uci-navy shrink-0 transition-colors hover:brightness-105"
             style={{ background: 'var(--color-uci-gold)', boxShadow: 'var(--shadow-button-gold)' }}
           >
@@ -183,104 +110,6 @@ const StickersPage: React.FC = () => {
           </button>
         )}
       </div>
-
-      {/* Inline track form */}
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="mb-8 p-5 rounded-xl border border-warm-gray/30 bg-white/60 backdrop-blur-sm space-y-3"
-        >
-          <h2 className="font-semibold text-espresso text-sm">Track from library</h2>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="col-span-2 sm:col-span-1">
-              <label className="block text-xs text-espresso/60 mb-1">Library sticker ID</label>
-              <input
-                type="number"
-                min={1}
-                value={form.sticker_id}
-                onChange={(e) => setForm((f) => ({ ...f, sticker_id: e.target.value }))}
-                placeholder="optional"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-warm-gray/40 bg-white outline-none focus:border-uci-blue"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-espresso/60 mb-1">Condition</label>
-              <input
-                type="text"
-                maxLength={100}
-                value={form.condition}
-                onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
-                placeholder="mint, worn…"
-                className="w-full px-3 py-2 text-sm rounded-lg border border-warm-gray/40 bg-white outline-none focus:border-uci-blue"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-espresso/60 mb-1">Acquired</label>
-              <input
-                type="date"
-                value={form.acquired_at}
-                onChange={(e) => setForm((f) => ({ ...f, acquired_at: e.target.value }))}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-warm-gray/40 bg-white outline-none focus:border-uci-blue"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs text-espresso/60 mb-1">Note</label>
-            <textarea
-              maxLength={500}
-              value={form.note}
-              onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
-              rows={2}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-warm-gray/40 bg-white outline-none focus:border-uci-blue resize-none"
-            />
-          </div>
-
-          <div className="flex items-center gap-5">
-            <label className="flex items-center gap-2 text-sm text-espresso cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={form.favorite}
-                onChange={(e) => setForm((f) => ({ ...f, favorite: e.target.checked }))}
-                className="rounded accent-uci-gold"
-              />
-              Favorite
-            </label>
-            <label className="flex items-center gap-2 text-sm text-espresso cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={form.for_trade}
-                onChange={(e) => setForm((f) => ({ ...f, for_trade: e.target.checked }))}
-                className="rounded accent-uci-gold"
-              />
-              Available to trade
-            </label>
-          </div>
-
-          {formError && <p className="text-red-500 text-xs">{formError}</p>}
-
-          <div className="flex gap-2 pt-1">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-2 text-sm font-semibold rounded-full text-uci-navy disabled:opacity-50 hover:brightness-105 transition-all"
-              style={{ background: 'var(--color-uci-gold)' }}
-            >
-              {submitting ? 'Saving…' : 'Save'}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }}
-              className="px-4 py-2 text-sm text-espresso/60 hover:text-espresso transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
 
       {/* Grid */}
       {loading ? (
@@ -298,7 +127,7 @@ const StickersPage: React.FC = () => {
           </div>
           <p className="text-uci-navy font-bold tracking-wide">No stickers tracked yet</p>
           {isOwner && (
-            <p className="text-uci-navy/50 text-sm mt-1">Hit "Track sticker" to add your first entry.</p>
+            <p className="text-uci-navy/50 text-sm mt-1">Hit &quot;Track sticker&quot; to add your first entry.</p>
           )}
         </div>
       ) : (
@@ -308,7 +137,7 @@ const StickersPage: React.FC = () => {
             return (
               <div
                 key={sticker.id}
-                className="group relative aspect-square bg-white rounded-sticker overflow-hidden border-2 border-transparent hover:border-uci-gold hover:-translate-y-[3px] transition-all duration-200"
+                className="group relative aspect-square bg-white rounded-sticker overflow-hidden border-2 border-transparent hover:border-uci-gold hover:-translate-y-0.75 transition-all duration-200"
                 style={{ boxShadow: 'var(--shadow-card)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.boxShadow = 'var(--shadow-card-hover)')}
                 onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'var(--shadow-card)')}
@@ -382,6 +211,8 @@ const StickersPage: React.FC = () => {
           })}
         </div>
       )}
+
+      {showAddModal && <AddStickerModal onClose={() => setShowAddModal(false)} />}
     </div>
   );
 };
