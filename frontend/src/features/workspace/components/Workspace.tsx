@@ -29,6 +29,7 @@ export function Workspace({ posts, isOwner, triggerNewCanvas }: Props) {
     focus,
     blur,
     placePanel,
+    createLibraryCanvas,
     removeFromWorkspace,
     deletePanel,
     updatePanelRect,
