@@ -37,19 +37,28 @@ export function AppProviders({ children }: { children: ReactNode }) {
     // 'storage' fires when another tab changes localStorage.
     // 'auth:login' is dispatched by LogIn.tsx after same-tab login because
     // the browser does NOT fire 'storage' for same-window localStorage writes.
+    // 'auth:logout' is dispatched by AccountTab after clearSession() so
+    // same-tab logout also transitions isAuthenticated to false.
     window.addEventListener('storage', handleStorage);
     window.addEventListener('auth:login', handleStorage);
+    window.addEventListener('auth:logout', handleStorage);
     return () => {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('auth:login', handleStorage);
+      window.removeEventListener('auth:logout', handleStorage);
     };
   }, []);
 
-  // Invalidate all cached queries when the user signs in so stale guest data
-  // (is_liked: false, is_owner: false) is replaced with personalized responses.
+  // Keep the query cache in sync with auth state transitions.
+  // Logout  (true → false): wipe all cached data so the next user starts cold.
+  // Login   (false → true): invalidate stale guest queries so they re-fetch
+  //                          with the new user's cookies.
   const prevAuthRef = useRef(false);
   useEffect(() => {
-    if (isAuthenticated && !prevAuthRef.current) {
+    if (!isAuthenticated && prevAuthRef.current) {
+      queryClient.clear();
+      sessionStorage.removeItem('roleSynced');
+    } else if (isAuthenticated && !prevAuthRef.current) {
       queryClient.invalidateQueries();
     }
     prevAuthRef.current = isAuthenticated;
