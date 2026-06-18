@@ -31,8 +31,8 @@ export async function createPage(rows: number, cols: number, title?: string): Pr
 
 export async function assignSlot(
   userStickerId: number,
-  binderPageId: number,
-  slotIndex: number,
+  binderPageId: number | null,
+  slotIndex: number | null,
 ): Promise<BinderOut> {
   const res = await fetchWithAuth(`${API_BASE}/binders/me/slots`, {
     method: 'PUT',
