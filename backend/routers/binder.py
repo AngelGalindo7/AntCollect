@@ -59,6 +59,9 @@ def _load_binder(db: Session, user_id: int) -> Binder | None:
             selectinload(Binder.pages)
             .selectinload(BinderPage.stickers)
             .selectinload(UserSticker.bg_removed_asset),
+            selectinload(Binder.pages)
+            .selectinload(BinderPage.stickers)
+            .selectinload(UserSticker.library_sticker),
         )
     ).scalar_one_or_none()
 
@@ -70,6 +73,7 @@ def _load_page(db: Session, page_id: int) -> BinderPage:
         .options(
             selectinload(BinderPage.stickers).selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
             selectinload(BinderPage.stickers).selectinload(UserSticker.bg_removed_asset),
+            selectinload(BinderPage.stickers).selectinload(UserSticker.library_sticker),
         )
     ).scalar_one()
 

@@ -36,6 +36,7 @@ def _load_stickers(user_id: int, db: Session) -> List[UserSticker]:
         .options(
             selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
             selectinload(UserSticker.bg_removed_asset),
+            selectinload(UserSticker.library_sticker),
         )
         .order_by(UserSticker.created_at.desc())
     ).scalars().all()
@@ -122,6 +123,7 @@ def create_sticker(
         .options(
             selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
             selectinload(UserSticker.bg_removed_asset),
+            selectinload(UserSticker.library_sticker),
         )
     ).scalar_one()
 
@@ -197,6 +199,7 @@ def upload_sticker(
         .options(
             selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
             selectinload(UserSticker.bg_removed_asset),
+            selectinload(UserSticker.library_sticker),
         )
     ).scalar_one()
     return build_user_sticker_out(sticker)
@@ -271,6 +274,7 @@ def promote_post_to_stickers(
         .options(
             selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
             selectinload(UserSticker.bg_removed_asset),
+            selectinload(UserSticker.library_sticker),
         )
         .order_by(UserSticker.id)
     ).scalars().all()
@@ -293,6 +297,7 @@ def update_sticker(
         .options(
             selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
             selectinload(UserSticker.bg_removed_asset),
+            selectinload(UserSticker.library_sticker),
         )
     ).scalar_one_or_none()
     if not sticker:
@@ -325,6 +330,7 @@ def update_sticker(
         .options(
             selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
             selectinload(UserSticker.bg_removed_asset),
+            selectinload(UserSticker.library_sticker),
         )
     ).scalar_one()
 
@@ -366,6 +372,7 @@ def remove_sticker_background(
         .options(
             selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
             selectinload(UserSticker.bg_removed_asset),
+            selectinload(UserSticker.library_sticker),
         )
     ).scalar_one_or_none()
     if not sticker:
@@ -403,6 +410,7 @@ def remove_sticker_background(
         .options(
             selectinload(UserSticker.images).selectinload(UserStickerImage.asset),
             selectinload(UserSticker.bg_removed_asset),
+            selectinload(UserSticker.library_sticker),
         )
     ).scalar_one()
 
