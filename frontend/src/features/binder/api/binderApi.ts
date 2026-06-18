@@ -42,3 +42,23 @@ export async function assignSlot(
   if (!res.ok) throw new Error('Failed to assign slot');
   return res.json();
 }
+
+export async function updatePage(
+  pageId: number,
+  body: { title?: string | null; rows?: number; cols?: number },
+): Promise<BinderPageOut> {
+  const res = await fetchWithAuth(`${API_BASE}/binders/me/pages/${pageId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error('Failed to update page');
+  return res.json();
+}
+
+export async function deletePage(pageId: number): Promise<void> {
+  const res = await fetchWithAuth(`${API_BASE}/binders/me/pages/${pageId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete page');
+}
