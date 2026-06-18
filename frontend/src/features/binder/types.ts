@@ -8,6 +8,7 @@ export interface UserStickerImageOut {
 export interface UserStickerOut {
   id: number;
   sticker_id: number | null;
+  sticker_name: string | null;
   source_post_id: number | null;
   favorite: boolean;
   for_trade: boolean;

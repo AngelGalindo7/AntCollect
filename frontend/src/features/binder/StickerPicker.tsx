@@ -140,7 +140,7 @@ export default function StickerPicker({
                 <button
                   key={s.id}
                   type="button"
-                  title={s.note ?? undefined}
+                  title={s.sticker_name ?? s.note ?? undefined}
                   onClick={() => onSelect(isSelected ? null : s)}
                   style={{
                     position: 'relative',
@@ -150,6 +150,7 @@ export default function StickerPicker({
                     borderRadius: 10,
                     padding: 6,
                     cursor: 'pointer',
+                    overflow: 'hidden',
                     transition: 'transform 120ms ease, border-color 120ms ease',
                     boxShadow: isSelected ? '0 0 0 2px rgba(0,100,164,0.2)' : 'none',
                   }}
@@ -167,6 +168,7 @@ export default function StickerPicker({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      zIndex: 1,
                     }}>
                       <Check size={9} strokeWidth={2.5} color="#fff" />
                     </div>
@@ -182,6 +184,27 @@ export default function StickerPicker({
                     <div className="w-full h-full flex items-center justify-center">
                       <Package className="w-6 h-6" style={{ color: 'var(--pw-ink3)' }} />
                     </div>
+                  )}
+                  {s.sticker_name && (
+                    <span style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      padding: '2px 4px',
+                      fontSize: 8,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: 'var(--pw-ink3)',
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      pointerEvents: 'none',
+                    }}>
+                      {s.sticker_name}
+                    </span>
                   )}
                 </button>
               );
