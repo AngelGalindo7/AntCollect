@@ -4,7 +4,7 @@ import { X, Sparkles, Package } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BinderViewer from './BinderViewer';
 import StickerPicker from './StickerPicker';
-import { getMyBinder, getPublicBinder, getUserStickers, assignSlot, createPage } from './api/binderApi';
+import { getMyBinder, getPublicBinder, getUserStickers, assignSlot, createPage, updatePage, deletePage } from './api/binderApi';
 import type { BinderOut, BinderPageOut, UserStickerOut } from './types';
 
 const PANEL_WIDTH = 288;
@@ -25,6 +25,8 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
     occupant: UserStickerOut;
   } | null>(null);
   const [isCreatingPage, setIsCreatingPage] = useState(false);
+  const [pendingDeletePage, setPendingDeletePage] = useState<BinderPageOut | null>(null);
+  const [isDeletingPage, setIsDeletingPage] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -131,6 +133,36 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
       console.error(e);
     } finally {
       setIsCreatingPage(false);
+    }
+  };
+
+  const handleRenamePage = async (pageId: number, newTitle: string) => {
+    try {
+      const updated = await updatePage(pageId, { title: newTitle || null });
+      queryClient.setQueryData(['binder', username], (old: BinderOut) => ({
+        ...old,
+        pages: old.pages.map(p => p.id === pageId ? { ...p, title: updated.title } : p),
+      }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeletePage = async () => {
+    if (!pendingDeletePage) return;
+    setIsDeletingPage(true);
+    try {
+      await deletePage(pendingDeletePage.id);
+      queryClient.setQueryData(['binder', username], (old: BinderOut) => ({
+        ...old,
+        pages: old.pages.filter(p => p.id !== pendingDeletePage.id),
+      }));
+      queryClient.invalidateQueries({ queryKey: ['my-stickers'] });
+      setPendingDeletePage(null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeletingPage(false);
     }
   };
 
@@ -285,6 +317,8 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
                     isEditMode={isEditMode}
                     selectedStickerId={selectedSticker?.id ?? null}
                     onSlotClick={handleSlotClick}
+                    onRenamePage={handleRenamePage}
+                    onDeletePage={setPendingDeletePage}
                   />
                 )}
               </div>
@@ -306,6 +340,35 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
               )}
             </AnimatePresence>
           </motion.div>
+
+          {/* Delete page confirmation dialog */}
+          {pendingDeletePage && (
+            <div className="fixed inset-0 z-60 flex items-center justify-center pointer-events-none">
+              <div className="bg-[#2c2c2e] rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 border border-white/10 pointer-events-auto">
+                <p className="text-white font-semibold text-center mb-2">Delete this page?</p>
+                <p className="text-[#8e8e93] text-sm text-center mb-6">
+                  {pendingDeletePage.stickers.length > 0
+                    ? `${pendingDeletePage.stickers.length} sticker${pendingDeletePage.stickers.length === 1 ? '' : 's'} will be unfile'd and returned to your collection.`
+                    : 'This page is empty.'}
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setPendingDeletePage(null)}
+                    className="flex-1 py-2.5 rounded-xl bg-white/10 text-white text-sm font-medium hover:bg-white/20 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeletePage}
+                    disabled={isDeletingPage}
+                    className="flex-1 py-2.5 rounded-xl bg-red-500/90 hover:bg-red-500 text-white text-sm font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {isDeletingPage ? 'Deleting…' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Swap confirmation dialog */}
           {pendingPlacement && (
