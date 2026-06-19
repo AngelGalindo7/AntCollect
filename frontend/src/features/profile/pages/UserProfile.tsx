@@ -7,6 +7,7 @@ import { PositionedBackgroundImage } from "@/shared/components/PositionedBackgro
 import BinderSheet from "@/features/binder/BinderSheet";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchPublic, fetchWithAuth, API_BASE } from "@/shared/api/api";
+import { getSession } from "@/shared/auth/session";
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 
@@ -192,6 +193,15 @@ const UserProfile: React.FC = () => {
     );
   }
 
+  // Effective owner flag. The profile is fetched via fetchPublic, which sends the
+  // cookie but does NOT refresh an expired access_token — so the backend can return
+  // is_owner=false for your own profile once the short-lived token lapses. Fall back
+  // to a client-side identity match so edit affordances stay visible; mutations still
+  // go through fetchWithAuth, which refreshes the token on demand.
+  const { is_owner: backendIsOwner, user_id: profileUserId } = profile;
+  const session = getSession();
+  const isOwner = backendIsOwner || (!!session && session.userId === String(profileUserId));
+
   const tabFolderType: FolderType = activeTab !== "showcase" ? (activeTab as FolderType) : "collection";
   const filteredPosts = profile.posts.filter((p) => p.type === activeTab);
   const filteredFolders = folders.filter((f) => f.folder_type === activeTab);
@@ -201,7 +211,7 @@ const UserProfile: React.FC = () => {
 
   return (
     <div className="w-full">
-      <BinderSheet isOpen={binderOpen} onClose={() => setBinderOpen(false)} username={profile.username} isOwner={profile.is_owner} />
+      <BinderSheet isOpen={binderOpen} onClose={() => setBinderOpen(false)} username={profile.username} isOwner={isOwner} />
 
       {/* ── Section 1: Profile header with background ── */}
       <div className="relative w-full overflow-hidden aspect-[6/1] min-h-[200px] bg-warm-gray/20">
@@ -226,7 +236,7 @@ const UserProfile: React.FC = () => {
 
         <div className="absolute inset-0 z-10 flex items-start gap-6 px-4 py-8 max-w-6xl mx-auto">
           <div className="shrink-0">
-            {profile.is_owner ? (
+            {isOwner ? (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -283,14 +293,14 @@ const UserProfile: React.FC = () => {
               <p className="bg-white/60 rounded-md px-2 py-0.5 w-fit text-sm text-espresso/70">
                 {profile.bio}
               </p>
-            ) : profile.is_owner ? (
+            ) : isOwner ? (
               <p className="bg-white/60 rounded-md px-2 py-0.5 w-fit text-sm text-espresso/40 italic">
                 No bio yet.
               </p>
             ) : null}
 
             <div className="flex items-center gap-3 flex-wrap" data-testid="profile-stats">
-              {profile.is_owner ? (
+              {isOwner ? (
                 <div className="flex flex-col items-center bg-white/60 rounded-md px-2 py-0.5">
                   <span className="text-xs text-espresso/60">Stickers</span>
                   {editingStickers ? (
@@ -347,7 +357,7 @@ const UserProfile: React.FC = () => {
       {/* ── Section 2: Tab bar ── */}
       <div className="border-b border-warm-gray">
         <div className="max-w-6xl mx-auto px-4">
-          <div className="flex gap-6">
+          <div className="flex gap-6 justify-center">
             {TABS.map((tab) => (
               <button
                 key={tab.value}
@@ -367,7 +377,7 @@ const UserProfile: React.FC = () => {
 
       {/* ── Section 3: Tab content ── */}
       {activeTab === "showcase" ? (
-        profile.is_owner ? (
+        isOwner ? (
           <Workspace username={String(username)} posts={profile.posts} isOwner={true} triggerNewCanvas={triggerNewCanvas} />
         ) : (
           <SpotlightViewer username={String(username)} />
