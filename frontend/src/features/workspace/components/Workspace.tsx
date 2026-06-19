@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Plus, Pencil, Check } from 'lucide-react';
 import type { Post } from '@/shared/types/Types';
 import type { WorkspaceBounds, Rect } from '../types/workspace';
 import { useWorkspaceState } from '../hooks/useWorkspaceState';
@@ -19,6 +20,8 @@ export function Workspace({ posts, isOwner, triggerNewCanvas }: Props) {
   const [bounds, setBounds] = useState<WorkspaceBounds>({ w: 800, h: 600 });
   const [workspaceH, setWorkspaceH] = useState(600);
   const [editingPanelId, setEditingPanelId] = useState<number | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [creatingCanvas, setCreatingCanvas] = useState(false);
   const freshPanelIdRef = useRef<number | null>(null);
   const pendingCanvasSizeRef = useRef<{ w: number; h: number } | null>(null);
   const newCanvasTriggeredRef = useRef(false);
@@ -82,6 +85,18 @@ export function Workspace({ posts, isOwner, triggerNewCanvas }: Props) {
     }
   }, [isLoading, isOwner, triggerNewCanvas, createLibraryCanvas]);
 
+  const handleNewCanvas = () => {
+    if (creatingCanvas) return;
+    setCreatingCanvas(true);
+    createLibraryCanvas()
+      .then((panel) => {
+        freshPanelIdRef.current = panel.id;
+        setEditingPanelId(panel.id);
+      })
+      .catch(() => {})
+      .finally(() => setCreatingCanvas(false));
+  };
+
   const editingPanel = panels.find((p) => p.id === editingPanelId) ?? null;
 
   return (
@@ -104,6 +119,46 @@ export function Workspace({ posts, isOwner, triggerNewCanvas }: Props) {
         </div>
       )}
 
+      {/* Owner toolbar — Edit toggle + New Canvas */}
+      {!isLoading && isOwner && (
+        <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+          <button
+            onClick={handleNewCanvas}
+            disabled={creatingCanvas}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-sm text-espresso text-xs font-semibold shadow-md hover:bg-white transition-colors disabled:opacity-50"
+          >
+            <Plus size={13} strokeWidth={2.5} />
+            {creatingCanvas ? 'Creating…' : 'New Canvas'}
+          </button>
+          <button
+            onClick={() => setIsEditMode((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md transition-colors ${
+              isEditMode
+                ? 'bg-uci-gold text-espresso hover:brightness-105'
+                : 'bg-white/90 backdrop-blur-sm text-espresso hover:bg-white'
+            }`}
+          >
+            {isEditMode ? <Check size={13} strokeWidth={2.5} /> : <Pencil size={13} strokeWidth={2.5} />}
+            {isEditMode ? 'Done' : 'Edit'}
+          </button>
+        </div>
+      )}
+
+      {/* Empty-state CTA for owners with nothing placed yet */}
+      {!isLoading && isOwner && placedPanels.length === 0 && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-6 pointer-events-none">
+          <p className="text-espresso/50 text-sm font-medium">Your showcase is empty</p>
+          <button
+            onClick={handleNewCanvas}
+            disabled={creatingCanvas}
+            className="pointer-events-auto flex items-center gap-1.5 px-4 py-2 rounded-full bg-uci-gold text-espresso text-sm font-semibold shadow-md hover:brightness-105 transition-all disabled:opacity-50"
+          >
+            <Plus size={15} strokeWidth={2.5} />
+            {creatingCanvas ? 'Creating…' : 'Create your first canvas'}
+          </button>
+        </div>
+      )}
+
 
       {!isLoading &&
         placedPanels.map((panel) => {
@@ -116,7 +171,7 @@ export function Workspace({ posts, isOwner, triggerNewCanvas }: Props) {
               key={panel.id}
               panel={panel}
               isOwner={isOwner}
-              isWorkspaceEditMode={false}
+              isWorkspaceEditMode={isEditMode}
               bounds={bounds}
               others={others}
               onUpdateRect={(id, rect) => updatePanelRect(id, rect)}
