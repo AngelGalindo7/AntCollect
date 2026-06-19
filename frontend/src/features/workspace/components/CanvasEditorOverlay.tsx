@@ -485,7 +485,6 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
         <StickerPicker
           posts={posts}
           onNodeAdd={(url, source) => addNode(url, source)}
-          onUploadAsset={uploadWorkspaceAsset}
         />
 
         <div
