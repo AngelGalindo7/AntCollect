@@ -61,8 +61,12 @@ export function InteractiveOverlay({ nodes, canvasW, canvasH, onOpenPost }: Prop
 
       const holoChild = (
         <HoloStickerEffect maskUrl={node.image_url} variant={node.holoVariant}>
-          {/* Empty placeholder — the actual sticker image lives in the baked PNG below. */}
-          <div style={{ width: '100%', height: '100%' }} />
+          <img
+            src={node.image_url}
+            alt=""
+            draggable={false}
+            style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block' }}
+          />
         </HoloStickerEffect>
       );
 
