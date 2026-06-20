@@ -630,7 +630,18 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
                     onToggleRemoveBg={handleToggleRemoveBg}
                     onToggleHolo={() => updateNode(selectedNode.id, { holo: !selectedNode.holo })}
                     onToggleKeepRatio={() => setKeepRatio((v) => !v)}
-                    onRotate={(deg) => updateNode(selectedNode.id, { rotation: deg })}
+                    onRotate={(deg) => {
+                      const oldRad = (selectedNode.rotation * Math.PI) / 180;
+                      const newRad = (deg * Math.PI) / 180;
+                      const { x, y, width, height } = selectedNode;
+                      const cx = x + Math.cos(oldRad) * width / 2 - Math.sin(oldRad) * height / 2;
+                      const cy = y + Math.sin(oldRad) * width / 2 + Math.cos(oldRad) * height / 2;
+                      updateNode(selectedNode.id, {
+                        rotation: deg,
+                        x: cx - Math.cos(newRad) * width / 2 + Math.sin(newRad) * height / 2,
+                        y: cy - Math.sin(newRad) * width / 2 - Math.cos(newRad) * height / 2,
+                      });
+                    }}
                     onDelete={() => { removeNode(selectedNode.id); setSelectedId(null); }}
                   />
                 </>
