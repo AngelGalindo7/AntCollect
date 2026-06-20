@@ -5,6 +5,7 @@ import type { Panel } from '../types/workspace';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/hooks/useCanvasState';
 import { InteractiveOverlay } from './InteractiveOverlay';
 import { CanvasDomPreview } from '@/features/canvas/components/CanvasDomPreview';
+import { FadeImage } from '@/shared/components/FadeImage';
 
 interface Props {
   panel: Panel;
@@ -45,7 +46,7 @@ export function PanelLightbox({ panel, onClose, onOpenPost }: Props) {
   if (panel.preview_path) {
     content = (
       <div style={{ position: 'relative', width: contentW, height: contentH }}>
-        <img
+        <FadeImage
           src={panel.preview_path}
           alt={panel.title ?? ''}
           draggable={false}

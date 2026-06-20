@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import type { Panel } from '../types/workspace';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/hooks/useCanvasState';
 import { InteractiveOverlay } from './InteractiveOverlay';
+import { FadeImage } from '@/shared/components/FadeImage';
 
 interface Props {
   panel: Panel;
@@ -14,6 +16,7 @@ export function PanelPreview({ panel, onOpenPost }: Props) {
   const canvas = panel.canvas_json;
   const cw = canvas?.width ?? CANVAS_WIDTH;
   const ch = canvas?.height ?? CANVAS_HEIGHT;
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   if (panel.preview_path) {
     const bg = canvas?.background;
@@ -21,10 +24,16 @@ export function PanelPreview({ panel, onOpenPost }: Props) {
 
     return (
       <div className="w-full h-full relative overflow-hidden" style={{ background: letterboxColor }}>
-        <img
+        {/* Shimmer skeleton while the PNG is in flight */}
+        <div
+          className={`absolute inset-0 animate-pulse transition-opacity duration-300 pointer-events-none ${imgLoaded ? 'opacity-0' : 'opacity-100'}`}
+          style={{ background: 'rgba(255,255,255,0.18)' }}
+        />
+        <FadeImage
           src={panel.preview_path}
           className="absolute inset-0 w-full h-full"
           style={{ objectFit: 'contain' }}
+          onLoad={() => setImgLoaded(true)}
           alt=""
           draggable={false}
         />

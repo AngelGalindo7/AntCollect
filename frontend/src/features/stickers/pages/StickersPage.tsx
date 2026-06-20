@@ -11,6 +11,7 @@ import {
   updateSticker,
 } from '../api/stickerApi';
 import AddStickerModal from '../components/AddStickerModal';
+import { FadeImage } from '@/shared/components/FadeImage';
 
 const BackIcon = () => (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,7 +144,7 @@ const StickersPage: React.FC = () => {
                 onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'var(--shadow-card)')}
               >
                 {img ? (
-                  <img src={img} alt="sticker" className="w-full h-full object-contain p-[10%]" />
+                  <FadeImage src={img} alt="sticker" className="w-full h-full object-contain p-[10%]" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-warm-cream text-warm-gray text-xs font-semibold">
                     #{String(sticker.sticker_id ?? sticker.id).padStart(3, '0')}
