@@ -94,7 +94,7 @@ export function useCanvasState(initial: CanvasState | null) {
 
   const { nodes, background, width, height } = state.present;
 
-  const addNode = useCallback((imageUrl: string, source: NodeSource) => {
+  const addNode = useCallback((imageUrl: string, source: NodeSource, opts?: { postId?: number }) => {
     const id = crypto.randomUUID();
     const isPreCut = source === 'library';
     dispatch({
@@ -116,6 +116,7 @@ export function useCanvasState(initial: CanvasState | null) {
             scaleY: 1,
             bgRemoved: isPreCut,
             removedBgUrl: isPreCut ? imageUrl : undefined,
+            ...(opts?.postId != null ? { postId: opts.postId } : {}),
           },
         ],
       }),
