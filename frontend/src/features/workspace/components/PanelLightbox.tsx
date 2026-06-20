@@ -2,18 +2,20 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import type { Panel } from '../types/workspace';
-import { CanvasDomPreview } from '@/features/canvas/components/CanvasDomPreview';
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from '@/features/canvas/hooks/useCanvasState';
+import { InteractiveOverlay } from './InteractiveOverlay';
+import { CanvasDomPreview } from '@/features/canvas/components/CanvasDomPreview';
 
 interface Props {
   panel: Panel;
   onClose: () => void;
+  onOpenPost?: (postId: number) => void;
 }
 
-// Full-screen expansion of a single showcase canvas. Renders via CanvasDomPreview at
-// large scale so the holo shimmer + tilt are live here — this is the payoff that turns
-// the public showcase from a flat screenshot into something you interact with.
-export function PanelLightbox({ panel, onClose }: Props) {
+// Full-screen expansion of a single showcase panel. Primary render: baked PNG + live
+// InteractiveOverlay (holo shimmer + post hotspots). CanvasDomPreview is a fallback
+// for the rare case where canvas_json exists but preview upload failed mid-save.
+export function PanelLightbox({ panel, onClose, onOpenPost }: Props) {
   const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   useEffect(() => {
@@ -35,6 +37,34 @@ export function PanelLightbox({ panel, onClose }: Props) {
 
   // Fit the canvas inside the viewport, never upscaling past its natural pixel size.
   const scale = Math.min((vp.w * 0.92) / cw, (vp.h * 0.86) / ch, 1);
+
+  const contentW = cw * scale;
+  const contentH = ch * scale;
+
+  let content: React.ReactNode = null;
+  if (panel.preview_path) {
+    content = (
+      <div style={{ position: 'relative', width: contentW, height: contentH }}>
+        <img
+          src={panel.preview_path}
+          alt={panel.title ?? ''}
+          draggable={false}
+          style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+        />
+        <InteractiveOverlay
+          nodes={nodes}
+          canvasW={cw}
+          canvasH={ch}
+          onOpenPost={onOpenPost}
+        />
+      </div>
+    );
+  } else if (nodes.length > 0) {
+    // Fallback: canvas JSON present but preview not yet uploaded.
+    content = (
+      <CanvasDomPreview width={cw} height={ch} background={canvas?.background} nodes={nodes} scale={scale} />
+    );
+  }
 
   return createPortal(
     <div
@@ -72,21 +102,14 @@ export function PanelLightbox({ panel, onClose }: Props) {
         <X size={18} />
       </button>
 
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 30px 80px rgba(0,0,0,0.5)' }}
-      >
-        {nodes.length > 0 ? (
-          <CanvasDomPreview width={cw} height={ch} background={canvas?.background} nodes={nodes} scale={scale} />
-        ) : panel.preview_path ? (
-          <img
-            src={panel.preview_path}
-            alt={panel.title ?? ''}
-            draggable={false}
-            style={{ width: cw * scale, height: ch * scale, objectFit: 'contain', display: 'block' }}
-          />
-        ) : null}
-      </div>
+      {content && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 30px 80px rgba(0,0,0,0.5)' }}
+        >
+          {content}
+        </div>
+      )}
 
       {panel.title && (
         <p

@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles, Maximize2 } from 'lucide-react';
 import type { Panel } from '../types/workspace';
 import { getPublicWorkspace } from '../api/workspaceApi';
@@ -10,9 +11,9 @@ interface Props {
 }
 
 // Public showcase. Preserves the spatial composition the owner arranged and renders
-// every panel live (holo panels shimmer on hover via PanelPreview) rather than as a
-// flat screenshot. Scale is capped at 1 so a small showcase is never upscaled into a
-// blurry giant; the stage is centered when it is narrower than the container.
+// every panel live (holo panels shimmer on hover via InteractiveOverlay in PanelPreview)
+// rather than as a flat screenshot. Scale is capped at 1 so a small showcase is never
+// upscaled into a blurry giant; the stage is centered when narrower than the container.
 export function SpotlightViewer({ username }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [panels, setPanels] = useState<Panel[]>([]);
@@ -22,6 +23,7 @@ export function SpotlightViewer({ username }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<Panel | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let cancelled = false;
@@ -54,6 +56,13 @@ export function SpotlightViewer({ username }: Props) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // MVP: clicking a post sticker navigates to the showcase owner's profile — the post
+  // images in StickerPicker come from the owner's own posts, so the target is correct.
+  const handleOpenPost = useCallback((_postId: number) => {
+    setActivePanel(null);
+    navigate(`/${username}`);
+  }, [navigate, username]);
 
   // H7: never scale above 1 — upscaling a small composition produces a blown-up,
   // blurry result. Scale down to fit wide compositions, leave small ones at 1:1.
@@ -88,7 +97,7 @@ export function SpotlightViewer({ username }: Props) {
         <Sparkles size={22} className="text-espresso/30" />
         <p className="text-espresso/50 text-sm font-medium">Nothing on display yet</p>
         <p className="text-espresso/35 text-xs max-w-xs">
-          This collector hasn’t put anything in their showcase.
+          This collector hasn't put anything in their showcase.
         </p>
       </div>
     );
@@ -120,7 +129,7 @@ export function SpotlightViewer({ username }: Props) {
               overflow: 'hidden',
             }}
           >
-            <PanelPreview panel={p} />
+            <PanelPreview panel={p} onOpenPost={handleOpenPost} />
 
             {/* Expand affordance — signals the panel is clickable without obscuring the art. */}
             <div className="pointer-events-none absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100">
@@ -138,7 +147,11 @@ export function SpotlightViewer({ username }: Props) {
       </div>
 
       {activePanel && (
-        <PanelLightbox panel={activePanel} onClose={() => setActivePanel(null)} />
+        <PanelLightbox
+          panel={activePanel}
+          onClose={() => setActivePanel(null)}
+          onOpenPost={handleOpenPost}
+        />
       )}
     </div>
   );
