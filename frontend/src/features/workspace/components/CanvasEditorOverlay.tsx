@@ -622,6 +622,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
                     holoOn={!!selectedNode.holo}
                     keepRatio={keepRatio}
                     isRemovingBg={isRemovingBg}
+                    rotation={overlayBox.rotation}
                     onLayerUp={() => moveNodeUp(selectedNode.id)}
                     onLayerDown={() => moveNodeDown(selectedNode.id)}
                     onDuplicate={handleDuplicate}
@@ -629,6 +630,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
                     onToggleRemoveBg={handleToggleRemoveBg}
                     onToggleHolo={() => updateNode(selectedNode.id, { holo: !selectedNode.holo })}
                     onToggleKeepRatio={() => setKeepRatio((v) => !v)}
+                    onRotate={(deg) => updateNode(selectedNode.id, { rotation: deg })}
                     onDelete={() => { removeNode(selectedNode.id); setSelectedId(null); }}
                   />
                 </>

@@ -1,4 +1,4 @@
-import { ChevronUp, ChevronDown, Copy, Crop, Wand2, Sparkles, Lock, Unlock, Trash2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, Copy, Crop, Wand2, Sparkles, Lock, Unlock, Trash2, RotateCcw, RotateCw } from 'lucide-react';
 import type { CSSProperties } from 'react';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
   holoOn: boolean;
   keepRatio: boolean;
   isRemovingBg: boolean;
+  rotation: number;
   onLayerUp: () => void;
   onLayerDown: () => void;
   onDuplicate: () => void;
@@ -16,6 +17,7 @@ interface Props {
   onToggleRemoveBg: () => void;
   onToggleHolo: () => void;
   onToggleKeepRatio: () => void;
+  onRotate: (deg: number) => void;
   onDelete: () => void;
 }
 
@@ -27,6 +29,7 @@ export function ContextualToolbar({
   holoOn,
   keepRatio,
   isRemovingBg,
+  rotation,
   onLayerUp,
   onLayerDown,
   onDuplicate,
@@ -34,6 +37,7 @@ export function ContextualToolbar({
   onToggleRemoveBg,
   onToggleHolo,
   onToggleKeepRatio,
+  onRotate,
   onDelete,
 }: Props) {
   const baseBtn: CSSProperties = {
@@ -135,6 +139,31 @@ export function ContextualToolbar({
         style={{ ...baseBtn, ...(keepRatio ? activeStyle : {}) }}
       >
         {keepRatio ? <Lock size={16} strokeWidth={1.6} /> : <Unlock size={16} strokeWidth={1.6} />}
+      </button>
+
+      <span style={divider} />
+
+      <button
+        type="button"
+        title="Rotate −15°"
+        onClick={() => onRotate(rotation - 15)}
+        style={baseBtn}
+      >
+        <RotateCcw size={16} strokeWidth={1.6} />
+      </button>
+      <span
+        className="pw-mono"
+        style={{ fontSize: 11, minWidth: 34, textAlign: 'center', color: 'var(--pw-ink2)', userSelect: 'none' }}
+      >
+        {Math.round(((rotation % 360) + 360) % 360)}°
+      </span>
+      <button
+        type="button"
+        title="Rotate +15°"
+        onClick={() => onRotate(rotation + 15)}
+        style={baseBtn}
+      >
+        <RotateCw size={16} strokeWidth={1.6} />
       </button>
 
       <span style={divider} />
