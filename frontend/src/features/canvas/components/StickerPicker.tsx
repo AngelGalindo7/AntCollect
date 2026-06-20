@@ -1,19 +1,37 @@
-import { type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
+import { Upload } from 'lucide-react';
 import type { Post } from '../../../shared/types/Types';
 import type { NodeSource } from '../types/canvas';
 
 export function StickerPicker({
   posts,
   onNodeAdd,
+  onUpload,
 }: {
   posts: Post[];
-  onNodeAdd: (url: string, source: NodeSource) => void;
+  onNodeAdd: (url: string, source: NodeSource, opts?: { postId?: number }) => void;
+  onUpload?: (file: File) => Promise<void>;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const postImages = posts.flatMap((p) =>
     ((p as any).images ?? [])
       .filter((img: any) => img?.paths?.medium)
-      .map((img: any) => ({ url: img.paths.medium as string, caption: p.caption })),
+      .map((img: any) => ({ url: img.paths.medium as string, caption: p.caption, postId: p.post_id })),
   );
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUpload) return;
+    setIsUploading(true);
+    try {
+      await onUpload(file);
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
 
   const stickerCard: CSSProperties = {
     position: 'relative',
@@ -55,11 +73,47 @@ export function StickerPicker({
           Add to canvas
         </p>
         <p style={{ fontSize: 12, color: 'var(--pw-ink3)', margin: 0 }}>
-          Choose from your posts
+          Choose from your posts or upload a decoration
         </p>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 12px' }}>
+        {onUpload && (
+          <>
+            <p style={eyebrow}>Decoration</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              style={{
+                ...stickerCard,
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                aspectRatio: undefined,
+                padding: '12px 0',
+                marginBottom: 12,
+                opacity: isUploading ? 0.5 : 1,
+              }}
+            >
+              <Upload size={18} color="var(--pw-ink3)" />
+              <span style={{ fontSize: 12, color: 'var(--pw-ink3)' }}>
+                {isUploading ? 'Uploading…' : 'Upload image'}
+              </span>
+            </button>
+          </>
+        )}
+
         {postImages.length === 0 ? (
           <p style={{ color: 'var(--pw-ink3)', fontSize: 12, textAlign: 'center', padding: '32px 0' }}>
             No post images yet
@@ -72,7 +126,7 @@ export function StickerPicker({
                 <button
                   key={i}
                   type="button"
-                  onClick={() => onNodeAdd(img.url, 'post')}
+                  onClick={() => onNodeAdd(img.url, 'post', { postId: img.postId })}
                   title={img.caption}
                   style={stickerCard}
                 >
