@@ -2,9 +2,6 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { CanvasNode } from '@/features/canvas/types/canvas';
 import { HoloStickerEffect } from '@/features/canvas/components/HoloStickerEffect';
 
-// A node is interactive if it carries holo shimmer or is backed by a post (clickable hotspot).
-const isInteractive = (n: CanvasNode) => n.holo === true || n.postId != null;
-
 interface Props {
   nodes: CanvasNode[];
   canvasW: number;
