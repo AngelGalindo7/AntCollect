@@ -4,6 +4,7 @@ import { fetchWithAuth, API_BASE } from '../../../shared/api/api';
 import { uploadCanvasAsset } from '../api/canvasApi';
 import type { CanvasNode, BackgroundConfig, HoloVariant } from '../types/canvas';
 import { HOLO_VARIANTS } from '../types/canvas';
+import { FadeImage } from '@/shared/components/FadeImage';
 
 interface LibrarySticker {
   id: number;
@@ -192,7 +193,7 @@ export function StickerControls({
                   cursor: 'pointer',
                 }}
               >
-                <img src={node.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <FadeImage src={node.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </button>
             );
           })}
@@ -217,7 +218,7 @@ export function StickerControls({
           }}
         >
           <div style={{ width: 52, height: 52, borderRadius: 8, overflow: 'hidden', background: 'transparent', flexShrink: 0 }}>
-            <img src={selectedNode.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <FadeImage src={selectedNode.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--pw-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -464,7 +465,7 @@ export function StickerControls({
                         cursor: selectedNode ? 'pointer' : 'default',
                       }}
                     >
-                      <img src={s.thumbnail!} alt={s.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      <FadeImage src={s.thumbnail!} alt={s.title} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                     </button>
                   );
                 })}

@@ -2,6 +2,7 @@ import { useRef, useState, type CSSProperties } from 'react';
 import { Upload } from 'lucide-react';
 import type { Post } from '../../../shared/types/Types';
 import type { NodeSource } from '../types/canvas';
+import { FadeImage } from '@/shared/components/FadeImage';
 
 export function StickerPicker({
   posts,
@@ -130,7 +131,7 @@ export function StickerPicker({
                   title={img.caption}
                   style={stickerCard}
                 >
-                  <img src={img.url} alt={img.caption} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }} />
+                  <FadeImage src={img.url} alt={img.caption} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }} />
                 </button>
               ))}
             </div>
