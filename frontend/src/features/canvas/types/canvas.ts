@@ -21,6 +21,7 @@ export interface CanvasNode {
   removedBgUrl?: string;
   holo?: boolean;
   holoVariant?: HoloVariant;
+  postId?: number;
 }
 
 export interface BackgroundConfig {
