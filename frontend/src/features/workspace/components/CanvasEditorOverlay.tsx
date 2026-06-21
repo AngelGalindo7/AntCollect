@@ -655,44 +655,43 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
                 // Top-center of sticker in canvas coords (accounts for rotation)
                 const tcX = overlayBox.x + Math.cos(rad) * (w / 2);
                 const tcY = overlayBox.y + Math.sin(rad) * (w / 2);
-                // Perpendicular "up" from the top edge in rotated space
-                const pinOffset = 44;
-                const pinCX = tcX - Math.sin(rad) * pinOffset;
-                const pinCY = tcY - Math.cos(rad) * pinOffset;
+                // Pin lives in SCREEN coords — always above the toolbar so it's never hidden by it
+                const toolbarTop = Math.max(8, overlayBox.y * scale - 56);
+                const pinSX = (overlayBox.x + overlayBox.width / 2) * scale;
+                const pinSY = Math.max(4, toolbarTop - 28);
                 return (
                 <>
-                  {/* Line from top-center to pin */}
+                  {/* Dashed arm: pin → sticker top-center */}
                   <svg
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', zIndex: 29 }}
                   >
                     <line
-                      x1={tcX * scale} y1={tcY * scale}
-                      x2={pinCX * scale} y2={pinCY * scale}
-                      stroke="rgba(28,26,22,0.3)"
+                      x1={pinSX} y1={pinSY}
+                      x2={tcX * scale} y2={tcY * scale}
+                      stroke="rgba(0,100,164,0.45)"
                       strokeWidth={1.5}
-                      strokeDasharray="3 3"
+                      strokeDasharray="4 3"
                     />
                   </svg>
 
-                  {/* Rotation pin circle */}
+                  {/* Rotation pin — positioned ABOVE the toolbar in screen space */}
                   <div
                     title="Drag to rotate"
                     style={{
                       position: 'absolute',
-                      left: pinCX * scale,
-                      top: pinCY * scale,
+                      left: pinSX,
+                      top: pinSY,
                       transform: 'translate(-50%, -50%)',
-                      width: 24,
-                      height: 24,
+                      width: 28,
+                      height: 28,
                       borderRadius: '50%',
-                      background: 'var(--pw-paper)',
-                      border: '1.5px solid var(--pw-line)',
+                      background: '#0064A4',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'crosshair',
-                      zIndex: 31,
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                      zIndex: 32,
+                      boxShadow: '0 2px 6px rgba(0,100,164,0.35)',
                       userSelect: 'none',
                       touchAction: 'none',
                     }}
@@ -700,7 +699,7 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
                     onPointerMove={handleRotPinMove}
                     onPointerUp={handleRotPinUp}
                   >
-                    <RotateCw size={12} strokeWidth={1.8} color="var(--pw-ink2)" />
+                    <RotateCw size={13} strokeWidth={2} color="#ffffff" />
                   </div>
 
                   <div
