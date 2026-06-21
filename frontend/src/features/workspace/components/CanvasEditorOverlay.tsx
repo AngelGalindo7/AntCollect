@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { ArrowLeft, Undo2, Redo2, Crop, Eye } from 'lucide-react';
+import { ArrowLeft, Undo2, Redo2, Crop, Eye, RotateCw } from 'lucide-react';
 import type Konva from 'konva';
 import { CanvasStage } from '@/features/canvas/components/CanvasStage';
 import { CanvasDomPreview } from '@/features/canvas/components/CanvasDomPreview';
@@ -41,8 +41,9 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
       ? { version: 1, width: overrideInitialSize.w, height: overrideInitialSize.h, background: { type: 'color', value: '#f5f0e8' }, nodes: [] }
       : null);
 
-  const { nodes, background, width, height, isDirty, canUndo, canRedo, addNode, updateNode, removeNode, duplicateNode,
-    moveNodeUp, moveNodeDown, changeBackground, setCanvasSize, undo, redo, markClean, getCanvasJson } =
+  const { nodes, background, width, height, isDirty, canUndo, canRedo, addNode, updateNode, updateNodeLive,
+    checkpoint, removeNode, duplicateNode, moveNodeUp, moveNodeDown, changeBackground, setCanvasSize,
+    undo, redo, markClean, getCanvasJson } =
     useCanvasState(effectiveInitialJson);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -60,6 +61,12 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
   const [isHoloPreview, setIsHoloPreview] = useState(false);
   const stageRef = useRef<Konva.Stage | null>(null);
   const canvasAreaRef = useRef<HTMLDivElement>(null);
+  const rotDragRef = useRef<{
+    centerX: number;
+    centerY: number;
+    startAngle: number;
+    startRotation: number;
+  } | null>(null);
 
   const [bgEditUrl, setBgEditUrl] = useState<string | null>(null);
 
@@ -253,6 +260,59 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
       bgRemoved: false,
       removedBgUrl: undefined,
     });
+  };
+
+  const handleRotPinDown = (e: React.PointerEvent) => {
+    if (!selectedNode || !overlayBox) return;
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setLiveBounds(null);
+
+    const rad = (overlayBox.rotation * Math.PI) / 180;
+    const w = overlayBox.width;
+    const h = overlayBox.height;
+    const cX = overlayBox.x + Math.cos(rad) * w / 2 - Math.sin(rad) * h / 2;
+    const cY = overlayBox.y + Math.sin(rad) * w / 2 + Math.cos(rad) * h / 2;
+
+    const container = stageRef.current?.container();
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const pX = (e.clientX - rect.left) / scale;
+    const pY = (e.clientY - rect.top) / scale;
+
+    checkpoint();
+    rotDragRef.current = {
+      centerX: cX,
+      centerY: cY,
+      startAngle: Math.atan2(pY - cY, pX - cX),
+      startRotation: overlayBox.rotation,
+    };
+  };
+
+  const handleRotPinMove = (e: React.PointerEvent) => {
+    if (!rotDragRef.current || !selectedNode) return;
+    const container = stageRef.current?.container();
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const pX = (e.clientX - rect.left) / scale;
+    const pY = (e.clientY - rect.top) / scale;
+    const { centerX, centerY, startAngle, startRotation } = rotDragRef.current;
+    const delta = Math.atan2(pY - centerY, pX - centerX) - startAngle;
+    const newRot = startRotation + delta * (180 / Math.PI);
+    const newRad = (newRot * Math.PI) / 180;
+    const w = selectedNode.width;
+    const h = selectedNode.height;
+    updateNodeLive(selectedNode.id, {
+      rotation: newRot,
+      x: centerX - Math.cos(newRad) * w / 2 + Math.sin(newRad) * h / 2,
+      y: centerY - Math.sin(newRad) * w / 2 - Math.cos(newRad) * h / 2,
+    });
+  };
+
+  const handleRotPinUp = (e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    rotDragRef.current = null;
   };
 
   const stickerCountLabel = `${nodes.length} ${nodes.length === 1 ? 'sticker' : 'stickers'}`;
@@ -588,9 +648,61 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
                 Petr Stickers · UCI
               </span>
 
-              {/* Selection overlays — dimension chip + contextual toolbar */}
-              {!bgEditUrl && selectedNode && overlayBox && (
+              {/* Selection overlays — dimension chip + contextual toolbar + rotation pin */}
+              {!bgEditUrl && selectedNode && overlayBox && (() => {
+                const rad = (overlayBox.rotation * Math.PI) / 180;
+                const w = overlayBox.width;
+                // Top-center of sticker in canvas coords (accounts for rotation)
+                const tcX = overlayBox.x + Math.cos(rad) * (w / 2);
+                const tcY = overlayBox.y + Math.sin(rad) * (w / 2);
+                // Perpendicular "up" from the top edge in rotated space
+                const pinOffset = 44;
+                const pinCX = tcX - Math.sin(rad) * pinOffset;
+                const pinCY = tcY - Math.cos(rad) * pinOffset;
+                return (
                 <>
+                  {/* Line from top-center to pin */}
+                  <svg
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', zIndex: 29 }}
+                  >
+                    <line
+                      x1={tcX * scale} y1={tcY * scale}
+                      x2={pinCX * scale} y2={pinCY * scale}
+                      stroke="rgba(28,26,22,0.3)"
+                      strokeWidth={1.5}
+                      strokeDasharray="3 3"
+                    />
+                  </svg>
+
+                  {/* Rotation pin circle */}
+                  <div
+                    title="Drag to rotate"
+                    style={{
+                      position: 'absolute',
+                      left: pinCX * scale,
+                      top: pinCY * scale,
+                      transform: 'translate(-50%, -50%)',
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      background: 'var(--pw-paper)',
+                      border: '1.5px solid var(--pw-line)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'crosshair',
+                      zIndex: 31,
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                      userSelect: 'none',
+                      touchAction: 'none',
+                    }}
+                    onPointerDown={handleRotPinDown}
+                    onPointerMove={handleRotPinMove}
+                    onPointerUp={handleRotPinUp}
+                  >
+                    <RotateCw size={12} strokeWidth={1.8} color="var(--pw-ink2)" />
+                  </div>
+
                   <div
                     className="pw-mono"
                     style={{
@@ -645,7 +757,8 @@ export function CanvasEditorOverlay({ panel, posts, onClose, onSaved, overrideIn
                     onDelete={() => { removeNode(selectedNode.id); setSelectedId(null); }}
                   />
                 </>
-              )}
+                );
+              })()}
 
               {/* C2: live holo preview — DOM render over the Konva stage so the owner can
                   hover a sticker and see the actual shine before saving. */}
