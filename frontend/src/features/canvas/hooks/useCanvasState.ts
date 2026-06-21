@@ -27,6 +27,8 @@ interface HistoryState {
 
 type Action =
   | { type: 'mutate'; fn: (s: Snapshot) => Snapshot }
+  | { type: 'mutateLive'; fn: (s: Snapshot) => Snapshot }
+  | { type: 'checkpoint' }
   | { type: 'undo' }
   | { type: 'redo' }
   | { type: 'markClean' };
@@ -42,6 +44,16 @@ function reducer(state: HistoryState, action: Action): HistoryState {
       const past = [...state.past, state.present];
       const trimmed = past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
       return { past: trimmed, present: next, future: [], dirty: true };
+    }
+    case 'checkpoint': {
+      const past = [...state.past, state.present];
+      const trimmed = past.length > HISTORY_LIMIT ? past.slice(past.length - HISTORY_LIMIT) : past;
+      return { ...state, past: trimmed, future: [] };
+    }
+    case 'mutateLive': {
+      const next = action.fn(state.present);
+      if (next === state.present) return state;
+      return { ...state, present: next, dirty: true };
     }
     case 'undo': {
       if (state.past.length === 0) return state;
@@ -133,6 +145,20 @@ export function useCanvasState(initial: CanvasState | null) {
     });
   }, []);
 
+  // Live update during drag — updates present without creating an undo entry.
+  // Call checkpoint() first to save the pre-drag state for undo.
+  const updateNodeLive = useCallback((id: string, attrs: Partial<CanvasNode>) => {
+    dispatch({
+      type: 'mutateLive',
+      fn: (s) => {
+        if (!s.nodes.some((n) => n.id === id)) return s;
+        return { ...s, nodes: s.nodes.map((n) => (n.id === id ? { ...n, ...attrs } : n)) };
+      },
+    });
+  }, []);
+
+  const checkpoint = useCallback(() => dispatch({ type: 'checkpoint' }), []);
+
   const removeNode = useCallback((id: string) => {
     dispatch({
       type: 'mutate',
@@ -217,6 +243,8 @@ export function useCanvasState(initial: CanvasState | null) {
     canRedo: state.future.length > 0,
     addNode,
     updateNode,
+    updateNodeLive,
+    checkpoint,
     removeNode,
     duplicateNode,
     moveNodeUp,
