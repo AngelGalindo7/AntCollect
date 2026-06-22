@@ -3,8 +3,6 @@ import React from 'react';
 interface CreateMenuProps {
   onSelectPost: () => void;
   onSelectFolder: () => void;
-  onSelectCatalog: () => void;
-  onSelectCanvas: () => void;
   onClose: () => void;
 }
 
@@ -19,26 +17,14 @@ const ITEMS = [
     title: 'New Folder',
     desc: 'Organize your collection for others to see',
   },
-  {
-    key: 'catalog',
-    title: 'Catalog Entry',
-    desc: 'Add a missing sticker to the community database',
-  },
-  {
-    key: 'canvas',
-    title: 'Canvas',
-    desc: 'Arrange your stickers into a showcase',
-  },
 ] as const;
 
 type ItemKey = typeof ITEMS[number]['key'];
 
-const CreateMenu: React.FC<CreateMenuProps> = ({ onSelectPost, onSelectFolder, onSelectCatalog, onSelectCanvas, onClose }) => {
+const CreateMenu: React.FC<CreateMenuProps> = ({ onSelectPost, onSelectFolder, onClose }) => {
   const handlers: Record<ItemKey, () => void> = {
     post: onSelectPost,
     folder: onSelectFolder,
-    catalog: onSelectCatalog,
-    canvas: onSelectCanvas,
   };
 
   return (
