@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getSession } from '@/shared/auth/session';
+import { Sparkles } from 'lucide-react';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
 // import { useState } from 'react';
@@ -212,15 +212,9 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount: _unreadCount = 0,
             </div>
           </button> */}
 
-          <button
-            onClick={() => { const s = getSession(); if (s) navigate(`/${s.username}?newCanvas=1`); }}
-            className={iconButtonClass}
-            title="New Canvas"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
+          <NavLink to="/studio" className={getNavLinkClass} title="Studio">
+            <Sparkles className="w-6 h-6" />
+          </NavLink>
 
           <NavLink to="/settings" className={getNavLinkClass} title="Settings">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
