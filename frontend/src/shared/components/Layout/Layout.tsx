@@ -1,35 +1,19 @@
 import React from 'react';
-import { Outlet, useNavigate, useMatch } from 'react-router-dom';
+import { Outlet, useMatch } from 'react-router-dom';
 import { SideBar } from './SideBar';
 import { GuestNav } from './GuestNav';
 import Header from './Header';
-import { useUIStore } from '@/shared/store/useUIStore';
-import CreatePost from '@/features/posts/components/CreatePost';
-import CreateMenu from '@/features/create/components/CreateMenu';
 // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
 // import { useUnreadCount } from '@/features/messaging/index';
 // import { ConversationList } from '@/features/messaging/components/ConversationList';
 // import { ConversationSearch } from '@/features/messaging/components/ConversationSearch';
 import { useIsAuthenticated } from '@/app/providers/AppProviders';
 import { AuthWallModal } from '@/shared/components/AuthWallModal';
-import { getSession } from '@/shared/auth/session';
 
 // Authenticated shell — only rendered when a session exists.
 // Auth-dependent hooks (useUnreadCount, WebSocket state) live here and never
 // fire for guests.
 const AuthenticatedLayout: React.FC = () => {
-  const navigate = useNavigate();
-  const {
-    isCreateMenuOpen, closeCreateMenu,
-    openCreatePostModal, isCreatePostModalOpen, closeCreatePostModal,
-  } = useUIStore();
-
-  const handleOpenCanvas = () => {
-    const session = getSession();
-    if (!session) return;
-    closeCreateMenu();
-    navigate(`/${session.username}?newCanvas=1`);
-  };
   // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
   // const unreadCount = useUnreadCount();
 
@@ -83,35 +67,6 @@ const AuthenticatedLayout: React.FC = () => {
         </div>
       </div>
 
-      {isCreateMenuOpen && (
-        <CreateMenu
-          onSelectPost={openCreatePostModal}
-          onSelectFolder={() => { closeCreateMenu(); navigate('/create-folder'); }}
-          onSelectCatalog={() => { closeCreateMenu(); navigate('/library'); }}
-          onSelectCanvas={handleOpenCanvas}
-          onClose={closeCreateMenu}
-        />
-      )}
-
-      {isCreatePostModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-          onClick={closeCreatePostModal}
-        >
-          <div
-            className="relative"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={closeCreatePostModal}
-              className="absolute -top-10 right-0 text-white hover:text-gray-300 text-2xl font-bold"
-            >
-              ✕
-            </button>
-            <CreatePost onSuccess={closeCreatePostModal} />
-          </div>
-        </div>
-      )}
     </div>
   );
 };

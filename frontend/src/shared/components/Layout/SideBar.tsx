@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { useUIStore } from '@/shared/store/useUIStore';
+import { getSession } from '@/shared/auth/session';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
 // import { useState } from 'react';
@@ -35,7 +35,6 @@ interface SideBarProps {
 export const SideBar: React.FC<SideBarProps> = ({ unreadCount: _unreadCount = 0, isChatRoute: _isChatRoute = false }) => {
   void _unreadCount;
   void _isChatRoute;
-  const openCreateMenu = useUIStore((state) => state.openCreateMenu);
   const navigate = useNavigate();
 
   // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
@@ -213,7 +212,11 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount: _unreadCount = 0,
             </div>
           </button> */}
 
-          <button onClick={openCreateMenu} className={iconButtonClass} title="Create">
+          <button
+            onClick={() => { const s = getSession(); if (s) navigate(`/${s.username}?newCanvas=1`); }}
+            className={iconButtonClass}
+            title="New Canvas"
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
             </svg>
