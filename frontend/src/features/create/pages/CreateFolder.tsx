@@ -257,11 +257,11 @@ const CreateFolder: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-warm-cream overflow-hidden">
 
-      {/* Page header */}
-      <div className="bg-white border-b border-warm-gray/30 px-6 py-3.5 flex items-center gap-4 shrink-0">
+      {/* Header */}
+      <div className="bg-white border-b border-warm-gray/20 px-6 py-4 flex items-center gap-4 shrink-0">
         <button
           onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-1.5 text-sm text-espresso/50 hover:text-espresso transition-colors shrink-0"
+          className="inline-flex items-center gap-1.5 text-sm text-espresso/45 hover:text-espresso transition-colors shrink-0"
           aria-label="Go back"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -270,29 +270,30 @@ const CreateFolder: React.FC = () => {
           Back
         </button>
 
-        <h1 className="text-base font-bold text-espresso flex-1">New Folder</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-base font-bold text-espresso">New Folder</h1>
+          <p className="text-xs text-espresso/40 mt-0.5">Group your stickers by collection, wishlist, or trade pile.</p>
+        </div>
 
         <div className="flex items-center gap-3 shrink-0">
           {saving && savingProgress && (
-            <span className="text-xs text-espresso/50">{savingProgress}</span>
+            <span className="text-xs text-espresso/45 italic">{savingProgress}</span>
           )}
           {error && <p className="text-sm text-brick-red">{error}</p>}
           {totalToAdd > 0 && !saving && (
-            <span className="text-xs text-espresso/50">
-              {totalToAdd} sticker{totalToAdd === 1 ? '' : 's'} ready
-            </span>
+            <span className="text-xs text-espresso/45">{totalToAdd} sticker{totalToAdd === 1 ? '' : 's'} ready</span>
           )}
           <button
             onClick={() => navigate(-1)}
             disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-espresso/55 hover:text-espresso transition-colors disabled:opacity-40"
+            className="px-4 py-2 text-sm font-medium text-espresso/50 hover:text-espresso transition-colors disabled:opacity-40"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex items-center gap-2 px-5 py-2 text-sm font-bold bg-campus-blue text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+            className="inline-flex items-center gap-2 px-5 py-2 text-sm font-bold bg-campus-blue text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
           >
             {saving && (
               <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -306,28 +307,28 @@ const CreateFolder: React.FC = () => {
       </div>
 
       {/* Two-column body */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0">
 
         {/* Left sidebar — folder setup */}
-        <div className="w-72 shrink-0 border-r border-warm-gray/30 bg-white overflow-y-auto">
+        <div className="w-72 shrink-0 border-r border-warm-gray/20 bg-white overflow-y-auto px-6 py-8 space-y-8">
 
           {/* Cover photo */}
-          <div className="px-6 py-6 border-b border-warm-gray/20">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-espresso/40 mb-3">Cover Photo</p>
+          <div>
+            <p className="text-xs font-semibold text-espresso/50 mb-3">Cover photo</p>
             <button
               type="button"
               onClick={() => avatarInputRef.current?.click()}
-              className={`relative w-full aspect-square overflow-hidden border-2 border-dashed flex flex-col items-center justify-center transition-all ${
+              className={`relative w-full aspect-square overflow-hidden rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
                 avatarPreview
-                  ? 'border-campus-blue/30'
-                  : 'border-warm-gray hover:border-campus-blue/40 hover:bg-blue-50/20'
+                  ? 'border-campus-blue/25'
+                  : 'border-warm-gray/60 hover:border-campus-blue/40 hover:bg-warm-cream/50'
               }`}
               aria-label="Choose folder cover"
             >
               {avatarPreview ? (
                 <>
                   <img src={avatarPreview} alt="Folder cover" className="absolute inset-0 w-full h-full object-cover" />
-                  <span className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="absolute inset-0 bg-black/35 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
                     <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 11l-3 3v3h3l9-9-3-3-9 9z" />
                     </svg>
@@ -339,38 +340,32 @@ const CreateFolder: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider">Add Cover</span>
+                  <span className="text-xs font-medium text-espresso/40">Add cover</span>
                 </span>
               )}
             </button>
-            <input
-              ref={avatarInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="hidden"
-              onChange={handleAvatarSelect}
-            />
+            <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleAvatarSelect} />
           </div>
 
           {/* Folder name */}
-          <div className="px-6 py-6 border-b border-warm-gray/20">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-espresso/40 mb-3">Folder Name</p>
+          <div>
+            <p className="text-xs font-semibold text-espresso/50 mb-2">Folder name</p>
             <input
               ref={nameInputRef}
               type="text"
               placeholder="e.g. Anteater Pep Rally 2024"
               value={name}
               onChange={(e) => { setName(e.target.value); setError(null); }}
-              className="w-full border border-warm-gray px-3 py-2.5 text-sm text-espresso bg-white focus:border-campus-blue focus:ring-1 focus:ring-campus-blue/20 outline-none placeholder-espresso/25 transition-colors"
+              className="w-full border border-warm-gray/60 rounded-lg px-3 py-2.5 text-sm text-espresso bg-white focus:border-campus-blue focus:ring-2 focus:ring-campus-blue/15 outline-none placeholder-espresso/25 transition-colors"
               maxLength={80}
             />
-            <p className="text-[11px] text-espresso/35 mt-1.5">{name.length}/80</p>
+            <p className="text-xs text-espresso/30 mt-1.5">{name.length}/80</p>
           </div>
 
           {/* Folder type */}
-          <div className="px-6 py-6">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-espresso/40 mb-3">Folder Type</p>
-            <div className="space-y-1.5">
+          <div>
+            <p className="text-xs font-semibold text-espresso/50 mb-3">Type</p>
+            <div className="space-y-2">
               {FOLDER_TYPES.map((ft) => {
                 const active = folderType === ft.value;
                 return (
@@ -378,20 +373,20 @@ const CreateFolder: React.FC = () => {
                     key={ft.value}
                     type="button"
                     onClick={() => setFolderType(ft.value)}
-                    className={`w-full flex items-center gap-3 px-3 py-3 border-2 text-left transition-all ${
+                    className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg border text-left transition-all ${
                       active
-                        ? 'border-campus-blue bg-campus-blue/5 text-espresso'
-                        : 'border-warm-gray/40 text-espresso/55 hover:border-campus-blue/40 hover:bg-blue-50/30'
+                        ? 'border-campus-blue/60 bg-campus-blue/6 text-espresso shadow-sm'
+                        : 'border-warm-gray/50 text-espresso/55 hover:border-warm-gray hover:bg-warm-cream/50'
                     }`}
                   >
-                    <span className={`flex items-center justify-center w-8 h-8 shrink-0 transition-colors ${
+                    <span className={`flex items-center justify-center w-8 h-8 rounded-md shrink-0 transition-colors ${
                       active ? 'bg-campus-blue text-white' : 'bg-warm-cream text-espresso/40'
                     }`}>
                       {ft.icon}
                     </span>
                     <span className="flex flex-col leading-tight">
                       <span className="text-sm font-semibold">{ft.label}</span>
-                      <span className="text-[11px] text-espresso/40">{ft.hint}</span>
+                      <span className="text-xs text-espresso/40 mt-0.5">{ft.hint}</span>
                     </span>
                   </button>
                 );
@@ -403,87 +398,71 @@ const CreateFolder: React.FC = () => {
         {/* Right panel — sticker content */}
         <div className="flex-1 overflow-y-auto">
 
-          {/* Upload new stickers */}
-          <div className="px-8 py-6 bg-white border-b border-warm-gray/20">
+          {/* Upload section */}
+          <div className="px-8 py-7 border-b border-warm-gray/20 bg-white">
             <div className="flex items-baseline justify-between mb-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-espresso/40">
-                Upload New Stickers
-              </p>
-              <span className="text-[11px] text-espresso/35 font-medium">
-                {uploadFiles.length} / {MAX_UPLOAD_FILES}
-              </span>
+              <p className="text-sm font-semibold text-espresso">Upload stickers</p>
+              <span className="text-xs text-espresso/35">{uploadFiles.length} / {MAX_UPLOAD_FILES}</span>
             </div>
-            <p className="text-xs text-espresso/40 mb-4">Each image becomes its own post inside this folder.</p>
+            <p className="text-xs text-espresso/45 mb-5">Each image becomes its own post inside this folder.</p>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3">
               {uploadPreviews.map((src, i) => (
-                <div
-                  key={i}
-                  className="relative w-20 h-20 overflow-hidden border border-warm-gray/50 group/upload"
-                >
+                <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden shadow-sm group/upload">
                   <img src={src} alt="" className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removeUploadAt(i)}
-                    className="absolute top-1 right-1 w-5 h-5 bg-espresso/80 text-white text-xs leading-none flex items-center justify-center opacity-0 group-hover/upload:opacity-100 transition-opacity hover:bg-brick-red"
+                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-espresso/75 text-white text-xs leading-none flex items-center justify-center opacity-0 group-hover/upload:opacity-100 transition-opacity hover:bg-brick-red"
                     aria-label="Remove file"
                   >×</button>
                 </div>
               ))}
 
               {uploadFiles.length < MAX_UPLOAD_FILES && (
-                <label className="w-20 h-20 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-warm-gray cursor-pointer text-espresso/30 hover:border-campus-blue/50 hover:bg-blue-50/30 hover:text-campus-blue transition-all">
-                  <input
-                    ref={uploadInputRef}
-                    type="file"
-                    multiple
-                    accept={ACCEPT}
-                    className="hidden"
-                    onChange={handleUploadFilesChange}
-                  />
+                <label className="w-24 h-24 flex flex-col items-center justify-center gap-1.5 border-2 border-dashed border-warm-gray/50 rounded-lg cursor-pointer text-espresso/30 hover:border-campus-blue/50 hover:bg-warm-cream/50 hover:text-campus-blue transition-all">
+                  <input ref={uploadInputRef} type="file" multiple accept={ACCEPT} className="hidden" onChange={handleUploadFilesChange} />
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider">Add</span>
+                  <span className="text-xs font-medium">Add</span>
                 </label>
               )}
             </div>
 
             {uploadWarning && (
-              <p className="text-xs text-brick-red/90 bg-brick-red/10 border border-brick-red/20 px-3 py-2 mt-3">
+              <p className="text-xs text-brick-red/80 bg-brick-red/8 border border-brick-red/15 rounded-lg px-3 py-2 mt-4">
                 {uploadWarning}
               </p>
             )}
           </div>
 
           {/* Existing posts */}
-          <div className="px-8 py-6">
-            <div className="flex items-baseline justify-between mb-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-espresso/40">
-                Pick from Existing Posts
-              </p>
+          <div className="px-8 py-7">
+            <div className="flex items-baseline justify-between mb-5">
+              <p className="text-sm font-semibold text-espresso">Add from your collection</p>
               {selectedIds.size > 0 && (
-                <span className="text-[11px] font-semibold text-campus-blue bg-campus-blue/10 px-2 py-0.5">
+                <span className="text-xs font-semibold text-campus-blue bg-campus-blue/10 px-2.5 py-1 rounded-full">
                   {selectedIds.size} selected
                 </span>
               )}
             </div>
 
             {loadingPosts ? (
-              <div className="grid grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
+              <div className="grid grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
                 {Array.from({ length: 16 }).map((_, i) => (
-                  <div key={i} className="aspect-square bg-warm-gray/25 animate-pulse" />
+                  <div key={i} className="aspect-square bg-warm-gray/20 animate-pulse rounded-lg" />
                 ))}
               </div>
             ) : posts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3 border border-dashed border-warm-gray/40">
+              <div className="flex flex-col items-center justify-center py-20 gap-3 border border-dashed border-warm-gray/40 rounded-xl">
                 <svg className="w-10 h-10 text-espresso/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <p className="text-sm text-espresso/40">No posts yet — upload some above to get started.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2">
+              <div className="grid grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
                 {posts.map((post) => {
                   const selected = selectedIds.has(post.post_id);
                   const thumb = post.image_paths[0];
@@ -491,18 +470,14 @@ const CreateFolder: React.FC = () => {
                     <button
                       key={post.post_id}
                       onClick={() => togglePost(post.post_id)}
-                      className={`relative aspect-square overflow-hidden transition-all ${
+                      className={`relative aspect-square overflow-hidden rounded-lg transition-all ${
                         selected
-                          ? 'ring-2 ring-campus-blue ring-offset-1 ring-offset-warm-cream'
+                          ? 'ring-2 ring-campus-blue ring-offset-2 ring-offset-warm-cream'
                           : 'ring-1 ring-warm-gray/30 hover:ring-2 hover:ring-campus-blue/40'
                       }`}
                     >
                       {thumb ? (
-                        <img
-                          src={thumb}
-                          alt={post.caption || `Post ${post.post_id}`}
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={thumb} alt={post.caption || `Post ${post.post_id}`} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-warm-cream flex items-center justify-center">
                           <svg className="w-5 h-5 text-espresso/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -510,11 +485,10 @@ const CreateFolder: React.FC = () => {
                           </svg>
                         </div>
                       )}
-
                       {selected && (
                         <>
                           <div className="absolute inset-0 bg-campus-blue/15" />
-                          <div className="absolute top-1 right-1 w-5 h-5 bg-campus-blue flex items-center justify-center">
+                          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-campus-blue flex items-center justify-center shadow-sm">
                             <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                             </svg>
