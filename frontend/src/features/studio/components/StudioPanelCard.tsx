@@ -31,7 +31,6 @@ export function StudioPanelCard({ panel, index, onDeleted }: Props) {
 
   const hasHolo = (panel.canvas_json?.nodes ?? []).some((n) => n.holo);
   const stickerCount = panel.canvas_json?.nodes?.length ?? 0;
-  const tilt = index % 2 === 0 ? '-rotate-[1.5deg]' : 'rotate-[1.5deg]';
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -48,7 +47,7 @@ export function StudioPanelCard({ panel, index, onDeleted }: Props) {
 
   return (
     <div
-      className={`group relative rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 ease-out cursor-pointer ${tilt} hover:rotate-0 hover:scale-[1.02]`}
+      className="group relative rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 ease-out cursor-pointer hover:scale-[1.02]"
       onClick={() => navigate(`/studio/canvas/${panel.id}`)}
     >
       {/* Thumbnail */}
