@@ -350,7 +350,7 @@ const CreateFolder: React.FC = () => {
                   placeholder="e.g. Anteater Pep Rally 2024"
                   value={name}
                   onChange={(e) => { setName(e.target.value); setError(null); }}
-                  className="w-full mt-1 text-2xl font-display font-semibold bg-transparent border-b-2 border-warm-gray/70 focus:border-uci-gold outline-none py-1 placeholder-espresso/25 transition-colors text-espresso"
+                  className="w-full mt-1 text-xl font-display font-semibold bg-white/80 border border-warm-gray rounded-xl px-4 py-2.5 focus:border-uci-gold focus:ring-1 focus:ring-uci-gold/20 outline-none placeholder-espresso/30 transition-colors text-espresso"
                   maxLength={80}
                 />
                 {error ? (

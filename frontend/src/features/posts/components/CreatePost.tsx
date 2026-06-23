@@ -10,21 +10,21 @@ const POST_TYPES = [
     label: 'Collectible',
     desc: 'Something I own',
     active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/30',
-    idle: 'bg-warm-cream/60 text-espresso/50 hover:bg-uci-gold/20',
+    idle: 'bg-white border border-warm-gray/60 text-espresso/70 hover:border-uci-gold/60 hover:bg-uci-gold/5',
   },
   {
     value: 'trading',
     label: 'Trading',
     desc: 'Available to trade',
     active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/30',
-    idle: 'bg-warm-cream/60 text-espresso/50 hover:bg-uci-gold/20',
+    idle: 'bg-white border border-warm-gray/60 text-espresso/70 hover:border-uci-gold/60 hover:bg-uci-gold/5',
   },
   {
     value: 'looking_for',
     label: 'Looking For',
     desc: 'I want this one',
     active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/30',
-    idle: 'bg-warm-cream/60 text-espresso/50 hover:bg-uci-gold/20',
+    idle: 'bg-white border border-warm-gray/60 text-espresso/70 hover:border-uci-gold/60 hover:bg-uci-gold/5',
   },
 ] as const;
 
@@ -179,7 +179,7 @@ function CreatePost({ onSuccess }: CreatePostProps) {
       <button
         type="submit"
         disabled={isSubmitting || files.length === 0}
-        className="w-full py-3 bg-uci-gold hover:bg-amber-400 text-espresso font-bold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md"
+        className="w-full py-3 bg-uci-gold hover:bg-amber-400 text-espresso font-bold rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
       >
         {isSubmitting ? 'Posting…' : 'Share Post'}
       </button>
