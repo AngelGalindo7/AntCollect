@@ -23,8 +23,8 @@ import ConfirmEmailChangePage from '@/features/auth/pages/ConfirmEmailChangePage
 import ChangeEmailPage from '@/features/auth/pages/ChangeEmailPage';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
 import ForgotPasswordPage from '@/features/auth/pages/ForgotPasswordPage';
-import StudioPage from '@/features/studio/pages/StudioPage';
 import PanelEditorPage from '@/features/studio/pages/PanelEditorPage';
+import BinderPage from '@/features/binder/pages/BinderPage';
 import { getSession } from '@/shared/auth/session';
 
 function RequireAuth() {
@@ -52,6 +52,9 @@ function App(){
           <Route path="/studio/canvas/:panelId" element={<PanelEditorPage />} />
         </Route>
 
+        {/* Full-screen public routes — no Layout chrome */}
+        <Route path="/:username/binder" element={<BinderPage />} />
+
         {/* Single Layout instance for all app routes.
             RequireAuth is nested INSIDE Layout so auth users on public routes
             always see the authenticated shell (SideBar etc.) */}
@@ -67,7 +70,6 @@ function App(){
             <Route path="/create-post" element={<CreatePost />} />
             <Route path="/create-folder" element={<CreateFolder />} />
             <Route path="/library" element={<LibraryPage />} />
-            <Route path="/studio" element={<StudioPage />} />
             {/* DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md */}
             {/* <Route path="/messages/:conversationId" element={<ChatErrorBoundary><ChatPage /></ChatErrorBoundary>} /> */}
           </Route>
