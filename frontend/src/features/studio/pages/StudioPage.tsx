@@ -1,3 +1,9 @@
+// DECOMMISSIONED 2026-06-22
+// Canvas gallery moved to profile Showcase tab (/:username, last tab).
+// My Stickers management available at /:username/stickers.
+// Canvas editor (/studio/canvas/:panelId) remains active.
+// Route /studio removed from App.tsx — this file is retained for reference only.
+
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
