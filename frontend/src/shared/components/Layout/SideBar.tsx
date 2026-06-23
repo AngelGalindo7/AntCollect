@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { Sparkles } from 'lucide-react';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
@@ -212,6 +213,10 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount: _unreadCount = 0,
               )}
             </div>
           </button> */}
+
+          <NavLink to="/studio" className={getNavLinkClass} title="Studio">
+            <Sparkles className="w-6 h-6" />
+          </NavLink>
 
           <button onClick={openCreateMenu} className={iconButtonClass} title="Create">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
