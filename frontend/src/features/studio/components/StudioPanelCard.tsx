@@ -24,7 +24,7 @@ interface Props {
   onDeleted: () => void;
 }
 
-export function StudioPanelCard({ panel, index, onDeleted }: Props) {
+export function StudioPanelCard({ panel, onDeleted }: Props) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
