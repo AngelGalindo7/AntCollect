@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, useNavigate, useMatch } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { SideBar } from './SideBar';
 import { GuestNav } from './GuestNav';
 import Header from './Header';
@@ -10,25 +11,34 @@ import Header from './Header';
 import { useUIStore } from '@/shared/store/useUIStore';
 import CreatePost from '@/features/posts/components/CreatePost';
 import CreateMenu from '@/features/create/components/CreateMenu';
+import { NewPanelModal } from '@/features/studio/components/NewPanelModal';
+import { createPanel } from '@/features/workspace/api/workspaceApi';
 import { useIsAuthenticated } from '@/app/providers/AppProviders';
 import { AuthWallModal } from '@/shared/components/AuthWallModal';
-import { getSession } from '@/shared/auth/session';
 
 // Authenticated shell — only rendered when a session exists.
 // Auth-dependent hooks (useUnreadCount, WebSocket state) live here and never
 // fire for guests.
 const AuthenticatedLayout: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const {
     isCreateMenuOpen, closeCreateMenu,
     openCreatePostModal, isCreatePostModalOpen, closeCreatePostModal,
   } = useUIStore();
 
+  const [showNewPanelModal, setShowNewPanelModal] = useState(false);
+
   const handleOpenCanvas = () => {
-    const session = getSession();
-    if (!session) return;
     closeCreateMenu();
-    navigate(`/${session.username}?newCanvas=1`);
+    setShowNewPanelModal(true);
+  };
+
+  const handleCreatePanel = async (w: number, h: number, title: string | null) => {
+    const panel = await createPanel({ w, h, title: title ?? undefined });
+    setShowNewPanelModal(false);
+    await queryClient.invalidateQueries({ queryKey: ['workspace'] });
+    navigate(`/studio/canvas/${panel.id}`);
   };
   // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
   // const unreadCount = useUnreadCount();
@@ -89,6 +99,14 @@ const AuthenticatedLayout: React.FC = () => {
           onSelectFolder={() => { closeCreateMenu(); navigate('/create-folder'); }}
           onSelectCanvas={handleOpenCanvas}
           onClose={closeCreateMenu}
+        />
+      )}
+
+      {showNewPanelModal && (
+        <NewPanelModal
+          existingCount={0}
+          onClose={() => setShowNewPanelModal(false)}
+          onCreate={handleCreatePanel}
         />
       )}
 
