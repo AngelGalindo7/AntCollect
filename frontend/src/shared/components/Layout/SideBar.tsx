@@ -1,9 +1,25 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Sparkles } from 'lucide-react';
 import { useUIStore } from '@/shared/store/useUIStore';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
+
+function TreasureChestIcon() {
+  return (
+    <svg className="w-6 h-6" viewBox="0 0 120 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="50" width="100" height="40" rx="6" fill="#D4A843" stroke="#B8892A" strokeWidth="2" />
+      <rect x="10" y="30" width="100" height="24" rx="6" fill="#C49834" stroke="#B8892A" strokeWidth="2" />
+      <rect x="10" y="46" width="100" height="8" fill="#B8892A" opacity="0.3" />
+      <rect x="16" y="64" width="88" height="4" rx="2" fill="#B8892A" opacity="0.4" />
+      <circle cx="60" cy="50" r="7" fill="#FFD700" stroke="#B8892A" strokeWidth="1.5" />
+      <circle cx="60" cy="50" r="3" fill="#B8892A" opacity="0.5" />
+      <rect x="50" y="12" width="20" height="20" rx="4" fill="#8B6914" stroke="#6B4E0E" strokeWidth="1.5" />
+      <rect x="54" y="17" width="12" height="8" rx="2" fill="#6B4E0E" opacity="0.35" />
+      <path d="M28 30L18 46" stroke="#B8892A" strokeWidth="1.5" strokeDasharray="3 2" />
+      <path d="M92 30L102 46" stroke="#B8892A" strokeWidth="1.5" strokeDasharray="3 2" />
+    </svg>
+  );
+}
 // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
 // import { useState } from 'react';
 // import { ConversationList } from '@/features/messaging/components/ConversationList';
@@ -215,7 +231,7 @@ export const SideBar: React.FC<SideBarProps> = ({ unreadCount: _unreadCount = 0,
           </button> */}
 
           <NavLink to="/studio" className={getNavLinkClass} title="Studio">
-            <Sparkles className="w-6 h-6" />
+            <TreasureChestIcon />
           </NavLink>
 
           <button onClick={openCreateMenu} className={iconButtonClass} title="Create">
