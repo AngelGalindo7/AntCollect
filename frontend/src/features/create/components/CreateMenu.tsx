@@ -54,7 +54,7 @@ const CreateMenu: React.FC<CreateMenuProps> = ({ onSelectPost, onSelectFolder, o
             key={item.key}
             data-testid={`create-menu-${item.key}`}
             onClick={handlers[item.key]}
-            className={`w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-warm-cream/70 transition-colors ${
+            className={`w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-espresso/5 transition-colors ${
               i < ITEMS.length - 1 ? 'border-b border-warm-gray/30' : ''
             }`}
           >

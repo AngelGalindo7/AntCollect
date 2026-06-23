@@ -64,7 +64,7 @@ const AddStickerModal: React.FC<Props> = ({ onClose, onSuccess }) => {
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
 
-      <div className="relative w-full max-w-xl rounded-[24px] overflow-hidden flex flex-col max-h-[90vh] bg-warm-cream">
+      <div className="relative w-full max-w-xl rounded-2xl overflow-hidden flex flex-col max-h-[90vh] bg-warm-cream">
         <div className="p-5 border-b border-warm-gray/40 flex items-center justify-between">
           <h2 className="text-lg font-bold text-espresso">Add New Sticker</h2>
           <button onClick={onClose} className="text-espresso/40 hover:text-espresso transition-colors">
@@ -82,7 +82,7 @@ const AddStickerModal: React.FC<Props> = ({ onClose, onSuccess }) => {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none transition-all bg-white/70 text-espresso placeholder-warm-gray"
+              className="w-full px-3 py-2.5 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none transition-all bg-white/70 text-espresso placeholder-warm-gray"
               placeholder="e.g. Holo Petr"
             />
           </div>
@@ -94,7 +94,7 @@ const AddStickerModal: React.FC<Props> = ({ onClose, onSuccess }) => {
                 type="text"
                 value={petrDropper}
                 onChange={(e) => setPetrDropper(e.target.value)}
-                className="w-full px-4 py-2 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none transition-all bg-white/70 text-espresso placeholder-warm-gray"
+                className="w-full px-3 py-2.5 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none transition-all bg-white/70 text-espresso placeholder-warm-gray"
                 placeholder="Name"
               />
             </div>
@@ -104,7 +104,7 @@ const AddStickerModal: React.FC<Props> = ({ onClose, onSuccess }) => {
                 type="text"
                 value={dropDate}
                 onChange={(e) => setDropDate(e.target.value)}
-                className="w-full px-4 py-2 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none transition-all bg-white/70 text-espresso placeholder-warm-gray"
+                className="w-full px-3 py-2.5 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none transition-all bg-white/70 text-espresso placeholder-warm-gray"
                 placeholder="e.g. Fall 2025"
               />
             </div>
@@ -115,7 +115,7 @@ const AddStickerModal: React.FC<Props> = ({ onClose, onSuccess }) => {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none transition-all h-24 resize-none bg-white/70 text-espresso placeholder-warm-gray"
+              className="w-full px-3 py-2.5 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none transition-all h-24 resize-none bg-white/70 text-espresso placeholder-warm-gray"
               placeholder="Lore or details..."
             />
           </div>
