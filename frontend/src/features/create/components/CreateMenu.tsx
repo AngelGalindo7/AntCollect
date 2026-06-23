@@ -40,8 +40,7 @@ const CreateMenu: React.FC<CreateMenuProps> = ({ onSelectPost, onSelectFolder, o
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl shadow-xl overflow-hidden"
-        style={{ background: '#FDFCF0', fontFamily: "'Quicksand', sans-serif" }}
+        className="w-full max-w-sm rounded-2xl shadow-xl overflow-hidden bg-warm-cream"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

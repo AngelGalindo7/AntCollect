@@ -192,8 +192,7 @@ const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUp
       <div className="absolute inset-0 bg-black/60" onClick={canClose ? handleClose : undefined} />
 
       <div
-        className="relative w-full max-w-xl rounded-[24px] overflow-hidden flex flex-col max-h-[90vh]"
-        style={{ background: '#FDFCF0' }}
+        className="relative w-full max-w-xl rounded-[24px] overflow-hidden flex flex-col max-h-[90vh] bg-warm-cream"
       >
         <div className="p-5 border-b border-warm-gray/40 flex items-center justify-between">
           <div>

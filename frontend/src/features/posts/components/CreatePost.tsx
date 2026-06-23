@@ -85,8 +85,7 @@ function CreatePost({ onSuccess }: CreatePostProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-5 w-full max-w-lg p-7 rounded-3xl shadow-2xl"
-      style={{ background: '#FDFCF0', fontFamily: "'Quicksand', sans-serif" }}
+      className="flex flex-col gap-5 w-full max-w-lg p-7 rounded-3xl shadow-2xl bg-warm-cream"
     >
       <div>
         <h2 className="text-xl font-bold text-espresso">New Post</h2>

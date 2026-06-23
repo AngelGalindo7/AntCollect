@@ -61,10 +61,10 @@ const AddStickerModal: React.FC<Props> = ({ onClose, onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" style={{ fontFamily: "'Quicksand', sans-serif" }}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
 
-      <div className="relative w-full max-w-xl rounded-[24px] overflow-hidden flex flex-col max-h-[90vh]" style={{ background: '#FDFCF0' }}>
+      <div className="relative w-full max-w-xl rounded-[24px] overflow-hidden flex flex-col max-h-[90vh] bg-warm-cream">
         <div className="p-5 border-b border-warm-gray/40 flex items-center justify-between">
           <h2 className="text-lg font-bold text-espresso">Add New Sticker</h2>
           <button onClick={onClose} className="text-espresso/40 hover:text-espresso transition-colors">

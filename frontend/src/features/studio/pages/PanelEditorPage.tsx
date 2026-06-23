@@ -33,10 +33,7 @@ export default function PanelEditorPage() {
 
   if (wsLoading || profileLoading) {
     return (
-      <div
-        className="fixed inset-0 flex items-center justify-center"
-        style={{ background: '#FDFCF0', fontFamily: "'Quicksand', sans-serif" }}
-      >
+      <div className="fixed inset-0 flex items-center justify-center bg-warm-cream">
         <span className="text-espresso/40 text-sm">Loading…</span>
       </div>
     );
@@ -44,16 +41,12 @@ export default function PanelEditorPage() {
 
   if (!panel) {
     return (
-      <div
-        className="fixed inset-0 flex items-center justify-center"
-        style={{ background: '#FDFCF0', fontFamily: "'Quicksand', sans-serif" }}
-      >
+      <div className="fixed inset-0 flex items-center justify-center bg-warm-cream">
         <div className="text-center">
           <p className="text-espresso/60 text-sm">Canvas not found.</p>
           <button
             onClick={() => navigate('/studio')}
-            className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-semibold hover:opacity-90 transition-opacity"
-            style={{ background: '#0064A4' }}
+            className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-semibold bg-campus-blue hover:opacity-90 transition-opacity"
           >
             Back to Studio
           </button>
