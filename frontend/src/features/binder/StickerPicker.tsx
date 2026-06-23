@@ -1,5 +1,8 @@
-import { useEffect, useState } from 'react';
-import { Package, Check, Trash2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Package, Check, Trash2, Upload } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { CropModal } from '@/features/canvas/components/CropModal';
+import { uploadSticker } from '@/features/stickers/api/stickerApi';
 import type { UserStickerOut } from './types';
 
 const CARD_COLORS = [
@@ -33,7 +36,46 @@ export default function StickerPicker({
   onUnfile,
   isLoading,
 }: StickerPickerProps) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const croppedFileRef = useRef<File | null>(null);
+
   const [activeTab, setActiveTab] = useState<Tab>('unfiled');
+  const [rawUrl, setRawUrl] = useState<string | null>(null);
+  const [showCrop, setShowCrop] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleCropUpload = async (file: File): Promise<string> => {
+    croppedFileRef.current = file;
+    return URL.createObjectURL(file);
+  };
+
+  const handleCropConfirm = async (_url: string) => {
+    const file = croppedFileRef.current;
+    if (!file) return;
+    setShowCrop(false);
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file, 'sticker.png');
+      await uploadSticker(formData);
+      queryClient.invalidateQueries({ queryKey: ['my-stickers'] });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+      croppedFileRef.current = null;
+      setRawUrl(null);
+    }
+  };
+
+  const handleCropCancel = () => {
+    setShowCrop(false);
+    croppedFileRef.current = null;
+    setRawUrl(null);
+  };
 
   // When a filed sticker is picked up from the binder, switch to All so it shows highlighted.
   useEffect(() => {
@@ -52,6 +94,7 @@ export default function StickerPicker({
     : null;
 
   return (
+    <>
     <div
       className="paper-workshop pw-neutral w-72 h-full shrink-0 flex flex-col overflow-hidden"
       style={{ background: 'var(--pw-paper)', borderRight: '1px solid var(--pw-line)' }}
@@ -296,7 +339,66 @@ export default function StickerPicker({
             )}
           </>
         )}
+
+        {/* Upload entry point */}
+        <div style={{ borderTop: '1px solid var(--pw-line)', paddingTop: 8 }}>
+          <button
+            type="button"
+            onClick={() => !uploading && fileInputRef.current?.click()}
+            disabled={uploading}
+            style={{
+              width: '100%',
+              padding: '7px 14px',
+              background: 'transparent',
+              border: '1px solid var(--pw-line)',
+              color: 'var(--pw-ink)',
+              fontSize: 12,
+              fontWeight: 500,
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              cursor: uploading ? 'not-allowed' : 'pointer',
+              opacity: uploading ? 0.55 : 1,
+              transition: 'opacity 120ms ease',
+            }}
+          >
+            <Upload size={12} strokeWidth={2} />
+            {uploading ? 'Uploading…' : 'Upload sticker'}
+          </button>
+          {uploadError && (
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--pw-danger)', textAlign: 'center' }}>
+              {uploadError}
+            </p>
+          )}
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setRawUrl(URL.createObjectURL(file));
+            setUploadError(null);
+            setShowCrop(true);
+            e.target.value = '';
+          }}
+        />
       </div>
     </div>
+
+    {showCrop && rawUrl && (
+      <CropModal
+        imageUrl={rawUrl}
+        onUpload={handleCropUpload}
+        onConfirm={handleCropConfirm}
+        onCancel={handleCropCancel}
+      />
+    )}
+    </>
   );
 }
