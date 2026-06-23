@@ -15,6 +15,7 @@ import { NewPanelModal } from '@/features/studio/components/NewPanelModal';
 import { createPanel } from '@/features/workspace/api/workspaceApi';
 import { useIsAuthenticated } from '@/app/providers/AppProviders';
 import { AuthWallModal } from '@/shared/components/AuthWallModal';
+import { toast } from '@/shared/feedback/toastStore';
 
 // Authenticated shell — only rendered when a session exists.
 // Auth-dependent hooks (useUnreadCount, WebSocket state) live here and never
@@ -35,10 +36,14 @@ const AuthenticatedLayout: React.FC = () => {
   };
 
   const handleCreatePanel = async (w: number, h: number, title: string | null) => {
-    const panel = await createPanel({ w, h, title: title ?? undefined });
-    setShowNewPanelModal(false);
-    await queryClient.invalidateQueries({ queryKey: ['workspace'] });
-    navigate(`/studio/canvas/${panel.id}`);
+    try {
+      const panel = await createPanel({ w, h, title: title ?? undefined });
+      setShowNewPanelModal(false);
+      await queryClient.invalidateQueries({ queryKey: ['workspace'] });
+      navigate(`/studio/canvas/${panel.id}`);
+    } catch {
+      toast.error('Failed to create canvas. Please try again.');
+    }
   };
   // DECOMMISSIONED 2026-05-06: trading & messaging — see docs/RECOMMISSION_TRADING_MESSAGING.md
   // const unreadCount = useUnreadCount();
