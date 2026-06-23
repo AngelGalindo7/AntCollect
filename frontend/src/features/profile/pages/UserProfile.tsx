@@ -4,7 +4,6 @@ import PostDetailModal from "@/features/posts/components/PostDetailModal";
 import { Workspace } from "@/features/workspace/components/Workspace";
 import { SpotlightViewer } from "@/features/workspace/components/SpotlightViewer";
 import { PositionedBackgroundImage } from "@/shared/components/PositionedBackgroundImage";
-import BinderSheet from "@/features/binder/BinderSheet";
 import type { Folder, FolderType, GridItem, Post, ProfileResponse } from "@/shared/types/Types";
 import { fetchPublic, fetchWithAuth, API_BASE } from "@/shared/api/api";
 import { getSession } from "@/shared/auth/session";
@@ -15,10 +14,10 @@ type TabValue = "showcase" | "collection" | "looking_for" | "trading";
 type ViewMode = "posts" | "folders";
 
 const TABS: { label: string; value: TabValue }[] = [
-  { label: "Showcase",     value: "showcase" },
   { label: "Collection",   value: "collection" },
   { label: "Looking For",  value: "looking_for" },
   { label: "Trading Away", value: "trading" },
+  { label: "Showcase",     value: "showcase" },
 ];
 
 function swapAvatarSize(path: string | null, size: 'medium' | 'original'): string | null {
@@ -39,7 +38,7 @@ const UserProfile: React.FC = () => {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const triggerNewCanvas = searchParams.get('newCanvas') === '1';
-  const initialTab = (location.state as { tab?: TabValue } | null)?.tab ?? "showcase";
+  const initialTab = (location.state as { tab?: TabValue } | null)?.tab ?? "collection";
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -51,9 +50,6 @@ const UserProfile: React.FC = () => {
   // Avatar upload state
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Binder modal state
-  const [binderOpen, setBinderOpen] = useState(false);
 
   // Sticker count inline edit state
   const [editingStickers, setEditingStickers] = useState(false);
@@ -110,7 +106,7 @@ const UserProfile: React.FC = () => {
   // unless an explicit tab was passed via navigation state (e.g. after deleting a folder)
   useEffect(() => {
     const fromState = (location.state as { tab?: TabValue } | null)?.tab;
-    setActiveTab(fromState ?? "showcase");
+    setActiveTab(fromState ?? "collection");
     if (fromState) {
       navigate(location.pathname, { replace: true, state: null });
     }
@@ -211,8 +207,6 @@ const UserProfile: React.FC = () => {
 
   return (
     <div className="w-full">
-      <BinderSheet isOpen={binderOpen} onClose={() => setBinderOpen(false)} username={profile.username} isOwner={isOwner} />
-
       {/* ── Section 1: Profile header with background ── */}
       <div className="relative w-full overflow-hidden aspect-[6/1] min-h-[200px] bg-warm-gray/20">
         {profile.background_path && (
@@ -226,7 +220,7 @@ const UserProfile: React.FC = () => {
 
         {/* Binder icon — top-right of header, visible to all visitors */}
         <button
-          onClick={() => setBinderOpen(true)}
+          onClick={() => navigate(`/${profile.username}/binder`)}
           className="absolute top-3 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 hover:bg-white/90 backdrop-blur-sm shadow-md transition-colors text-espresso"
           title="Open sticker binder"
         >
