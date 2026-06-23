@@ -335,7 +335,7 @@ export default function ProfileTab() {
               <button
                 onClick={() => handleBackgroundPositionApply(editPosition)}
                 disabled={!editNaturalSize}
-                className="bg-uci-gold hover:bg-amber-400 disabled:opacity-50 text-espresso text-sm font-semibold px-3 py-1.5 rounded-md transition-colors"
+                className="bg-uci-blue hover:bg-uci-navy disabled:opacity-50 text-white text-sm font-semibold px-3 py-1.5 rounded-md transition-colors"
               >
                 Apply
               </button>
@@ -406,7 +406,7 @@ export default function ProfileTab() {
               profileMutation.mutate();
             }}
             disabled={profileMutation.isPending}
-            className="bg-uci-gold hover:bg-amber-400 disabled:opacity-50 text-espresso text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+            className="bg-uci-blue hover:bg-uci-navy disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
           >
             {profileMutation.isPending ? 'Saving…' : 'Save Changes'}
           </button>

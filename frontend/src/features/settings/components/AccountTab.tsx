@@ -199,7 +199,7 @@ export default function AccountTab() {
               <button
                 onClick={() => { setDirectEmailError(''); directEmailMutation.mutate(); }}
                 disabled={directEmailMutation.isPending || !directNewEmail}
-                className="bg-uci-gold hover:bg-amber-400 disabled:opacity-50 text-espresso text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+                className="bg-uci-blue hover:bg-uci-navy disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
               >
                 {directEmailMutation.isPending ? 'Sending…' : 'Update Email'}
               </button>
@@ -324,7 +324,7 @@ export default function AccountTab() {
                   <button
                     onClick={handlePasswordSubmit}
                     disabled={passwordMutation.isPending}
-                    className="bg-uci-gold hover:bg-amber-400 disabled:opacity-50 text-espresso text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+                    className="bg-uci-blue hover:bg-uci-navy disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
                   >
                     {passwordMutation.isPending ? 'Updating…' : 'Update Password'}
                   </button>

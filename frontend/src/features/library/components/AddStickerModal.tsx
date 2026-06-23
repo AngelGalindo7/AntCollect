@@ -64,7 +64,7 @@ const AddStickerModal: React.FC<Props> = ({ onClose, onSuccess }) => {
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
 
-      <div className="relative w-full max-w-xl rounded-2xl overflow-hidden flex flex-col max-h-[90vh] bg-warm-cream">
+      <div className="relative w-full max-w-xl rounded-2xl overflow-hidden flex flex-col max-h-[90vh] bg-white">
         <div className="p-5 border-b border-warm-gray/40 flex items-center justify-between">
           <h2 className="text-lg font-bold text-espresso">Add New Sticker</h2>
           <button onClick={onClose} className="text-espresso/40 hover:text-espresso transition-colors">
@@ -82,7 +82,7 @@ const AddStickerModal: React.FC<Props> = ({ onClose, onSuccess }) => {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2.5 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none transition-all bg-white/70 text-espresso placeholder-warm-gray"
+              className="w-full px-3 py-2.5 border border-warm-gray rounded-lg focus:border-campus-blue focus:ring-1 focus:ring-campus-blue/20 outline-none transition-all bg-white text-espresso placeholder-warm-gray"
               placeholder="e.g. Holo Petr"
             />
           </div>
@@ -94,7 +94,7 @@ const AddStickerModal: React.FC<Props> = ({ onClose, onSuccess }) => {
                 type="text"
                 value={petrDropper}
                 onChange={(e) => setPetrDropper(e.target.value)}
-                className="w-full px-3 py-2.5 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none transition-all bg-white/70 text-espresso placeholder-warm-gray"
+                className="w-full px-3 py-2.5 border border-warm-gray rounded-lg focus:border-campus-blue focus:ring-1 focus:ring-campus-blue/20 outline-none transition-all bg-white text-espresso placeholder-warm-gray"
                 placeholder="Name"
               />
             </div>
@@ -104,7 +104,7 @@ const AddStickerModal: React.FC<Props> = ({ onClose, onSuccess }) => {
                 type="text"
                 value={dropDate}
                 onChange={(e) => setDropDate(e.target.value)}
-                className="w-full px-3 py-2.5 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none transition-all bg-white/70 text-espresso placeholder-warm-gray"
+                className="w-full px-3 py-2.5 border border-warm-gray rounded-lg focus:border-campus-blue focus:ring-1 focus:ring-campus-blue/20 outline-none transition-all bg-white text-espresso placeholder-warm-gray"
                 placeholder="e.g. Fall 2025"
               />
             </div>
@@ -141,7 +141,7 @@ const AddStickerModal: React.FC<Props> = ({ onClose, onSuccess }) => {
             <button
               type="submit"
               disabled={mutation.isPending || !title || selectedFiles.length === 0}
-              className="w-full py-3 bg-uci-gold text-espresso rounded-xl font-bold hover:bg-amber-400 disabled:bg-warm-gray/50 disabled:text-espresso/40 disabled:cursor-not-allowed transition-colors"
+              className="w-full py-3 bg-campus-blue text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
             >
               {mutation.isPending ? 'Uploading...' : 'Add to Library'}
             </button>

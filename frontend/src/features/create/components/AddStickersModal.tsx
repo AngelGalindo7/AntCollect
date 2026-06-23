@@ -187,12 +187,11 @@ const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUp
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-      style={{ fontFamily: "'Quicksand', sans-serif" }}
     >
       <div className="absolute inset-0 bg-black/60" onClick={canClose ? handleClose : undefined} />
 
       <div
-        className="relative w-full max-w-xl rounded-[24px] overflow-hidden flex flex-col max-h-[90vh] bg-warm-cream"
+        className="relative w-full max-w-xl rounded-2xl overflow-hidden flex flex-col max-h-[90vh] bg-white"
       >
         <div className="p-5 border-b border-warm-gray/40 flex items-center justify-between">
           <div>
@@ -283,7 +282,7 @@ const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUp
               type="button"
               onClick={ctaAction}
               disabled={ctaDisabled}
-              className="w-full py-3 bg-uci-gold text-espresso rounded-xl font-bold hover:bg-amber-400 disabled:bg-warm-gray/50 disabled:text-espresso/40 disabled:cursor-not-allowed transition-colors"
+              className="w-full py-3 bg-campus-blue text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
             >
               {ctaLabel}
             </button>

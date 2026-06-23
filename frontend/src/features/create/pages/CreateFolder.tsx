@@ -285,7 +285,7 @@ const CreateFolder: React.FC = () => {
         </button>
 
         {/* Page card */}
-        <div className="bg-soft-white rounded-3xl shadow-soft border border-warm-gray/40 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-soft border border-warm-gray/40 overflow-hidden">
           {/* Hero strip */}
           <div className="relative bg-gradient-to-br from-uci-gold/30 via-warm-cream to-soft-white px-8 pt-8 pb-10">
             <h1 className="text-3xl font-display font-bold text-espresso tracking-tight">
@@ -350,7 +350,7 @@ const CreateFolder: React.FC = () => {
                   placeholder="e.g. Anteater Pep Rally 2024"
                   value={name}
                   onChange={(e) => { setName(e.target.value); setError(null); }}
-                  className="w-full mt-1 text-xl font-display font-semibold bg-white/80 border border-warm-gray rounded-xl px-4 py-2.5 focus:border-uci-gold focus:ring-1 focus:ring-uci-gold/20 outline-none placeholder-espresso/30 transition-colors text-espresso"
+                  className="w-full mt-1 text-xl font-display font-semibold bg-white/80 border border-warm-gray rounded-xl px-4 py-2.5 focus:border-campus-blue focus:ring-1 focus:ring-campus-blue/20 outline-none placeholder-espresso/30 transition-colors text-espresso"
                   maxLength={80}
                 />
                 {error ? (
@@ -381,12 +381,12 @@ const CreateFolder: React.FC = () => {
                       onClick={() => setFolderType(ft.value)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition-all ${
                         active
-                          ? 'bg-uci-gold/15 border-uci-gold text-espresso shadow-[0_2px_10px_rgba(255,210,0,0.25)]'
-                          : 'bg-soft-white border-warm-gray/60 text-espresso/70 hover:border-uci-gold/60 hover:bg-uci-gold/5'
+                          ? 'bg-campus-blue/10 border-campus-blue text-espresso shadow-[0_2px_10px_rgba(0,100,164,0.15)]'
+                          : 'bg-white border-warm-gray/60 text-espresso/70 hover:border-campus-blue/50 hover:bg-blue-50/40'
                       }`}
                     >
                       <span className={`flex items-center justify-center w-9 h-9 rounded-xl shrink-0 ${
-                        active ? 'bg-uci-gold text-espresso' : 'bg-warm-cream text-espresso/55'
+                        active ? 'bg-campus-blue text-white' : 'bg-warm-cream text-espresso/55'
                       }`}>
                         {ft.icon}
                       </span>
@@ -568,7 +568,7 @@ const CreateFolder: React.FC = () => {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-6 py-2.5 text-sm font-bold bg-uci-gold text-espresso rounded-xl shadow-button-gold hover:brightness-105 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all"
+              className="px-6 py-2.5 text-sm font-bold bg-campus-blue text-white rounded-xl hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {saving ? 'Saving…' : 'Create Folder'}
             </button>

@@ -9,22 +9,22 @@ const POST_TYPES = [
     value: 'collection',
     label: 'Collectible',
     desc: 'Something I own',
-    active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/30',
-    idle: 'bg-white border border-warm-gray/60 text-espresso/70 hover:border-uci-gold/60 hover:bg-uci-gold/5',
+    active: 'bg-campus-blue text-white ring-2 ring-campus-blue/30',
+    idle: 'bg-white border border-warm-gray/60 text-espresso/70 hover:border-campus-blue/50 hover:bg-blue-50/50',
   },
   {
     value: 'trading',
     label: 'Trading',
     desc: 'Available to trade',
-    active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/30',
-    idle: 'bg-white border border-warm-gray/60 text-espresso/70 hover:border-uci-gold/60 hover:bg-uci-gold/5',
+    active: 'bg-campus-blue text-white ring-2 ring-campus-blue/30',
+    idle: 'bg-white border border-warm-gray/60 text-espresso/70 hover:border-campus-blue/50 hover:bg-blue-50/50',
   },
   {
     value: 'looking_for',
     label: 'Looking For',
     desc: 'I want this one',
-    active: 'bg-uci-gold text-espresso ring-2 ring-uci-gold/30',
-    idle: 'bg-white border border-warm-gray/60 text-espresso/70 hover:border-uci-gold/60 hover:bg-uci-gold/5',
+    active: 'bg-campus-blue text-white ring-2 ring-campus-blue/30',
+    idle: 'bg-white border border-warm-gray/60 text-espresso/70 hover:border-campus-blue/50 hover:bg-blue-50/50',
   },
 ] as const;
 
@@ -85,7 +85,7 @@ function CreatePost({ onSuccess }: CreatePostProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-5 w-full max-w-lg p-7 rounded-2xl shadow-2xl bg-warm-cream"
+      className="flex flex-col gap-5 w-full max-w-lg p-7 rounded-2xl shadow-2xl bg-white"
     >
       <div>
         <h2 className="text-xl font-bold text-espresso">New Post</h2>
@@ -172,14 +172,14 @@ function CreatePost({ onSuccess }: CreatePostProps) {
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
           rows={3}
-          className="w-full px-4 py-3 border border-warm-gray rounded-lg focus:ring-2 focus:ring-uci-gold outline-none resize-none bg-white/70 text-espresso placeholder-warm-gray text-sm"
+          className="w-full px-4 py-3 border border-warm-gray rounded-lg focus:border-campus-blue focus:ring-1 focus:ring-campus-blue/20 outline-none resize-none bg-white text-espresso placeholder-warm-gray text-sm"
         />
       </div>
 
       <button
         type="submit"
         disabled={isSubmitting || files.length === 0}
-        className="w-full py-3 bg-uci-gold hover:bg-amber-400 text-espresso font-bold rounded-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
+        className="w-full py-3 bg-campus-blue text-white font-bold rounded-xl transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isSubmitting ? 'Posting…' : 'Share Post'}
       </button>
