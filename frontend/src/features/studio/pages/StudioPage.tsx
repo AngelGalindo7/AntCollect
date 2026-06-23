@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Plus, Sparkles } from 'lucide-react';
 import { getMyWorkspace, createPanel } from '@/features/workspace/api/workspaceApi';
 import { StudioPanelCard } from '../components/StudioPanelCard';
 import { NewPanelModal } from '../components/NewPanelModal';
 import type { Panel } from '@/features/workspace/types/workspace';
+import { listMyStickers } from '@/features/stickers/api/stickerApi';
+import type { UserStickerOut } from '@/features/binder/types';
 
 /*
  * Studio design tokens (defined in src/app/index.css @theme):
@@ -59,10 +61,16 @@ export default function StudioPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showNewModal, setShowNewModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'canvases' | 'stickers'>('canvases');
 
   const { data, isLoading } = useQuery({
     queryKey: ['workspace'],
     queryFn: getMyWorkspace,
+  });
+
+  const { data: stickers = [] } = useQuery<UserStickerOut[]>({
+    queryKey: ['my-stickers'],
+    queryFn: listMyStickers,
   });
 
   const panels: Panel[] = (data?.panels ?? [])
@@ -92,35 +100,102 @@ export default function StudioPage() {
         <div className="bg-white border-b border-warm-gray/30 px-6 py-4 flex items-center gap-3">
           <Sparkles className="w-5 h-5 text-campus-blue shrink-0" />
           <h1 className="text-lg font-bold text-espresso flex-1">Your Studio</h1>
+          {activeTab === 'canvases' && (
+            <button
+              onClick={() => setShowNewModal(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white bg-campus-blue hover:opacity-90 transition-opacity"
+            >
+              <Plus className="w-4 h-4" />
+              New Canvas
+            </button>
+          )}
+        </div>
+
+        {/* Tab bar */}
+        <div className="bg-white border-b border-warm-gray/30 px-6 flex gap-6">
           <button
-            onClick={() => setShowNewModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white bg-campus-blue hover:opacity-90 transition-opacity"
+            onClick={() => setActiveTab('canvases')}
+            className={`py-3 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === 'canvases'
+                ? 'border-campus-blue text-campus-blue'
+                : 'border-transparent text-espresso/50 hover:text-espresso'
+            }`}
           >
-            <Plus className="w-4 h-4" />
-            New Canvas
+            Canvases
+          </button>
+          <button
+            onClick={() => setActiveTab('stickers')}
+            className={`py-3 text-sm font-semibold border-b-2 transition-colors ${
+              activeTab === 'stickers'
+                ? 'border-campus-blue text-campus-blue'
+                : 'border-transparent text-espresso/50 hover:text-espresso'
+            }`}
+          >
+            My Stickers
           </button>
         </div>
 
-        {/* Gallery */}
+        {/* Content */}
         <div className="max-w-5xl mx-auto px-6 py-10">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-20 text-espresso/40 text-sm">
-              Loading…
+          {activeTab === 'canvases' ? (
+            isLoading ? (
+              <div className="flex items-center justify-center py-20 text-espresso/40 text-sm">
+                Loading…
+              </div>
+            ) : panels.length === 0 ? (
+              <EmptyState onNew={() => setShowNewModal(true)} />
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {panels.map((panel, i) => (
+                  <StudioPanelCard
+                    key={panel.id}
+                    panel={panel}
+                    index={i}
+                    onDeleted={() =>
+                      queryClient.invalidateQueries({ queryKey: ['workspace'] })
+                    }
+                  />
+                ))}
+              </div>
+            )
+          ) : stickers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
+              <p className="text-espresso/50 text-sm">
+                No stickers yet —{' '}
+                <Link to="/library" className="text-campus-blue underline hover:opacity-80 transition-opacity">
+                  browse the Library
+                </Link>{' '}
+                to add some
+              </p>
             </div>
-          ) : panels.length === 0 ? (
-            <EmptyState onNew={() => setShowNewModal(true)} />
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {panels.map((panel, i) => (
-                <StudioPanelCard
-                  key={panel.id}
-                  panel={panel}
-                  index={i}
-                  onDeleted={() =>
-                    queryClient.invalidateQueries({ queryKey: ['workspace'] })
-                  }
-                />
-              ))}
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {stickers.map((sticker) => {
+                const imgUrl =
+                  sticker.bg_removed && sticker.bg_removed_file_url
+                    ? sticker.bg_removed_file_url
+                    : sticker.images[0]?.file_url;
+                return (
+                  <div key={sticker.id} className="rounded-xl bg-white shadow-sm overflow-hidden">
+                    <div className="aspect-square bg-warm-cream flex items-center justify-center">
+                      {imgUrl ? (
+                        <img
+                          src={imgUrl}
+                          alt={sticker.sticker_name ?? 'Sticker'}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-warm-cream" />
+                      )}
+                    </div>
+                    {sticker.sticker_name && (
+                      <p className="px-2 py-1.5 text-xs font-medium text-espresso truncate">
+                        {sticker.sticker_name}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
