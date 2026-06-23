@@ -1,11 +1,15 @@
+import { useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import BinderSheet from '../BinderSheet';
+import { getSession } from '@/shared/auth/session';
 
 export default function BinderPage() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
+  const session = getSession();
+  const isOwner = !!session && session.username === username;
 
-  const handleBack = () => navigate(`/${username}`);
+  const handleBack = useCallback(() => navigate(`/${username}`), [username, navigate]);
 
   return (
     <>
@@ -13,7 +17,7 @@ export default function BinderPage() {
         isOpen={true}
         onClose={handleBack}
         username={username}
-        isOwner={false}
+        isOwner={isOwner}
       />
       {/* Back nav — floats above the BinderSheet header (z-50); pointer-events-none
           wrapper prevents blocking BinderSheet's right-side close button */}
