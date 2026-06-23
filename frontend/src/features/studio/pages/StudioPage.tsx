@@ -7,6 +7,17 @@ import { StudioPanelCard } from '../components/StudioPanelCard';
 import { NewPanelModal } from '../components/NewPanelModal';
 import type { Panel } from '@/features/workspace/types/workspace';
 
+/*
+ * Studio design tokens (defined in src/app/index.css @theme):
+ *   bg-warm-cream   #F4EFE6  — page background (matches Layout <main>)
+ *   bg-campus-blue  #0064A4  — primary action buttons, sidebar
+ *   text-espresso   #332D2A  — body text
+ *   border-warm-gray/30      — dividers (#DDD4C5 at 30% opacity)
+ *   bg-white                 — top-bar / card surfaces
+ *
+ * Dot grid: radial-gradient with espresso at 4% opacity, 24px spacing.
+ */
+
 function TreasureChest() {
   return (
     <svg width="120" height="96" viewBox="0 0 120 96" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -36,8 +47,7 @@ function EmptyState({ onNew }: { onNew: () => void }) {
       </div>
       <button
         onClick={onNew}
-        className="px-6 py-3 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-opacity"
-        style={{ background: '#0064A4' }}
+        className="px-6 py-3 rounded-xl text-sm font-bold text-white bg-campus-blue hover:opacity-90 transition-opacity"
       >
         Create Canvas
       </button>
@@ -67,16 +77,12 @@ export default function StudioPage() {
   };
 
   return (
-    <div
-      className="min-h-screen relative"
-      style={{ background: '#FDFCF0', fontFamily: "'Quicksand', sans-serif" }}
-    >
-      {/* Dot grid overlay */}
+    <div className="min-h-screen bg-warm-cream relative">
+      {/* Subtle dot grid — espresso at 4% opacity, 24px grid */}
       <div
         className="pointer-events-none fixed inset-0 z-0"
         style={{
-          background:
-            'radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px)',
+          background: 'radial-gradient(circle, rgba(51,45,42,0.04) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
         }}
       />
@@ -88,8 +94,7 @@ export default function StudioPage() {
           <h1 className="text-lg font-bold text-espresso flex-1">Your Studio</h1>
           <button
             onClick={() => setShowNewModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-opacity"
-            style={{ background: '#0064A4' }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white bg-campus-blue hover:opacity-90 transition-opacity"
           >
             <Plus className="w-4 h-4" />
             New Canvas

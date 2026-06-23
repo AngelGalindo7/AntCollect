@@ -50,8 +50,7 @@ export function NewPanelModal({ onClose, onCreate }: Props) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm rounded-2xl shadow-xl overflow-hidden"
-        style={{ background: '#FDFCF0', fontFamily: "'Quicksand', sans-serif" }}
+        className="w-full max-w-sm rounded-2xl shadow-xl overflow-hidden bg-warm-cream"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -134,8 +133,7 @@ export function NewPanelModal({ onClose, onCreate }: Props) {
           <button
             onClick={handleCreate}
             disabled={creating}
-            className="w-full rounded-xl py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-            style={{ background: '#0064A4' }}
+            className="w-full rounded-xl py-3 text-sm font-bold text-white bg-campus-blue transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             {creating ? 'Creating…' : 'Create Canvas'}
           </button>
