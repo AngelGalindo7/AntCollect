@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { apiFetch, API_BASE } from '@/shared/api/api';
+import { apiFetch, fetchWithAuth, API_BASE } from '@/shared/api/api';
 import { handleApiError } from '@/shared/feedback/useApiErrorHandler';
 import type { FieldErrorMap } from '@/shared/feedback/useApiErrorHandler';
 import { toast } from '@/shared/feedback/toastStore';
@@ -39,6 +39,7 @@ function CreatePost({ onSuccess }: CreatePostProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [postType, setPostType] = useState<PostTypeValue>('collection');
+  const [addToCollection, setAddToCollection] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrorMap>({});
 
@@ -65,15 +66,33 @@ function CreatePost({ onSuccess }: CreatePostProps) {
     files.forEach((file) => formData.append('post_images', file));
 
     try {
-      await apiFetch(`${API_BASE}/posts/upload-post`, {
+      const res = await apiFetch(`${API_BASE}/posts/upload-post`, {
         method: 'POST',
         body: formData,
       });
-      toast.success('Post shared');
+      const { post_id } = (await res.json()) as { post_id: string; message: string };
+
+      if (addToCollection && postType !== 'looking_for' && post_id) {
+        const groups = files.map((_, i) => [i + 1]);
+        try {
+          await fetchWithAuth(`${API_BASE}/stickers/me/from-post`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ post_id: Number(post_id), groups }),
+          });
+          toast.success(`Post shared · ${files.length} sticker${files.length !== 1 ? 's' : ''} added to your collection`);
+        } catch {
+          toast.success('Post shared · could not add stickers to collection');
+        }
+      } else {
+        toast.success('Post shared');
+      }
+
       setCaption('');
       setFiles([]);
       setPreviews([]);
       setPostType('collection');
+      setAddToCollection(false);
       onSuccess?.();
     } catch (err) {
       handleApiError(err, { setFieldErrors });
@@ -175,6 +194,18 @@ function CreatePost({ onSuccess }: CreatePostProps) {
           className="w-full px-4 py-3 border border-warm-gray rounded-lg focus:border-campus-blue focus:ring-1 focus:ring-campus-blue/20 outline-none resize-none bg-white text-espresso placeholder-warm-gray text-sm"
         />
       </div>
+
+      {postType !== 'looking_for' && (
+        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={addToCollection}
+            onChange={(e) => setAddToCollection(e.target.checked)}
+            className="rounded accent-uci-gold w-4 h-4"
+          />
+          <span className="text-sm text-espresso/70">Add to my sticker collection</span>
+        </label>
+      )}
 
       <button
         type="submit"
