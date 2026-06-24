@@ -23,7 +23,7 @@ export function CanvasEditorLoader({ onClose }: Props) {
         ]);
 
         if (meRes?.username) {
-          const profileRes = await fetchWithAuth(`${API_BASE}/users/get_user_`, {
+          const profileRes = await fetchWithAuth(`${API_BASE}/users/get_user_?include_unlisted=true`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
