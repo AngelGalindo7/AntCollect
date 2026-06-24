@@ -142,9 +142,9 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
         ×
       </button>
 
-      {/* Viewer card */}
+      {/* Viewer card — hugs the image so there is no dead side space */}
       <div
-        className="relative z-10 flex flex-col w-full max-w-xl rounded-2xl overflow-hidden bg-white/4 ring-1 ring-white/8 shadow-2xl"
+        className="relative z-10 inline-flex flex-col min-w-[320px] max-w-[92vw] rounded-2xl overflow-hidden bg-[#15161a] ring-1 ring-white/10 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header: avatar + username + caption */}
@@ -179,16 +179,16 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
         )}
 
         {/* Image stage */}
-        <div className="relative bg-black/40 flex items-center justify-center">
+        <div className="relative bg-black/30 flex items-center justify-center">
           {imageSrc ? (
             <img
               src={imageSrc}
               alt={post.caption || `Post ${post.post_id}`}
-              className="max-w-full max-h-[55vh] w-auto h-auto object-contain select-none"
+              className="max-w-[92vw] max-h-[62vh] w-auto h-auto object-contain select-none"
               draggable={false}
             />
           ) : (
-            <div className="w-full h-[40vh] flex flex-col items-center justify-center text-white/40 gap-3">
+            <div className="w-[min(80vw,420px)] h-[40vh] flex flex-col items-center justify-center text-white/40 gap-3">
               <svg className="w-16 h-16 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
@@ -243,11 +243,11 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
           )}
         </div>
 
-        {/* Bottom: unified thumbnail strip + save action */}
+        {/* Bottom: filmstrip + save action on its own surface */}
         {(canNav || showPromote) && (
-          <div className="px-4 py-4 flex flex-col gap-3 shrink-0">
+          <div className="border-t border-white/10 bg-white/[0.02] px-4 py-4 flex flex-col gap-3.5 shrink-0">
 
-            {/* Single thumbnail strip — navigation + optional selection badges */}
+            {/* Filmstrip — navigation focus (white ring) is distinct from save selection (blue check) */}
             {canNav && (
               <div className="flex gap-2.5 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
                 {images.map((img, i) => {
@@ -257,8 +257,11 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
                   return (
                     <div
                       key={i}
-                      className={`relative shrink-0 w-20 h-20 rounded-xl overflow-hidden transition-all duration-150
-                        ${isActive ? 'ring-2 ring-white opacity-100' : 'opacity-50 hover:opacity-80'}`}
+                      className={`relative shrink-0 w-16 h-16 rounded-lg overflow-hidden transition-all duration-150
+                        ${isActive
+                          ? 'ring-2 ring-white opacity-100'
+                          : 'ring-1 ring-white/10 opacity-55 hover:opacity-90'}
+                        ${showPromote && !isSelected ? 'grayscale-[35%]' : ''}`}
                     >
                       {/* Navigation tap target fills the whole thumbnail */}
                       <button
@@ -275,19 +278,19 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
                         />
                       </button>
 
-                      {/* Selection badge — shown only for owners */}
+                      {/* Selection check — owners only */}
                       {showPromote && (
                         <button
                           type="button"
                           onClick={() => toggleIdx(i)}
-                          className={`absolute bottom-1 right-1 z-10 w-5 h-5 rounded-full flex items-center justify-center transition-all
+                          className={`absolute bottom-1 right-1 z-10 w-5 h-5 rounded-md flex items-center justify-center transition-all
                             ${isSelected
-                              ? 'bg-uci-gold ring-1 ring-uci-gold/50'
-                              : 'bg-black/65 ring-1 ring-white/40 hover:ring-white/70'}`}
-                          aria-label={`${isSelected ? 'Deselect' : 'Select'} image ${i + 1}`}
+                              ? 'bg-uci-blue ring-1 ring-white/30'
+                              : 'bg-black/55 ring-1 ring-white/40 hover:ring-white/80 hover:bg-black/70'}`}
+                          aria-label={`${isSelected ? 'Remove from' : 'Add to'} save selection — image ${i + 1}`}
                         >
                           {isSelected && (
-                            <svg className="w-3 h-3 text-uci-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                             </svg>
                           )}
@@ -302,17 +305,20 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
             {/* Save as stickers action */}
             {showPromote && (
               promotedCount !== null ? (
-                <p className="text-sm font-semibold text-emerald-400 text-center py-1">
+                <p className="text-sm font-semibold text-emerald-400 text-center py-1.5">
                   ✓ {promotedCount} sticker{promotedCount !== 1 ? 's' : ''} added to your collection
                 </p>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2.5">
                   {images.length > 1 && (
-                    <div className="flex justify-end">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-white/55 font-medium tabular-nums">
+                        {selectedIdxs.length} of {images.length} selected
+                      </span>
                       <button
                         type="button"
                         onClick={toggleAll}
-                        className="text-xs text-white/45 hover:text-white/75 transition-colors"
+                        className="text-white/45 hover:text-white transition-colors font-medium"
                       >
                         {allSelected ? 'Deselect all' : 'Select all'}
                       </button>
@@ -322,7 +328,7 @@ const PostDetailModal: React.FC<PostDetailModalProps> = ({
                     type="button"
                     onClick={handlePromote}
                     disabled={promoting || selectedIdxs.length === 0}
-                    className="w-full py-2.5 rounded-full text-sm font-bold text-uci-navy bg-uci-gold hover:brightness-105 disabled:opacity-40 transition-all"
+                    className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-uci-blue hover:bg-[#0072bb] disabled:opacity-40 disabled:hover:bg-uci-blue transition-colors shadow-[0_4px_14px_rgba(0,100,164,0.35)]"
                   >
                     {promoting
                       ? 'Saving…'
