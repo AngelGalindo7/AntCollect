@@ -140,7 +140,7 @@ const CreateFolder: React.FC = () => {
 
       for (let i = 0; i < uploadFiles.length; i++) {
         setSavingProgress(`Uploading sticker ${i + 1} of ${uploadFiles.length}…`);
-        const fd = new FormData(); fd.append('files', uploadFiles[i]); fd.append('is_published', 'true');
+        const fd = new FormData(); fd.append('files', uploadFiles[i]);
         const uploadRes = await fetchWithAuth(`${API_BASE}/folders/${folder!.id}/upload`, { method: 'POST', credentials: 'include', body: fd });
         if (!uploadRes.ok) throw new Error(uploadRes.status === 429 ? 'Upload limit reached.' : `Sticker ${i + 1} failed.`);
         const body = await uploadRes.json();
