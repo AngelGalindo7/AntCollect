@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func, literal
 from ..database import get_db
-from backend.models import User, Post, PostLike, PostImage, MediaAsset, Folder, FolderPost
+from backend.models import User, Post, PostLike, PostImage, MediaAsset, Folder, FolderPost, UserSticker, UserStickerImage
 from ..schemas import (
     FolderCreate,
     FolderUpdate,
@@ -371,6 +371,47 @@ def delete_folder(
         raise HTTPException(status_code=404, detail="Folder not found")
     if folder.user_id != user.user_id:
         raise HTTPException(status_code=403, detail="Forbidden")
+
+    other_folder_exists = (
+        select(FolderPost.id)
+        .where(FolderPost.post_id == Post.id, FolderPost.folder_id != folder_id)
+        .correlate(Post)
+        .exists()
+    )
+    orphan_post_ids = db.execute(
+        select(Post.id)
+        .join(FolderPost, Post.id == FolderPost.post_id)
+        .where(
+            FolderPost.folder_id == folder_id,
+            Post.is_published == False,
+            Post.user_id == user.user_id,
+            ~other_folder_exists,
+        )
+    ).scalars().all()
+
+    for pid in orphan_post_ids:
+        post = db.query(Post).filter(Post.id == pid).first()
+        if not post:
+            continue
+        post_images = db.query(PostImage).filter(PostImage.post_id == pid).all()
+        assets = [pi.asset for pi in post_images if pi.asset]
+        db.delete(post)
+        for asset in assets:
+            sticker_refs = db.execute(
+                select(func.count(UserStickerImage.id)).where(UserStickerImage.asset_id == asset.id)
+            ).scalar_one()
+            bg_refs = db.execute(
+                select(func.count(UserSticker.id)).where(UserSticker.bg_removed_asset_id == asset.id)
+            ).scalar_one()
+            if sticker_refs > 0 or bg_refs > 0:
+                continue
+            if asset.json_metadata and "paths" in asset.json_metadata:
+                for path in asset.json_metadata["paths"].values():
+                    try:
+                        delete_file(path)
+                    except Exception as e:
+                        logger.error(f"Failed to delete file {path}: {e}")
+            db.delete(asset)
 
     db.delete(folder)
     db.commit()
