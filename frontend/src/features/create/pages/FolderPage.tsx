@@ -5,6 +5,7 @@ import PostGridLayout from '@/features/posts/components/PostGridLayout';
 import PostDetailModal from '@/features/posts/components/PostDetailModal';
 import AddStickersModal from '@/features/create/components/AddStickersModal';
 import type { GridItem, Post, FolderType } from '@/shared/types/Types';
+import type { MasonryConfig } from '@/shared/hooks/useMasonryLayout';
 
 import { API_BASE } from '@/shared/api/api';
 
@@ -172,6 +173,16 @@ const FolderPage: React.FC = () => {
 
   const gridItems: GridItem[] = folder.posts.map((p): GridItem => ({ kind: 'post', data: p }));
 
+  const FOLDER_MASONRY_CONFIG: MasonryConfig = {
+    gap: 10,
+    breakpoints: [
+      { minWidth: 0, cols: 3 },
+      { minWidth: 640, cols: 4 },
+      { minWidth: 1024, cols: 5 },
+      { minWidth: 1280, cols: 6 },
+    ],
+  };
+
   return (
     <div className="w-full">
       {/* ── Folder header ── */}
@@ -304,13 +315,16 @@ const FolderPage: React.FC = () => {
       </div>
 
       {/* ── Posts grid ── */}
-      <PostGridLayout
-        items={gridItems}
-        onPostClick={(post) => setSelectedPost(post)}
-        onPostDelete={handlePostDelete}
-        folderType={folder.folder_type}
-        postOwnerId={folder.user_id}
-      />
+      <div className="max-w-6xl mx-auto px-6 py-6">
+        <PostGridLayout
+          items={gridItems}
+          onPostClick={(post) => setSelectedPost(post)}
+          onPostDelete={handlePostDelete}
+          folderType={folder.folder_type}
+          postOwnerId={folder.user_id}
+          masonryConfig={FOLDER_MASONRY_CONFIG}
+        />
+      </div>
 
       {selectedPost && (
         <PostDetailModal
