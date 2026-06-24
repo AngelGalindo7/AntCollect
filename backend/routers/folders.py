@@ -445,7 +445,6 @@ def upload_stickers_to_folder(
     request: Request,
     folder_id: int,
     files: list[UploadFile] = File(...),
-    is_published: bool = Form(True),
     db: Session = Depends(get_db),
     user: UserSearch = Depends(authenthicate_access_token),
 ):
@@ -482,7 +481,7 @@ def upload_stickers_to_folder(
             user_id=user.user_id,
             caption=None,
             post_type=folder.folder_type,
-            is_published=is_published,
+            is_published=False,
             files=files,
             created_paths_sink=all_created_files,
         )
