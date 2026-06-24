@@ -22,7 +22,7 @@ const PostPickerModal: React.FC<PostPickerModalProps> = ({ onSelect, onClose, ex
     const username = localStorage.getItem('username');
     if (!username) { setLoading(false); return; }
 
-    fetchWithAuth(`${API_BASE}/users/get_user_`, {
+    fetchWithAuth(`${API_BASE}/users/get_user_?include_unlisted=true`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username }),
