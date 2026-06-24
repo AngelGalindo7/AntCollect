@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import PostCardOverlay from './PostCardOverlay';
 import ReportModal from './ReportModal';
-import type { Post } from '@/shared/types/Types';
+import SaveStickersModal from './SaveStickersModal';
+import type { Post, FolderType } from '@/shared/types/Types';
 import { fetchWithAuth, API_BASE } from '@/shared/api/api';
 import { getSession } from '@/shared/auth/session';
 import { canModeratePosts } from '@/shared/auth/permissions';
@@ -11,20 +12,29 @@ interface PostCardProps {
   post: Post;
   imagePath: string | null;
   imageIndex: number;
+  folderType?: FolderType;
   onClick?: (post: Post, imageIndex: number) => void;
   onLikeToggle?: (postId: number, isLiked: boolean) => void;
   onDelete?: (postId: number) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClick, onLikeToggle, onDelete }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, folderType, onClick, onLikeToggle, onDelete }) => {
   const [isLiked, setIsLiked] = useState(post.is_liked);
   const [likeCount, setLikeCount] = useState(post.total_likes || 0);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [saveStickersOpen, setSaveStickersOpen] = useState(false);
 
   const { guard } = useGuestGate();
   const session = getSession();
   const isOwner = post.user?.user_id !== undefined && String(post.user.user_id) === session?.userId;
   const canModerate = !isOwner && canModeratePosts(session);
+  const canSaveStickers =
+    isOwner && folderType !== 'looking_for' && (post.images?.length ?? post.image_paths.length) > 0;
+
+  const handleSaveStickersClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSaveStickersOpen(true);
+  };
 
   const imageMeta = post.images?.[imageIndex];
   const imageWidth = imageMeta?.original_width;
@@ -145,6 +155,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
         onLikeClick={handleLikeClick}
         isOwner={isOwner}
         canModerate={canModerate}
+        onSaveStickersClick={canSaveStickers ? handleSaveStickersClick : undefined}
         onDeleteClick={handlePostDelete}
         onAdminDeleteClick={handleAdminDelete}
         onReportClick={handleReportClick}
@@ -154,6 +165,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, imagePath, imageIndex, onClic
         <ReportModal
           postId={post.post_id}
           onClose={() => setReportModalOpen(false)}
+        />
+      )}
+
+      {saveStickersOpen && (
+        <SaveStickersModal
+          post={post}
+          onClose={() => setSaveStickersOpen(false)}
         />
       )}
 

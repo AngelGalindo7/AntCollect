@@ -43,6 +43,7 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
   onLikeToggle,
   onPostDelete,
   onFolderClick,
+  folderType,
   masonryConfig = DEFAULT_MASONRY_CONFIG,
 }) => {
   const safeItems = items ?? [];
@@ -80,6 +81,7 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
             post={item.data}
             imagePath={item.data.image_paths[0]}
             imageIndex={0}
+            folderType={folderType}
             onClick={onPostClick}
             onLikeToggle={onLikeToggle}
             onDelete={onPostDelete}

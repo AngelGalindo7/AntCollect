@@ -8,6 +8,7 @@ interface PostCardOverlayProps {
   onLikeClick: (e: React.MouseEvent) => void;
   isOwner?: boolean;
   canModerate?: boolean;
+  onSaveStickersClick?: (e: React.MouseEvent) => void;
   onDeleteClick?: (e: React.MouseEvent) => void;
   onAdminDeleteClick?: (e: React.MouseEvent) => void;
   onReportClick?: (e: React.MouseEvent) => void;
@@ -26,6 +27,7 @@ const PostCardOverlay: React.FC<PostCardOverlayProps> = ({
   onLikeClick,
   isOwner,
   canModerate,
+  onSaveStickersClick,
   onDeleteClick,
   onAdminDeleteClick,
   onReportClick,
@@ -42,6 +44,7 @@ const PostCardOverlay: React.FC<PostCardOverlayProps> = ({
         <PostOptionsMenu
           isOwner={isOwner}
           canModerate={canModerate}
+          onSaveStickersClick={onSaveStickersClick}
           onDeleteClick={onDeleteClick}
           onAdminDeleteClick={onAdminDeleteClick}
           onReportClick={onReportClick}

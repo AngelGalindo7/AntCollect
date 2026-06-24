@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Flag, MoreVertical, Shield, Trash2, X } from 'lucide-react';
+import { Flag, MoreVertical, Shield, Sticker, Trash2, X } from 'lucide-react';
 
 interface PostOptionsMenuProps {
   isOwner?: boolean;
   canModerate?: boolean;
+  onSaveStickersClick?: (e: React.MouseEvent) => void;
   onDeleteClick?: (e: React.MouseEvent) => void;
   onAdminDeleteClick?: (e: React.MouseEvent) => void;
   onReportClick?: (e: React.MouseEvent) => void;
@@ -12,6 +13,7 @@ interface PostOptionsMenuProps {
 const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
   isOwner,
   canModerate,
+  onSaveStickersClick,
   onDeleteClick,
   onAdminDeleteClick,
   onReportClick,
@@ -54,6 +56,12 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
     onReportClick?.(e);
   };
 
+  const handleSaveStickers = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsOpen(false);
+    onSaveStickersClick?.(e);
+  };
+
   return (
     <div className="relative" ref={menuRef}>
       <button
@@ -66,6 +74,16 @@ const PostOptionsMenu: React.FC<PostOptionsMenuProps> = ({
 
       {isOpen && (
         <div className="absolute top-full right-0 mt-2 w-40 bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-30 animate-in fade-in zoom-in duration-100">
+          {isOwner && onSaveStickersClick && (
+            <button
+              onClick={handleSaveStickers}
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-uci-navy hover:bg-uci-blue/10 transition-colors text-left"
+            >
+              <Sticker className="w-4 h-4" />
+              <span>Save as stickers</span>
+            </button>
+          )}
+
           {isOwner && (
             <button
               onClick={handleDelete}
