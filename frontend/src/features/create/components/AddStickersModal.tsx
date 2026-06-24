@@ -100,7 +100,6 @@ const AddStickersModal: React.FC<Props> = ({ folderId, folderType, onClose, onUp
 
     const fd = new FormData();
     items.forEach((it) => fd.append('files', it.file));
-    fd.append('is_published', 'true');
 
     try {
       const res = await fetchWithAuth(`${API_BASE}/folders/${folderId}/upload`, {
