@@ -19,7 +19,7 @@ export default function PanelEditorPage() {
   const { data: profileData, isLoading: profileLoading } = useQuery({
     queryKey: ['profile', session?.username],
     queryFn: (): Promise<ProfileResponse> =>
-      fetchPublic(`${API_BASE}/users/get_user_`, {
+      fetchPublic(`${API_BASE}/users/get_user_?include_unlisted=true`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: session?.username }),
