@@ -28,6 +28,8 @@ class Post(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     caption: Mapped[str] = mapped_column(Text, nullable=True)
+    # is_published=True  → surfaced in the social feed and profile grid; folder-upload sets False
+    # public=True        → accessible to non-owners via direct URL or a public folder (distinct concern)
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('true'))
     public: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text('true'))
     images: Mapped[list["PostImage"]] = relationship("PostImage", back_populates="post",cascade="all, delete-orphan")
