@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import PostCard from './PostCard';
 import FolderCard from '@/features/create/components/FolderCard';
 import type { GridItem, Post, Folder, FolderType } from '@/shared/types/Types';
-import { useMasonryLayout, type MasonryItemDims } from '@/shared/hooks/useMasonryLayout';
+import { useMasonryLayout, type MasonryItemDims, type MasonryConfig } from '@/shared/hooks/useMasonryLayout';
 
 interface PostGridLayoutProps {
   items: GridItem[];
@@ -12,9 +12,10 @@ interface PostGridLayoutProps {
   onFolderClick?: (folder: Folder) => void;
   folderType?: FolderType;
   postOwnerId?: number;
+  masonryConfig?: MasonryConfig;
 }
 
-const MASONRY_CONFIG = {
+const DEFAULT_MASONRY_CONFIG: MasonryConfig = {
   gap: 24,
   breakpoints: [
     { minWidth: 0, cols: 2 },
@@ -42,10 +43,11 @@ const PostGridLayout: React.FC<PostGridLayoutProps> = ({
   onLikeToggle,
   onPostDelete,
   onFolderClick,
+  masonryConfig = DEFAULT_MASONRY_CONFIG,
 }) => {
   const safeItems = items ?? [];
   const dims = useMemo(() => safeItems.map(dimsForItem), [safeItems]);
-  const { containerRef, positions, containerHeight, ready } = useMasonryLayout(dims, MASONRY_CONFIG);
+  const { containerRef, positions, containerHeight, ready } = useMasonryLayout(dims, masonryConfig);
 
   if (safeItems.length === 0) {
     return (
