@@ -419,6 +419,7 @@ def _search_posts(query: str, limit: int, db: Session) -> List[PostWithEngagemen
 def retrieve_user(
     request: Request,
     target_username: GetUserByUsernameRequest,
+    include_unlisted: bool = False,
     db: Session = Depends(get_db),
     user: UserSearch | None = Depends(optional_auth_token),
 ):
@@ -468,7 +469,13 @@ def retrieve_user(
     is_owner = (user is not None) and (user.user_id == target_user.id)
 
     if is_owner:
-        posts_query = posts_query.where(Post.user_id == user.user_id)
+        if include_unlisted:
+            posts_query = posts_query.where(Post.user_id == user.user_id)
+        else:
+            posts_query = posts_query.where(
+                Post.user_id == user.user_id,
+                Post.is_published == True,
+            )
     else:
         posts_query = posts_query.where(
             Post.user_id == target_user.id,
@@ -534,6 +541,7 @@ def retrieve_user_likes(
     posts_query = query.where(
         PostLike.user_id == current_user.user_id,
         Post.public == True,
+        Post.is_published == True,
     )
 
     results = db.execute(posts_query).all()
