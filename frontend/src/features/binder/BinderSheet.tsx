@@ -14,9 +14,10 @@ interface BinderSheetProps {
   onClose: () => void;
   username?: string;
   isOwner?: boolean;
+  onBack?: () => void;
 }
 
-export default function BinderSheet({ isOpen, onClose, username, isOwner }: BinderSheetProps) {
+export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack }: BinderSheetProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedSticker, setSelectedSticker] = useState<UserStickerOut | null>(null);
   const [pendingPlacement, setPendingPlacement] = useState<{
@@ -200,6 +201,15 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
               }}
               className="shrink-0 h-16 flex items-center px-6 gap-3"
             >
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="flex items-center gap-1.5 text-white/70 hover:text-white transition-colors text-sm font-medium shrink-0"
+                >
+                  ← @{username}
+                </button>
+              )}
+
               {isOwner && (
                 <>
                   {isEditMode ? (

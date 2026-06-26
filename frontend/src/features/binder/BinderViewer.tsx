@@ -124,7 +124,8 @@ export default function BinderViewer({ binder, isEditMode, selectedStickerId, on
         {/* Side Tabs */}
         <div className="absolute -right-14 top-12 flex flex-col gap-2 z-0">
           {spreads.map((spread, idx) => {
-            const isActive = activeIndex === idx;
+            const displayActiveIndex = (isFlipping && flippingToIndex !== null) ? flippingToIndex : activeIndex;
+            const isActive = displayActiveIndex === idx;
             return (
               <button
                 key={idx}
