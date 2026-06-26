@@ -18,7 +18,7 @@ from ..utils.audit import log_admin_action
 
 logger = logging.getLogger(__name__)
 
-MAX_IMAGES_PER_POST = 5
+MAX_IMAGES_PER_POST = 10
 
 router = APIRouter(
     prefix="/posts",

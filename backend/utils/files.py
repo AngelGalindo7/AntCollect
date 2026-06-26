@@ -10,7 +10,7 @@ from ..errors import AppError, ErrorCode
 from .s3 import upload_image_bytes, delete_s3_object, s3_key_from_url
 from .image_processing import handle_transparent_images, strip_metadata
 
-MAX_FILE_SIZE = 10 * 1024 * 1024
+MAX_FILE_SIZE = 25 * 1024 * 1024
 
 IMAGE_SIZES = {
     "thumbnail": (150, 150),
@@ -49,7 +49,7 @@ def check_file_size(file: UploadFile):
     if size > MAX_FILE_SIZE:
         raise AppError(
             ErrorCode.POST_IMAGE_TOO_LARGE,
-            f"Image is larger than {MAX_FILE_SIZE // (1024 * 1024)} MB",
+            f"Image is too large (max {MAX_FILE_SIZE // (1024 * 1024)} MB per image)",
             status=413,
             field="post_images",
         )
