@@ -201,7 +201,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
               }}
               className="shrink-0 h-16 flex items-center px-6 gap-3"
             >
-              {onBack && (
+              {onBack && !isEditMode && (
                 <button
                   onClick={onBack}
                   className="flex items-center gap-1.5 text-white/70 hover:text-white transition-colors text-sm font-medium shrink-0"
