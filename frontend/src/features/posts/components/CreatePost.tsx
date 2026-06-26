@@ -46,13 +46,16 @@ function CreatePost({ onSuccess }: CreatePostProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const picked = Array.from(e.target.files);
-    setFiles(picked);
-    setPreviews(picked.map((f) => URL.createObjectURL(f)));
+    setFiles((prev) => [...prev, ...picked]);
+    setPreviews((prev) => [...prev, ...picked.map((f) => URL.createObjectURL(f))]);
   };
 
   const removeFile = (i: number) => {
+    setPreviews((prev) => {
+      URL.revokeObjectURL(prev[i]);
+      return prev.filter((_, idx) => idx !== i);
+    });
     setFiles((prev) => prev.filter((_, idx) => idx !== i));
-    setPreviews((prev) => prev.filter((_, idx) => idx !== i));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
