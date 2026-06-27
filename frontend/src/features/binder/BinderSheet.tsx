@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Sparkles, Package } from 'lucide-react';
+import { X, Package } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BinderViewer from './BinderViewer';
 import StickerPicker from './StickerPicker';
@@ -288,7 +288,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
               </motion.div>
 
               {/* Binder area */}
-              <div className="flex-1 flex items-center justify-center px-6 pt-14 pb-6 overflow-hidden">
+              <div className="flex-1 flex items-center justify-center px-6 pt-14 pb-14 overflow-hidden">
                 {isEditMode && !hasPages ? (
                   <div className="flex flex-col items-center gap-4 text-center">
                     <Package className="w-12 h-12 text-white/20" />
@@ -319,18 +319,6 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
 
             {/* Footer hint — only in view mode */}
             <AnimatePresence>
-              {!isEditMode && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 0.7 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="shrink-0 pb-5 flex items-center justify-center gap-2 text-[#8e8e93] text-sm"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Swipe or click the corners to turn pages
-                </motion.div>
-              )}
             </AnimatePresence>
           </motion.div>
 
