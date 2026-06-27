@@ -4,7 +4,8 @@ import { X, Package } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BinderViewer from './BinderViewer';
 import StickerPicker from './StickerPicker';
-import { getMyBinder, getPublicBinder, getUserStickers, assignSlot, createPage, updatePage, deletePage } from './api/binderApi';
+import StickerDetailDrawer from './StickerDetailDrawer';
+import { getMyBinder, getPublicBinder, getUserStickers, assignSlot, createPage, updatePage, deletePage, removeStickerBg, toggleStickerBgRemoved } from './api/binderApi';
 import type { BinderOut, BinderPageOut, UserStickerOut } from './types';
 
 const PANEL_WIDTH = 288;
@@ -28,8 +29,23 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
   const [isCreatingPage, setIsCreatingPage] = useState(false);
   const [pendingDeletePage, setPendingDeletePage] = useState<BinderPageOut | null>(null);
   const [isDeletingPage, setIsDeletingPage] = useState(false);
+  const [viewSticker, setViewSticker] = useState<UserStickerOut | null>(null);
 
   const queryClient = useQueryClient();
+
+  const updateStickerInCache = (updated: UserStickerOut) => {
+    setViewSticker(updated);
+    queryClient.setQueryData(['binder', username], (old: BinderOut | undefined) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map(p => ({
+          ...p,
+          stickers: p.stickers.map(s => s.id === updated.id ? updated : s),
+        })),
+      };
+    });
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -43,6 +59,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
       setIsEditMode(false);
       setSelectedSticker(null);
       setPendingPlacement(null);
+      setViewSticker(null);
     }
   }, [isOpen]);
 
@@ -310,6 +327,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
                     isEditMode={isEditMode}
                     selectedStickerId={selectedSticker?.id ?? null}
                     onSlotClick={handleSlotClick}
+                    onStickerView={isOwner && !isEditMode ? setViewSticker : undefined}
                     onRenamePage={handleRenamePage}
                     onDeletePage={setPendingDeletePage}
                   />
@@ -350,6 +368,15 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
               </div>
             </div>
           )}
+
+          {/* Sticker detail drawer — view mode bg-remove */}
+          <StickerDetailDrawer
+            sticker={viewSticker}
+            onClose={() => setViewSticker(null)}
+            onUpdate={updateStickerInCache}
+            onRemoveBg={removeStickerBg}
+            onToggle={toggleStickerBgRemoved}
+          />
 
           {/* Swap confirmation dialog */}
           {pendingPlacement && (

@@ -62,3 +62,21 @@ export async function deletePage(pageId: number): Promise<void> {
   });
   if (!res.ok) throw new Error('Failed to delete page');
 }
+
+export async function removeStickerBg(stickerId: number): Promise<UserStickerOut> {
+  const res = await fetchWithAuth(`${API_BASE}/stickers/me/${stickerId}/remove-bg`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Background removal failed');
+  return res.json();
+}
+
+export async function toggleStickerBgRemoved(stickerId: number, enabled: boolean): Promise<UserStickerOut> {
+  const res = await fetchWithAuth(`${API_BASE}/stickers/me/${stickerId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bg_removed: enabled }),
+  });
+  if (!res.ok) throw new Error('Failed to update sticker');
+  return res.json();
+}

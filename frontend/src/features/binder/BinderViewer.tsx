@@ -13,11 +13,12 @@ interface BinderViewerProps {
   isEditMode?: boolean;
   selectedStickerId?: number | null;
   onSlotClick?: (page: BinderPageOut, slotIndex: number, occupant: UserStickerOut | null) => void;
+  onStickerView?: (sticker: UserStickerOut) => void;
   onRenamePage?: (pageId: number, newTitle: string) => void;
   onDeletePage?: (page: BinderPageOut) => void;
 }
 
-export default function BinderViewer({ binder, isEditMode, selectedStickerId, onSlotClick, onRenamePage, onDeletePage }: BinderViewerProps) {
+export default function BinderViewer({ binder, isEditMode, selectedStickerId, onSlotClick, onStickerView, onRenamePage, onDeletePage }: BinderViewerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
   const [flippingToIndex, setFlippingToIndex] = useState<number | null>(null);
@@ -70,7 +71,7 @@ export default function BinderViewer({ binder, isEditMode, selectedStickerId, on
 
         {/* STATIC LEFT PAGE */}
         <div className="w-1/2 h-full relative z-10">
-          <Page page={spreads[A_index].left} side="left" interactive={!isFlipping} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} onRenamePage={onRenamePage} onDeletePage={onDeletePage} />
+          <Page page={spreads[A_index].left} side="left" interactive={!isFlipping} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} onStickerView={onStickerView} onRenamePage={onRenamePage} onDeletePage={onDeletePage} />
           {isFlipping && (
             <motion.div className="absolute inset-0 bg-black pointer-events-none rounded-l-md" style={{ opacity: leftStaticShadow }} />
           )}
@@ -88,7 +89,7 @@ export default function BinderViewer({ binder, isEditMode, selectedStickerId, on
 
         {/* STATIC RIGHT PAGE */}
         <div className="w-1/2 h-full relative z-10">
-          <Page page={spreads[B_index].right} side="right" interactive={!isFlipping} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} onRenamePage={onRenamePage} onDeletePage={onDeletePage} />
+          <Page page={spreads[B_index].right} side="right" interactive={!isFlipping} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} onStickerView={onStickerView} onRenamePage={onRenamePage} onDeletePage={onDeletePage} />
           {isFlipping && (
             <motion.div className="absolute inset-0 bg-black pointer-events-none rounded-r-md" style={{ opacity: rightStaticShadow }} />
           )}
@@ -195,13 +196,14 @@ export default function BinderViewer({ binder, isEditMode, selectedStickerId, on
   );
 }
 
-function Page({ page, side, interactive, isEditMode, selectedStickerId, onSlotClick, onRenamePage, onDeletePage }: {
+function Page({ page, side, interactive, isEditMode, selectedStickerId, onSlotClick, onStickerView, onRenamePage, onDeletePage }: {
   page: BinderPageOut | null;
   side: 'left' | 'right';
   interactive: boolean;
   isEditMode?: boolean;
   selectedStickerId?: number | null;
   onSlotClick?: (page: BinderPageOut, slotIndex: number, occupant: UserStickerOut | null) => void;
+  onStickerView?: (sticker: UserStickerOut) => void;
   onRenamePage?: (pageId: number, newTitle: string) => void;
   onDeletePage?: (page: BinderPageOut) => void;
 }) {
@@ -222,18 +224,19 @@ function Page({ page, side, interactive, isEditMode, selectedStickerId, onSlotCl
       `} />
       <div className={`absolute ${side === 'left' ? 'right-0 bg-gradient-to-l' : 'left-0 bg-gradient-to-r'} top-0 bottom-0 w-16 from-black/10 to-transparent pointer-events-none z-20`} />
       <div className="relative z-30 p-6 md:p-10 h-full flex flex-col overflow-hidden">
-        <PageContent page={page} interactive={interactive} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} onRenamePage={onRenamePage} onDeletePage={onDeletePage} />
+        <PageContent page={page} interactive={interactive} isEditMode={isEditMode} selectedStickerId={selectedStickerId} onSlotClick={onSlotClick} onStickerView={onStickerView} onRenamePage={onRenamePage} onDeletePage={onDeletePage} />
       </div>
     </div>
   );
 }
 
-function PageContent({ page, interactive, isEditMode, selectedStickerId, onSlotClick, onRenamePage, onDeletePage }: {
+function PageContent({ page, interactive, isEditMode, selectedStickerId, onSlotClick, onStickerView, onRenamePage, onDeletePage }: {
   page: BinderPageOut | null;
   interactive: boolean;
   isEditMode?: boolean;
   selectedStickerId?: number | null;
   onSlotClick?: (page: BinderPageOut, slotIndex: number, occupant: UserStickerOut | null) => void;
+  onStickerView?: (sticker: UserStickerOut) => void;
   onRenamePage?: (pageId: number, newTitle: string) => void;
   onDeletePage?: (page: BinderPageOut) => void;
 }) {
@@ -333,18 +336,26 @@ function PageContent({ page, interactive, isEditMode, selectedStickerId, onSlotC
                   ? sticker.bg_removed_file_url
                   : sticker.images[0]?.file_url ?? null)
               : null;
-            const isClickable = isEditMode && interactive && !!page && !!onSlotClick;
+            const isEditClickable = isEditMode && interactive && !!page && !!onSlotClick;
+            const isViewClickable = !isEditMode && interactive && !!sticker && !!onStickerView;
             const isSelectedSlot = !!sticker && sticker.id === selectedStickerId;
+
+            const handleClick = isEditClickable
+              ? () => onSlotClick!(page!, i, sticker ?? null)
+              : isViewClickable
+                ? () => onStickerView!(sticker!)
+                : undefined;
 
             return (
               <div
                 key={i}
-                onClick={isClickable ? () => onSlotClick!(page!, i, sticker ?? null) : undefined}
+                onClick={handleClick}
                 className={`
                   w-full h-full flex items-center justify-center relative z-10 overflow-hidden
                   ${!isRightCol ? 'border-r border-white/40' : ''}
                   ${!isBottomRow ? 'border-b border-white/40' : ''}
-                  ${isClickable ? 'cursor-pointer hover:bg-amber-400/10' : ''}
+                  ${isEditClickable ? 'cursor-pointer hover:bg-amber-400/10' : ''}
+                  ${isViewClickable ? 'cursor-pointer hover:bg-white/5' : ''}
                   ${isSelectedSlot ? 'ring-2 ring-amber-400 ring-inset' : ''}
                   ${isEditMode && !sticker && selectedStickerId != null ? 'animate-pulse ring-1 ring-amber-400/40 ring-inset' : ''}
                 `}
