@@ -4,7 +4,6 @@ import { X, Package } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BinderViewer from './BinderViewer';
 import StickerPicker from './StickerPicker';
-import StickerDetailDrawer from './StickerDetailDrawer';
 import { getMyBinder, getPublicBinder, getUserStickers, assignSlot, createPage, updatePage, deletePage, removeStickerBg, toggleStickerBgRemoved } from './api/binderApi';
 import type { BinderOut, BinderPageOut, UserStickerOut } from './types';
 
@@ -29,23 +28,8 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
   const [isCreatingPage, setIsCreatingPage] = useState(false);
   const [pendingDeletePage, setPendingDeletePage] = useState<BinderPageOut | null>(null);
   const [isDeletingPage, setIsDeletingPage] = useState(false);
-  const [viewSticker, setViewSticker] = useState<UserStickerOut | null>(null);
 
   const queryClient = useQueryClient();
-
-  const updateStickerInCache = (updated: UserStickerOut) => {
-    setViewSticker(updated);
-    queryClient.setQueryData(['binder', username], (old: BinderOut | undefined) => {
-      if (!old) return old;
-      return {
-        ...old,
-        pages: old.pages.map(p => ({
-          ...p,
-          stickers: p.stickers.map(s => s.id === updated.id ? updated : s),
-        })),
-      };
-    });
-  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -59,7 +43,6 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
       setIsEditMode(false);
       setSelectedSticker(null);
       setPendingPlacement(null);
-      setViewSticker(null);
     }
   }, [isOpen]);
 
@@ -131,6 +114,33 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
     } else {
       doAssignSlot(page.id, slotIndex);
     }
+  };
+
+  const patchStickerInCaches = (updated: UserStickerOut) => {
+    setSelectedSticker(updated);
+    queryClient.setQueryData(['my-stickers'], (old: UserStickerOut[] | undefined) =>
+      old ? old.map(s => s.id === updated.id ? updated : s) : old
+    );
+    queryClient.setQueryData(['binder', username], (old: BinderOut | undefined) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map(p => ({
+          ...p,
+          stickers: p.stickers.map(s => s.id === updated.id ? updated : s),
+        })),
+      };
+    });
+  };
+
+  const handleRemoveBg = async (stickerId: number) => {
+    const updated = await removeStickerBg(stickerId);
+    patchStickerInCaches(updated);
+  };
+
+  const handleToggleBg = async (stickerId: number, enabled: boolean) => {
+    const updated = await toggleStickerBgRemoved(stickerId, enabled);
+    patchStickerInCaches(updated);
   };
 
   const handleExitEdit = () => {
@@ -299,6 +309,8 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
                     onSelect={setSelectedSticker}
                     onPlaceInNextSlot={handlePlaceInNextSlot}
                     onUnfile={doUnfile}
+                    onRemoveBg={handleRemoveBg}
+                    onToggleBg={handleToggleBg}
                     isLoading={stickersLoading}
                   />
                 )}
@@ -327,7 +339,6 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
                     isEditMode={isEditMode}
                     selectedStickerId={selectedSticker?.id ?? null}
                     onSlotClick={handleSlotClick}
-                    onStickerView={isOwner && !isEditMode ? setViewSticker : undefined}
                     onRenamePage={handleRenamePage}
                     onDeletePage={setPendingDeletePage}
                   />
@@ -368,15 +379,6 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack
               </div>
             </div>
           )}
-
-          {/* Sticker detail drawer — view mode bg-remove */}
-          <StickerDetailDrawer
-            sticker={viewSticker}
-            onClose={() => setViewSticker(null)}
-            onUpdate={updateStickerInCache}
-            onRemoveBg={removeStickerBg}
-            onToggle={toggleStickerBgRemoved}
-          />
 
           {/* Swap confirmation dialog */}
           {pendingPlacement && (

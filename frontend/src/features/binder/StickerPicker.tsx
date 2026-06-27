@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Package, Check, Trash2, Upload } from 'lucide-react';
+import { Package, Check, Trash2, Upload, Scissors, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { CropModal } from '@/features/canvas/components/CropModal';
 import { uploadSticker } from '@/features/stickers/api/stickerApi';
@@ -22,6 +22,8 @@ interface StickerPickerProps {
   onSelect: (sticker: UserStickerOut | null) => void;
   onPlaceInNextSlot: () => void;
   onUnfile?: () => void;
+  onRemoveBg: (stickerId: number) => Promise<void>;
+  onToggleBg: (stickerId: number, enabled: boolean) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -34,6 +36,8 @@ export default function StickerPicker({
   onSelect,
   onPlaceInNextSlot,
   onUnfile,
+  onRemoveBg,
+  onToggleBg,
   isLoading,
 }: StickerPickerProps) {
   const queryClient = useQueryClient();
@@ -41,6 +45,9 @@ export default function StickerPicker({
   const croppedFileRef = useRef<File | null>(null);
 
   const [activeTab, setActiveTab] = useState<Tab>('unfiled');
+  const [bgRemoving, setBgRemoving] = useState(false);
+  const [bgToggling, setBgToggling] = useState(false);
+  const [bgError, setBgError] = useState<string | null>(null);
   const [rawUrl, setRawUrl] = useState<string | null>(null);
   const [showCrop, setShowCrop] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -76,6 +83,8 @@ export default function StickerPicker({
     croppedFileRef.current = null;
     setRawUrl(null);
   };
+
+  useEffect(() => { setBgError(null); }, [selectedId]);
 
   // When a filed sticker is picked up from the binder, switch to All so it shows highlighted.
   useEffect(() => {
@@ -336,6 +345,100 @@ export default function StickerPicker({
                 <Trash2 size={13} strokeWidth={1.8} />
                 Remove from binder
               </button>
+            )}
+
+            {/* Background removal */}
+            {selectedSticker && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {!selectedSticker.bg_removed_file_url ? (
+                  <button
+                    type="button"
+                    disabled={bgRemoving}
+                    onClick={async () => {
+                      setBgRemoving(true);
+                      setBgError(null);
+                      try { await onRemoveBg(selectedSticker.id); }
+                      catch { setBgError('Removal failed — try again.'); }
+                      finally { setBgRemoving(false); }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 14px',
+                      background: 'transparent',
+                      border: '1px solid rgba(124,58,237,0.35)',
+                      color: '#7c3aed',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      borderRadius: 8,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      cursor: bgRemoving ? 'not-allowed' : 'pointer',
+                      opacity: bgRemoving ? 0.6 : 1,
+                      transition: 'opacity 120ms ease',
+                    }}
+                  >
+                    {bgRemoving
+                      ? <Loader2 size={13} strokeWidth={2} style={{ animation: 'spin 1s linear infinite' }} />
+                      : <Scissors size={13} strokeWidth={1.8} />
+                    }
+                    {bgRemoving ? 'Removing…' : 'Remove background'}
+                  </button>
+                ) : (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '6px 2px',
+                  }}>
+                    <span style={{ fontSize: 12, color: 'var(--pw-ink)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <Scissors size={12} strokeWidth={1.8} style={{ color: '#7c3aed' }} />
+                      No background
+                    </span>
+                    <button
+                      type="button"
+                      disabled={bgToggling}
+                      onClick={async () => {
+                        setBgToggling(true);
+                        setBgError(null);
+                        try { await onToggleBg(selectedSticker.id, !selectedSticker.bg_removed); }
+                        catch { setBgError('Could not update.'); }
+                        finally { setBgToggling(false); }
+                      }}
+                      role="switch"
+                      aria-checked={selectedSticker.bg_removed}
+                      style={{
+                        position: 'relative',
+                        width: 40,
+                        height: 22,
+                        borderRadius: 11,
+                        background: selectedSticker.bg_removed ? '#7c3aed' : 'var(--pw-surface2)',
+                        border: '1px solid var(--pw-line)',
+                        cursor: bgToggling ? 'not-allowed' : 'pointer',
+                        opacity: bgToggling ? 0.6 : 1,
+                        transition: 'background 200ms ease',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span style={{
+                        position: 'absolute',
+                        top: 2,
+                        left: selectedSticker.bg_removed ? 18 : 2,
+                        width: 16,
+                        height: 16,
+                        borderRadius: '50%',
+                        background: '#fff',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                        transition: 'left 200ms ease',
+                      }} />
+                    </button>
+                  </div>
+                )}
+                {bgError && (
+                  <p style={{ margin: 0, fontSize: 11, color: 'var(--pw-danger)', textAlign: 'center' }}>{bgError}</p>
+                )}
+              </div>
             )}
           </>
         )}
