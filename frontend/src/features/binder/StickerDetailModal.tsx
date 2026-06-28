@@ -120,7 +120,7 @@ export default function StickerDetailModal({
         {/* Filmstrip */}
         {canNav && (
           <div className="border-t border-white/10 bg-white/[0.02] px-4 py-3 shrink-0">
-            <div className="flex gap-2.5 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+            <div className="flex gap-2.5 overflow-x-auto p-1 [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
               {stickers.map((s, i) => {
                 const thumb = s.bg_removed && s.bg_removed_file_url
                   ? s.bg_removed_file_url
