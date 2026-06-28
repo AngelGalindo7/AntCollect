@@ -58,6 +58,16 @@ def upload_image_bytes(key: str, image_bytes: bytes, content_type: str) -> str:
     return f"https://{bucket}.s3.{region}.amazonaws.com/{key}"
 
 
+def get_s3_bytes(key: str) -> bytes:
+    bucket = os.getenv("AWS_S3_BUCKET")
+    try:
+        resp = _get_client().get_object(Bucket=bucket, Key=key)
+        return resp["Body"].read()
+    except ClientError:
+        logger.error("S3 download failed", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not fetch image from storage")
+
+
 def delete_s3_object(key: str) -> None:
     bucket = os.getenv("AWS_S3_BUCKET")
     try:

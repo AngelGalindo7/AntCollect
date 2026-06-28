@@ -67,7 +67,10 @@ export async function removeStickerBg(stickerId: number): Promise<UserStickerOut
   const res = await fetchWithAuth(`${API_BASE}/stickers/me/${stickerId}/remove-bg`, {
     method: 'POST',
   });
-  if (!res.ok) throw new Error('Background removal failed');
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.detail ?? `${res.status}`);
+  }
   return res.json();
 }
 

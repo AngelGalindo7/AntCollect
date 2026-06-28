@@ -14,9 +14,9 @@ from backend.models.user_sticker import UserSticker, UserStickerImage
 from backend.schemas import UserStickerCreate, UserStickerUpdate, UserStickerOut, PromoteToStickerRequest
 from backend.models.post import Post, PostImage, PostType
 from backend.utils.auth import authenthicate_access_token, optional_auth_token
-from backend.utils.background_removal import fetch_and_remove_background
+from backend.utils.background_removal import run_background_removal
 from backend.utils.files import process_and_save_image, delete_file
-from backend.utils.s3 import upload_image_bytes
+from backend.utils.s3 import upload_image_bytes, get_s3_bytes, s3_key_from_url
 from backend.utils.sticker_serialization import build_user_sticker_out
 from backend.utils.rate_limit import limiter, get_user_or_ip_key
 from backend.schemas import UserSearch
@@ -379,14 +379,22 @@ def remove_sticker_background(
         raise HTTPException(status_code=404, detail="Sticker not found")
 
     if sticker.bg_removed_asset_id is None:
-        source_url = sticker.images[0].asset.file_url if sticker.images else None
-        if not source_url:
+        source_asset = sticker.images[0].asset if sticker.images else None
+        if not source_asset:
             raise HTTPException(
                 status_code=400,
                 detail="This sticker has no image to remove a background from.",
             )
 
-        output_bytes = fetch_and_remove_background(source_url)
+        s3_key = source_asset.s3_key or s3_key_from_url(source_asset.file_url)
+        if not s3_key:
+            raise HTTPException(
+                status_code=400,
+                detail="This sticker has no image to remove a background from.",
+            )
+
+        image_bytes = get_s3_bytes(s3_key)
+        output_bytes = run_background_removal(image_bytes)
         key = f"stickers/{current_user.user_id}/cutout/{uuid.uuid4()}.png"
         processed_url = upload_image_bytes(key, output_bytes, "image/png")
 

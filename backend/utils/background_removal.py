@@ -64,6 +64,17 @@ def get_rembg_session():
     return _rembg_session
 
 
+def run_background_removal(image_bytes: bytes) -> bytes:
+    """Run rembg on already-fetched image bytes. Use this when the image is
+    retrieved from trusted internal storage (e.g. S3 via boto3) so the SSRF
+    guard is not needed."""
+    try:
+        from rembg import remove as rembg_remove
+        return rembg_remove(image_bytes, session=get_rembg_session())
+    except BaseException:
+        raise HTTPException(500, "Background removal failed")
+
+
 def fetch_and_remove_background(image_url: str) -> bytes:
     """Validate the URL (SSRF guard), fetch the image, and return the cut-out PNG bytes.
     Raises HTTPException(400) on fetch/validation failure and HTTPException(500) if rembg fails."""

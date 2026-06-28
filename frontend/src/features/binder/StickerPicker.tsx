@@ -358,7 +358,7 @@ export default function StickerPicker({
                       setBgRemoving(true);
                       setBgError(null);
                       try { await onRemoveBg(selectedSticker.id); }
-                      catch { setBgError('Removal failed — try again.'); }
+                      catch (e) { setBgError(e instanceof Error ? e.message : 'Removal failed.'); }
                       finally { setBgRemoving(false); }
                     }}
                     style={{
