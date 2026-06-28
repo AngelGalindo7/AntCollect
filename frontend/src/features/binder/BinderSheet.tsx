@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Package } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import BinderViewer from './BinderViewer';
 import StickerPicker from './StickerPicker';
+import StickerDetailModal from './StickerDetailModal';
 import { getMyBinder, getPublicBinder, getUserStickers, assignSlot, createPage, updatePage, deletePage, removeStickerBg, toggleStickerBgRemoved } from './api/binderApi';
 import type { BinderOut, BinderPageOut, UserStickerOut } from './types';
 
@@ -28,6 +29,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
   const [isCreatingPage, setIsCreatingPage] = useState(false);
   const [pendingDeletePage, setPendingDeletePage] = useState<BinderPageOut | null>(null);
   const [isDeletingPage, setIsDeletingPage] = useState(false);
+  const [detailIndex, setDetailIndex] = useState<number | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -57,6 +59,23 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
     queryFn: getUserStickers,
     enabled: isOpen && !!isOwner && isEditMode,
   });
+
+  const allBoundStickers = useMemo(() => {
+    if (!binder) return [];
+    return binder.pages
+      .slice()
+      .sort((a, b) => a.page_index - b.page_index)
+      .flatMap(p =>
+        [...p.stickers]
+          .filter(s => s.slot_index !== null)
+          .sort((a, b) => (a.slot_index ?? 0) - (b.slot_index ?? 0))
+      );
+  }, [binder]);
+
+  const handleStickerView = (sticker: UserStickerOut) => {
+    const idx = allBoundStickers.findIndex(s => s.id === sticker.id);
+    if (idx !== -1) setDetailIndex(idx);
+  };
 
   const doAssignSlot = async (pageId: number, slotIndex: number) => {
     if (!selectedSticker) return;
@@ -317,7 +336,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
               </motion.div>
 
               {/* Binder area */}
-              <div className="flex-1 flex items-center justify-center px-6 pt-14 pb-14 overflow-hidden">
+              <div className="flex-1 flex items-center justify-center pl-6 pr-20 pt-14 pb-4 overflow-hidden">
                 {isEditMode && !hasPages ? (
                   <div className="flex flex-col items-center gap-4 text-center">
                     <Package className="w-12 h-12 text-white/20" />
@@ -341,6 +360,7 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
                     onSlotClick={handleSlotClick}
                     onRenamePage={handleRenamePage}
                     onDeletePage={setPendingDeletePage}
+                    onStickerView={handleStickerView}
                   />
                 )}
               </div>
@@ -350,6 +370,16 @@ export default function BinderSheet({ isOpen, onClose, username, isOwner }: Bind
             <AnimatePresence>
             </AnimatePresence>
           </motion.div>
+
+          {/* Sticker detail modal */}
+          {detailIndex !== null && (
+            <StickerDetailModal
+              stickers={allBoundStickers}
+              activeIndex={detailIndex}
+              onActiveIndexChange={setDetailIndex}
+              onClose={() => setDetailIndex(null)}
+            />
+          )}
 
           {/* Delete page confirmation dialog */}
           {pendingDeletePage && (
