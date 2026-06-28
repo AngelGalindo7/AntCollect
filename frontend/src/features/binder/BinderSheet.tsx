@@ -17,7 +17,7 @@ interface BinderSheetProps {
   onBack?: () => void;
 }
 
-export default function BinderSheet({ isOpen, onClose, username, isOwner, onBack }: BinderSheetProps) {
+export default function BinderSheet({ isOpen, onClose, username, isOwner }: BinderSheetProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedSticker, setSelectedSticker] = useState<UserStickerOut | null>(null);
   const [pendingPlacement, setPendingPlacement] = useState<{
