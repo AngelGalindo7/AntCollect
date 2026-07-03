@@ -30,12 +30,12 @@ async def test_create_user_success(client: AsyncClient):
 
 # ── POST /users/login ────────────────────────────────────────────────────────
 
-async def test_login_success(client: AsyncClient, test_credentials: dict):
+async def test_login_success_with_email(client: AsyncClient, test_credentials: dict):
     await client.post("/users/create-user", json=test_credentials)
     response = await client.post(
         "/users/login",
         json={
-            "email": test_credentials["email"],
+            "identifier": test_credentials["email"],
             "password": test_credentials["password"],
         },
     )
@@ -49,22 +49,60 @@ async def test_login_success(client: AsyncClient, test_credentials: dict):
     assert "refresh_token" in response.cookies
 
 
+async def test_login_success_with_username(client: AsyncClient, test_credentials: dict):
+    await client.post("/users/create-user", json=test_credentials)
+    response = await client.post(
+        "/users/login",
+        json={
+            "identifier": test_credentials["username"],
+            "password": test_credentials["password"],
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user"]["username"] == test_credentials["username"]
+
+
+async def test_login_success_with_username_mixed_case(client: AsyncClient, test_credentials: dict):
+    """Both username and email are stored lowercase — login should be case-insensitive."""
+    await client.post("/users/create-user", json=test_credentials)
+    response = await client.post(
+        "/users/login",
+        json={
+            "identifier": test_credentials["username"].upper(),
+            "password": test_credentials["password"],
+        },
+    )
+    assert response.status_code == 200
+
+
 async def test_login_wrong_password(client: AsyncClient, test_credentials: dict):
     await client.post("/users/create-user", json=test_credentials)
     response = await client.post(
         "/users/login",
         json={
-            "email": test_credentials["email"],
+            "identifier": test_credentials["email"],
             "password": "definitelywrong!",
         },
     )
     assert response.status_code == 400
 
 
-async def test_login_unknown_email(client: AsyncClient):
+async def test_login_unknown_identifier(client: AsyncClient):
     response = await client.post(
         "/users/login",
-        json={"email": "nobody@nowhere.example.com", "password": "irrelevant"},
+        json={"identifier": "nobody@nowhere.example.com", "password": "irrelevant"},
+    )
+    assert response.status_code == 400
+
+
+async def test_login_username_cannot_be_used_as_email_field_bypass(client: AsyncClient, test_credentials: dict):
+    """A username can never collide with another user's email (charset excludes '@')."""
+    await client.post("/users/create-user", json=test_credentials)
+    other_email = f"{test_credentials['username']}@example.com"
+    response = await client.post(
+        "/users/login",
+        json={"identifier": other_email, "password": test_credentials["password"]},
     )
     assert response.status_code == 400
 

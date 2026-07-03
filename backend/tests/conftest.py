@@ -113,7 +113,7 @@ async def auth_client(client: AsyncClient, test_credentials: dict):
     await client.post(
         "/users/login",
         json={
-            "email": test_credentials["email"],
+            "identifier": test_credentials["email"],
             "password": test_credentials["password"],
         },
     )
