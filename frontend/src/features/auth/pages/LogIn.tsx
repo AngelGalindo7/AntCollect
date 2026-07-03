@@ -35,7 +35,7 @@ const LogIn: React.FC = () => {
             const res = await fetch(`${API_BASE}/users/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: username, password }),
+                body: JSON.stringify({ identifier: username, password }),
                 credentials: "include",
             });
             const data = await res.json();
