@@ -1,5 +1,6 @@
 import logging
 import os
+import secrets
 from datetime import datetime, timezone
 
 import jwt
@@ -8,7 +9,7 @@ from ..utils.rate_limit import limiter, get_real_ip, get_user_or_ip_key
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select, func, literal
+from sqlalchemy import select, func, literal, or_
 from ..database import get_db
 from backend.models import User, RefreshToken, Post, PostLike, PostImage, EngagementLog, MediaAsset, UsedVerificationToken
 from backend.models.user_sticker import UserSticker
@@ -27,6 +28,10 @@ router = APIRouter(
     prefix="/users",
     tags=["Users"]
     )
+
+# Precomputed once at import — bcrypt-verified against on any failed login
+# lookup so response time is the same whether the identifier exists or not.
+_LOGIN_DUMMY_HASH = hash_password(secrets.token_hex(32))
 
 
 @router.get("/me", response_model=UserMeResponse)
@@ -231,20 +236,27 @@ def create_user(
 @router.post("/login")
 @limiter.limit("10/minute;40/hour", key_func=get_real_ip)
 def login(request: Request, user: UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.email == user.email).first()
+    # identifier is pre-normalized (stripped + lowercased) by UserLogin, matching
+    # how both columns are stored — a plain "==" can use each column's unique
+    # index without ILIKE/wildcard risk. Username's charset ([a-z0-9_]) can never
+    # collide with a valid email (requires "@"), so the two branches can't shadow
+    # each other.
+    db_user = db.query(User).filter(
+        or_(User.email == user.identifier, User.username == user.identifier)
+    ).first()
 
+    # Always run a bcrypt comparison — against the real hash if we have one,
+    # otherwise a dummy one — so a request's timing can't reveal whether the
+    # identifier is registered or is a Google-only account (no password_hash).
+    hash_to_check = db_user.password_hash if (db_user and db_user.password_hash) else _LOGIN_DUMMY_HASH
+    password_matches = verify_password(user.password, hash_to_check)
 
-    if not db_user:
-        raise HTTPException(status_code=400, detail="Invalid email or password")
+    if not db_user or not db_user.password_hash or not password_matches:
+        # Single generic message/status for every failure mode (unknown
+        # identifier, OAuth-only account, wrong password) — no signal an
+        # attacker could use to enumerate accounts.
+        raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    if not db_user.password_hash:
-        # Generic message — distinct error here would let attackers enumerate
-        # which emails are registered and which use Google sign-in.
-        raise HTTPException(status_code=400, detail="Invalid email or password")
-
-    if not verify_password(user.password, db_user.password_hash):
-        raise HTTPException(status_code=400, detail="Invalid email or password")
-    
 
     #"sub" field has to be a string not a int
     #TODO Look into making user.id to str
