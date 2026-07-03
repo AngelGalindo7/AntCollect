@@ -27,7 +27,7 @@ async function globalSetup() {
   // Login through the browser's cookie jar — httpOnly cookies are captured
   // automatically because page.request uses the same context.
   const response = await page.request.post('http://localhost:8000/users/login', {
-    data: { email, password },
+    data: { identifier: email, password },
   });
 
   if (!response.ok()) {
