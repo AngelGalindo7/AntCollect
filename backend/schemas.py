@@ -50,13 +50,16 @@ class UserResponse(BaseModel):
     email_verified: bool = False
 
 class UserLogin(BaseModel):
-    email: EmailStr
-    password: str
+    # Accepts either a username or an email — both are stored lowercase
+    # (see _normalize_username / _normalize_email), so normalizing here
+    # lets the router do a single case-correct equality lookup on each.
+    identifier: str = Field(min_length=1, max_length=254)
+    password: str = Field(max_length=128)
 
-    @field_validator('email', mode='before')
+    @field_validator('identifier', mode='before')
     @classmethod
-    def _lower_email(cls, v):
-        return _normalize_email(v) if isinstance(v, str) else v
+    def _normalize_identifier(cls, v):
+        return v.strip().lower() if isinstance(v, str) else v
 
 
 class TokenResponse(BaseModel):
