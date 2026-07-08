@@ -36,7 +36,7 @@ const UserProfile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const initialTab = (location.state as { tab?: TabValue } | null)?.tab ?? "collection";
+  const initialTab = (location.state as { tab?: TabValue } | null)?.tab ?? "showcase";
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -104,7 +104,7 @@ const UserProfile: React.FC = () => {
   // unless an explicit tab was passed via navigation state (e.g. after deleting a folder)
   useEffect(() => {
     const fromState = (location.state as { tab?: TabValue } | null)?.tab;
-    setActiveTab(fromState ?? "collection");
+    setActiveTab(fromState ?? "showcase");
     if (fromState) {
       navigate(location.pathname, { replace: true, state: null });
     }
