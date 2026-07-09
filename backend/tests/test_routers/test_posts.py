@@ -57,21 +57,8 @@ async def test_delete_post_unauthorized(auth_client: AsyncClient, client: AsyncC
         "password": "TestPass1234!"
     }
     await client.post("/users/create-user", json=user_b_creds)
-    await client.post("/users/login", json={"email": user_b_creds["email"], "password": user_b_creds["password"]})
-    # 'client' is now logged in as User B because httpx.AsyncClient stores cookies (if using them)
-    # Wait, the auth_client fixture in conftest.py returns 'client'.
-    # Actually, httpx.AsyncClient doesn't automatically handle session cookies unless you use httpx.Client/AsyncClient(cookies=...).
-    # But wait, backend uses 'authenthicate_access_token' which probably looks at headers or cookies.
-    # Let's check backend/utils/auth.py
-    
-    # Actually, let's just create another auth_client for User B.
-    # Or just use the 'auth_client' for User A and another client for User B.
-    
-    # Re-login User B to get a token and set it in the client
-    login_res = await client.post("/users/login", json={"email": user_b_creds["email"], "password": user_b_creds["password"]})
-    token = login_res.cookies.get("access_token")
-    # If the backend uses cookies for auth, 'client' will have them.
-    
+    await client.post("/users/login", json={"identifier": user_b_creds["email"], "password": user_b_creds["password"]})
+
     # 3. Try to delete User A's post with User B's client
     delete_response = await client.delete(f"/posts/{post_id}")
     assert delete_response.status_code == 403

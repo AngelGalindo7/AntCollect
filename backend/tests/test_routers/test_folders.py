@@ -84,7 +84,7 @@ async def test_folder_upload_rejects_non_owner(auth_client: AsyncClient, client:
 
     other = {"username": "other_user", "email": "other@example.com", "password": "TestPass1234!"}
     await client.post("/users/create-user", json=other)
-    await client.post("/users/login", json={"email": other["email"], "password": other["password"]})
+    await client.post("/users/login", json={"identifier": other["email"], "password": other["password"]})
 
     files = [("files", ("a.jpg", b"x", "image/jpeg"))]
     res = await client.post(f"/folders/{folder_id}/upload", files=files)

@@ -114,7 +114,7 @@ async def test_delete_foreign_panel_returns_404(
     await client.post("/users/create-user", json=other)
     await client.post(
         "/users/login",
-        json={"email": other["email"], "password": other["password"]},
+        json={"identifier": other["email"], "password": other["password"]},
     )
 
     res = await client.delete(f"/workspace/me/panels/{panel_id}")
