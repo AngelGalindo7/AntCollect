@@ -15,12 +15,13 @@ test('showcase tab is the default active tab on profile load', async ({ page }) 
   await expect(showcaseTab).toHaveClass(/border-uci-gold/);
 });
 
-test('owner can enter edit mode and see Add Canvas button in showcase tab', async ({ page }) => {
+test('owner sees the New Canvas control and can toggle edit mode on the showcase tab', async ({ page }) => {
   await page.goto(`/${process.env.TEST_USERNAME}`);
-  // The Showcase tab renders the multi-panel Workspace. Owners always see the
-  // Edit Showcase entry button; clicking it reveals the Add Canvas toolbar action.
-  await page.getByRole('button', { name: /edit showcase/i }).click();
-  await expect(page.getByRole('button', { name: /add canvas/i })).toBeVisible();
+  // The Showcase tab renders the owner Workspace: a persistent New Canvas button
+  // plus an Edit toggle whose label flips to Done while panel-arrange mode is on.
+  await expect(page.getByRole('button', { name: /new canvas/i })).toBeVisible();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeVisible();
 });
 
 test('sticker count is inline-editable', async ({ page }) => {
