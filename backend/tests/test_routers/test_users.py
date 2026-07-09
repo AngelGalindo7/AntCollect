@@ -99,10 +99,13 @@ async def test_login_unknown_identifier(client: AsyncClient):
 async def test_login_username_cannot_be_used_as_email_field_bypass(client: AsyncClient, test_credentials: dict):
     """A username can never collide with another user's email (charset excludes '@')."""
     await client.post("/users/create-user", json=test_credentials)
-    other_email = f"{test_credentials['username']}@example.com"
+    # Append a domain the account never registered under: the identifier now matches
+    # neither the stored email (…@example.com) nor the bare username, so even with the
+    # correct password there is no account to authenticate against.
+    fabricated_email = f"{test_credentials['username']}@notreal.example"
     response = await client.post(
         "/users/login",
-        json={"identifier": other_email, "password": test_credentials["password"]},
+        json={"identifier": fabricated_email, "password": test_credentials["password"]},
     )
     assert response.status_code == 400
 
