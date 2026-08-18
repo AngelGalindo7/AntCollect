@@ -46,55 +46,110 @@ jobs:
           push: true
           tags: ${{ steps.login-ecr.outputs.registry }}/petrcollect-backend:latest
 
-      # ── Build & Push Messaging ──────────────────────────────────────────
-      - name: Build and push Messaging
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
-        with:
-          context: .
-          file: messaging-service/Dockerfile
-          push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/petrcollect-messaging:latest
-
-      # ── RDS Initialization (Admin via EC2) ──────────────────────────────
-      # psql runs on EC2, which is inside the VPC and can reach the private RDS
-      # endpoint. All role names are injected from secrets — nothing is hardcoded.
-      # Prereq: postgresql-client must be installed on the EC2 instance.
+      # ── DECOMMISSIONED: Build & Push Messaging ──────────────────────────
+      # Not deployed as of the 2026-07 rebuild. Restoring this also requires the
+      # petrcollect-messaging ECR repository and the messaging service in
+      # docker-compose.prod.yml. See docs/RECOMMISSION_TRADING_MESSAGING.md.
       #
-      # set -euo pipefail: catches empty/unset secrets before they produce malformed SQL.
-      # --set=ON_ERROR_STOP=1: any SQL failure immediately stops psql with non-zero exit,
-      #   so this CI step fails loudly instead of silently swallowing errors.
-      - name: Initialize RDS roles and schemas
+      # - name: Build and push Messaging
+      #   uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+      #   with:
+      #     context: .
+      #     file: messaging-service/Dockerfile
+      #     push: true
+      #     tags: ${{ steps.login-ecr.outputs.registry }}/petrcollect-messaging:latest
+
+      # ── Create .env for EC2 ──────────────────────────────────────────────
+      # TODO(security): migrate to AWS Secrets Manager
+      # Current: secrets written to .env on EC2 disk (chmod 600)
+      # See: docs/DECISION_LOG.md — Secrets Management Migration
+      - name: Create .env file for EC2
+        run: |
+          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" > .env
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "APP_DB_USER=${{ secrets.APP_DB_USER }}" >> .env
+          echo "APP_DB_PASSWORD=${{ secrets.APP_DB_PASSWORD }}" >> .env
+          echo "POSTGRES_ADMIN_USER=${{ secrets.POSTGRES_ADMIN_USER }}" >> .env
+          echo "POSTGRES_ADMIN_PASSWORD=${{ secrets.POSTGRES_ADMIN_PASSWORD }}" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+          echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
+          echo "CLOUDFRONT_DOMAIN=${{ secrets.CLOUDFRONT_DOMAIN }}" >> .env
+          echo "REMOVE_BG_ALLOWED_HOSTS=${{ secrets.REMOVE_BG_ALLOWED_HOSTS }}" >> .env
+          echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" >> .env
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+          echo "GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}" >> .env
+          echo "COOKIE_SECURE=true" >> .env
+          echo "COOKIE_DOMAIN=.petrcollect.com" >> .env
+
+      # ── Prepare EC2 Directory ────────────────────────────────────────────
+      - name: Prepare EC2 Directory
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
-        env:
-          PGPASSWORD: ${{ secrets.RDS_ADMIN_PASSWORD }}
-          PGSSLMODE: require
-          RDS_HOST: ${{ secrets.RDS_HOST }}
-          RDS_PORT: ${{ secrets.RDS_PORT }}
-          RDS_ADMIN_USER: ${{ secrets.RDS_ADMIN_USER }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          APP_DB_USER: ${{ secrets.APP_DB_USER }}
-          APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
-          MESSAGING_DB_USER: ${{ secrets.MESSAGING_DB_USER }}
-          MESSAGING_DB_PASSWORD: ${{ secrets.MESSAGING_DB_PASSWORD }}
-          MESSAGING_DB_SCHEMA: ${{ secrets.MESSAGING_DB_SCHEMA }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: PGPASSWORD,PGSSLMODE,RDS_HOST,RDS_PORT,RDS_ADMIN_USER,DB_NAME,APP_DB_USER,APP_DB_PASSWORD,MESSAGING_DB_USER,MESSAGING_DB_PASSWORD,MESSAGING_DB_SCHEMA
+          script: mkdir -p ~/petrcollect
+
+      # ── Copy configuration to EC2 ────────────────────────────────────────
+      - name: Copy docker-compose and .env to EC2
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker-compose.prod.yml,.env"
+          target: "~/petrcollect/"
+
+      # ── Start the database first ─────────────────────────────────────────
+      # Postgres runs on this box now rather than RDS, so it must be up and
+      # passing its healthcheck before role init or migrations can run.
+      # `--wait` blocks until the healthcheck succeeds, or fails the step.
+      - name: Start database
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_PASSWORD: ${{ steps.ecr-token.outputs.password }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: ECR_REGISTRY,ECR_PASSWORD
           script: |
             set -euo pipefail
-            # :'varname' (psql quoted-literal substitution) only works at the statement level.
-            # psql disables it inside dollar-quoted blocks (DO $$ ... $$), so passwords must
-            # be set via ALTER ROLE *outside* the DO block where substitution is active.
-            psql \
-              -h "$RDS_HOST" \
-              -p "$RDS_PORT" \
-              -U "$RDS_ADMIN_USER" \
-              -d "$DB_NAME" \
+            chmod 600 ~/petrcollect/.env
+            cd ~/petrcollect
+            echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+            docker compose -f docker-compose.prod.yml up -d --wait db
+
+      # ── Initialize roles and extensions ─────────────────────────────────
+      # Runs inside the db container over the local socket (trust auth), so the
+      # admin password never crosses the network. Creates the low-privilege app
+      # role that Alembic and the backend connect as.
+      #
+      # :'varname' (psql quoted-literal substitution) only works at statement
+      # level — psql disables it inside dollar-quoted DO blocks, so the password
+      # is set via ALTER ROLE outside the block.
+      - name: Initialize database roles and extensions
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+        env:
+          DB_NAME: ${{ secrets.DB_NAME }}
+          POSTGRES_ADMIN_USER: ${{ secrets.POSTGRES_ADMIN_USER }}
+          APP_DB_USER: ${{ secrets.APP_DB_USER }}
+          APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DB_NAME,POSTGRES_ADMIN_USER,APP_DB_USER,APP_DB_PASSWORD
+          script: |
+            set -euo pipefail
+            cd ~/petrcollect
+            docker compose -f docker-compose.prod.yml exec -T db \
+              psql -U "$POSTGRES_ADMIN_USER" -d "$DB_NAME" \
               -v ON_ERROR_STOP=1 \
               -v app_pw="$APP_DB_PASSWORD" \
-              -v msg_pw="$MESSAGING_DB_PASSWORD" \
               << EOSQL
             DO \$\$ BEGIN
               IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${APP_DB_USER}') THEN
@@ -104,58 +159,43 @@ jobs:
             ALTER ROLE ${APP_DB_USER} WITH PASSWORD :'app_pw';
             ALTER ROLE ${APP_DB_USER} SET search_path TO public;
             GRANT ALL PRIVILEGES ON SCHEMA public TO ${APP_DB_USER};
-            DO \$\$ BEGIN
-              IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${MESSAGING_DB_USER}') THEN
-                CREATE ROLE ${MESSAGING_DB_USER} WITH LOGIN;
-              END IF;
-            END \$\$;
-            ALTER ROLE ${MESSAGING_DB_USER} WITH PASSWORD :'msg_pw';
-            CREATE SCHEMA IF NOT EXISTS ${MESSAGING_DB_SCHEMA};
             CREATE EXTENSION IF NOT EXISTS pg_trgm;
             CREATE EXTENSION IF NOT EXISTS vector;
-            GRANT ALL PRIVILEGES ON SCHEMA ${MESSAGING_DB_SCHEMA} TO ${MESSAGING_DB_USER};
-            ALTER ROLE ${MESSAGING_DB_USER} SET search_path TO ${MESSAGING_DB_SCHEMA}, public;
-            GRANT USAGE ON SCHEMA public TO ${MESSAGING_DB_USER};
             EOSQL
 
-      # ── Run Alembic Migrations (App User via EC2) ───────────────────────
-      # docker run executes on EC2 so the container reaches RDS inside the VPC.
-      # ECR token is forwarded from the runner — no aws CLI needed on EC2.
+      # ── Run Alembic Migrations ──────────────────────────────────────────
+      # --network petrcollect_default is required: a bare `docker run` lands on
+      # the default bridge network and cannot resolve the `db` service name.
+      # The project name is pinned in docker-compose.prod.yml so this network
+      # name is deterministic.
       #
-      # TODO(follow-up): add downgrade round-trip test in CI before promoting to prod:
+      # TODO(follow-up): add downgrade round-trip test in CI before promoting:
       #   alembic upgrade head && alembic downgrade -1 && alembic upgrade head
-      #   Run against an ephemeral RDS clone or a local pg container seeded from a snapshot.
-
       - name: Validate pending migrations
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_PASSWORD: ${{ steps.ecr-token.outputs.password }}
           APP_DB_USER: ${{ secrets.APP_DB_USER }}
           APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
-          RDS_HOST: ${{ secrets.RDS_HOST }}
-          RDS_PORT: ${{ secrets.RDS_PORT }}
           DB_NAME: ${{ secrets.DB_NAME }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: ECR_REGISTRY,ECR_PASSWORD,APP_DB_USER,APP_DB_PASSWORD,RDS_HOST,RDS_PORT,DB_NAME
+          envs: ECR_REGISTRY,APP_DB_USER,APP_DB_PASSWORD,DB_NAME
           script: |
-            echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
             docker run --rm \
+              --network petrcollect_default \
               -e DB_USER="$APP_DB_USER" \
               -e DB_PASSWORD="$APP_DB_PASSWORD" \
-              -e DB_HOST="$RDS_HOST" \
-              -e DB_PORT="$RDS_PORT" \
+              -e DB_HOST=db \
+              -e DB_PORT=5432 \
               -e DB_NAME="$DB_NAME" \
               "$ECR_REGISTRY/petrcollect-backend:latest" \
               bash -euo pipefail -c '
                 set -euo pipefail
 
                 # Pending = revisions strictly between the DB''s applied state and the script head.
-                # "alembic current" reads the DB; "alembic heads" reads the migration chain tip.
-                # If they match, nothing is pending. Otherwise enumerate the gap with -r.
                 CURRENT=$(alembic current 2>/dev/null | awk "/^[a-f0-9]+/ {print \$1; exit}")
                 HEAD=$(alembic heads 2>/dev/null   | awk "/^[a-f0-9]+/ {print \$1; exit}")
 
@@ -169,8 +209,6 @@ jobs:
                   exit 0
                 fi
 
-                # "${CURRENT:-base}:$HEAD" handles the empty-DB case (no current revision yet).
-                # Each history line is "<down_rev> -> <rev_id> (...), <message>"; pull <rev_id>.
                 PENDING=$(alembic history -r "${CURRENT:-base}:$HEAD" 2>/dev/null \
                   | grep -oE "-> [a-f0-9]+" | awk "{print \$2}" || true)
 
@@ -200,7 +238,7 @@ jobs:
                     FAILED=1
                   fi
 
-                  # Adding a NOT NULL column without a server-side default locks the table for a full rewrite.
+                  # Adding a NOT NULL column without a server-side default locks the table for a rewrite.
                   if grep -qiE "add_column" "$FILE" \
                      && grep -qiE "nullable\s*=\s*False" "$FILE" \
                      && ! grep -qiE "server_default" "$FILE"; then
@@ -221,107 +259,38 @@ jobs:
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_PASSWORD: ${{ steps.ecr-token.outputs.password }}
           APP_DB_USER: ${{ secrets.APP_DB_USER }}
           APP_DB_PASSWORD: ${{ secrets.APP_DB_PASSWORD }}
-          RDS_HOST: ${{ secrets.RDS_HOST }}
-          RDS_PORT: ${{ secrets.RDS_PORT }}
           DB_NAME: ${{ secrets.DB_NAME }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: ECR_REGISTRY,ECR_PASSWORD,APP_DB_USER,APP_DB_PASSWORD,RDS_HOST,RDS_PORT,DB_NAME
+          envs: ECR_REGISTRY,APP_DB_USER,APP_DB_PASSWORD,DB_NAME
           script: |
-            echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
             docker run --rm \
+              --network petrcollect_default \
               -e DB_USER="$APP_DB_USER" \
               -e DB_PASSWORD="$APP_DB_PASSWORD" \
-              -e DB_HOST="$RDS_HOST" \
-              -e DB_PORT="$RDS_PORT" \
+              -e DB_HOST=db \
+              -e DB_PORT=5432 \
               -e DB_NAME="$DB_NAME" \
               "$ECR_REGISTRY/petrcollect-backend:latest" \
               alembic upgrade head
 
-      # ── Cross-Schema Permissions (Admin via EC2) ────────────────────────
-      # Grants messaging user read access to public.users.
-      # Must run after Alembic has created the table.
-      - name: Grant Cross-Schema Permissions
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
-        env:
-          PGPASSWORD: ${{ secrets.RDS_ADMIN_PASSWORD }}
-          PGSSLMODE: require
-          RDS_HOST: ${{ secrets.RDS_HOST }}
-          RDS_PORT: ${{ secrets.RDS_PORT }}
-          RDS_ADMIN_USER: ${{ secrets.RDS_ADMIN_USER }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          MESSAGING_DB_USER: ${{ secrets.MESSAGING_DB_USER }}
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          envs: PGPASSWORD,PGSSLMODE,RDS_HOST,RDS_PORT,RDS_ADMIN_USER,DB_NAME,MESSAGING_DB_USER
-          script: |
-            psql \
-              -h "$RDS_HOST" \
-              -p "$RDS_PORT" \
-              -U "$RDS_ADMIN_USER" \
-              -d "$DB_NAME" \
-              -c "GRANT SELECT ON public.users TO ${MESSAGING_DB_USER};"
-
-      # ── Prepare EC2 Directory ────────────────────────────────────────────
-      - name: Prepare EC2 Directory
-        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: mkdir -p ~/petrcollect
-
-      # ── Create .env for EC2 ──────────────────────────────────────────────
-      # TODO(security): migrate to AWS Secrets Manager
-      # Current: secrets written to .env on EC2 disk (chmod 600)
-      # Goal: replace with `aws secretsmanager get-secret-value` at container startup
-      # Requires: secrets pre-created in Secrets Manager and IAM role with secretsmanager:GetSecretValue
-      # See: docs/DECISION_LOG.md — Secrets Management Migration
+      # ── DECOMMISSIONED: cross-schema permissions ────────────────────────
+      # Granted the messaging role SELECT on public.users. Restore alongside the
+      # messaging service. See docs/RECOMMISSION_TRADING_MESSAGING.md.
       #
-      # RDS_ADMIN_PASSWORD is intentionally omitted — admin creds are only
-      # needed for the one-time schema init steps above, not at runtime.
-      - name: Create .env file for EC2
-        run: |
-          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" > .env
-          echo "DB_HOST=${{ secrets.RDS_HOST }}" >> .env
-          echo "DB_PORT=${{ secrets.RDS_PORT }}" >> .env
-          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
-          echo "APP_DB_USER=${{ secrets.APP_DB_USER }}" >> .env
-          echo "APP_DB_PASSWORD=${{ secrets.APP_DB_PASSWORD }}" >> .env
-          echo "MESSAGING_DB_USER=${{ secrets.MESSAGING_DB_USER }}" >> .env
-          echo "MESSAGING_DB_PASSWORD=${{ secrets.MESSAGING_DB_PASSWORD }}" >> .env
-          echo "MESSAGING_DB_SCHEMA=${{ secrets.MESSAGING_DB_SCHEMA }}" >> .env
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
-          echo "INTERNAL_SERVICE_SECRET=${{ secrets.INTERNAL_SERVICE_SECRET }}" >> .env
-          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
-          echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
-          echo "CLOUDFRONT_DOMAIN=${{ secrets.CLOUDFRONT_DOMAIN }}" >> .env
-          echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" >> .env
-          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
-          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
-          echo "GOOGLE_REDIRECT_URI=${{ secrets.GOOGLE_REDIRECT_URI }}" >> .env
-          echo "COOKIE_SECURE=true" >> .env
-          echo "COOKIE_DOMAIN=.petrcollect.com" >> .env
+      # - name: Grant Cross-Schema Permissions
+      #   uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
+      #   script: |
+      #     docker compose -f docker-compose.prod.yml exec -T db \
+      #       psql -U "$POSTGRES_ADMIN_USER" -d "$DB_NAME" \
+      #       -c "GRANT SELECT ON public.users TO ${MESSAGING_DB_USER};"
 
-      # ── Copy configuration to EC2 ────────────────────────────────────────
-      - name: Copy docker-compose and .env to EC2
-        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "docker-compose.prod.yml,.env"
-          target: "~/petrcollect/"
-
-      # ── Deploy to EC2 ────────────────────────────────────────────────────
-      - name: Deploy to EC2
+      # ── Deploy backend ───────────────────────────────────────────────────
+      - name: Deploy backend to EC2
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262 # v1.0.3
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -332,23 +301,17 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: ECR_REGISTRY,ECR_PASSWORD
           script: |
-            chmod 600 ~/petrcollect/.env
+            set -euo pipefail
             cd ~/petrcollect
-
-            # Login to ECR on EC2
             echo "$ECR_PASSWORD" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
-
-            # Pull latest images
             docker pull "$ECR_REGISTRY/petrcollect-backend:latest"
-            docker pull "$ECR_REGISTRY/petrcollect-messaging:latest"
 
-            # Tear down first (removes orphan containers from old naming schemes that cause name conflicts)
-            docker compose -f docker-compose.prod.yml down --remove-orphans
+            # --force-recreate ensures the freshly pulled image is used even
+            # though the :latest tag is unchanged. Only the backend is
+            # recreated — restarting db here would drop connections for nothing.
+            docker compose -f docker-compose.prod.yml up -d --force-recreate backend
 
-            # Restart services — force-recreate ensures the freshly pulled image is always used
-            docker compose -f docker-compose.prod.yml up -d --force-recreate
-
-            # Remove images no longer referenced by any container to prevent disk exhaustion.
-            # || true: a concurrent prune (e.g. from the Alembic docker run --rm step) must
-            # not fail the pipeline — containers are already running at this point.
+            # Remove images no longer referenced by any container to prevent
+            # disk exhaustion. || true: a concurrent prune must not fail the
+            # pipeline — containers are already running at this point.
             docker image prune -a -f || true
