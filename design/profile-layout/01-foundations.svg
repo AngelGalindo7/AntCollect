@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="800" viewBox="0 0 1000 800">
+<title>Foundations</title>
+<rect x="0" y="0" width="1000" height="800" fill="#F4EFE6" id="artboard-bg"/>
+<text x="48" y="64" font-family="Bricolage Grotesque" font-size="30" font-weight="700" fill="#332D2A">PetrCollect — Foundations</text>
+<text x="48" y="88" font-family="Inter Tight" font-size="13" font-weight="400" fill="#332D2A" fill-opacity="0.6">Source of truth: frontend/src/app/index.css @theme</text>
+<text x="48" y="136" font-family="Bricolage Grotesque" font-size="18" font-weight="700" fill="#332D2A">Color</text>
+<rect x="48" y="158" width="200" height="72" rx="14" fill="#0064A4" id="swatch-uci-blue"/>
+<text x="48" y="250" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">UCI Blue</text>
+<text x="48" y="267" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.55">#0064A4</text>
+<rect x="276" y="158" width="200" height="72" rx="14" fill="#0F2D5C" id="swatch-uci-navy"/>
+<text x="276" y="250" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">UCI Navy</text>
+<text x="276" y="267" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.55">#0F2D5C</text>
+<rect x="504" y="158" width="200" height="72" rx="14" fill="#FFD200" stroke="#DDD4C5" stroke-width="1" id="swatch-uci-gold"/>
+<text x="504" y="250" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">UCI Gold</text>
+<text x="504" y="267" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.55">#FFD200</text>
+<rect x="732" y="158" width="200" height="72" rx="14" fill="#F4EFE6" stroke="#DDD4C5" stroke-width="1" id="swatch-warm-cream"/>
+<text x="732" y="250" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Warm Cream</text>
+<text x="732" y="267" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.55">#F4EFE6</text>
+<rect x="48" y="288" width="200" height="72" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="swatch-soft-white"/>
+<text x="48" y="380" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Soft White</text>
+<text x="48" y="397" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.55">#FAF8F4</text>
+<rect x="276" y="288" width="200" height="72" rx="14" fill="#332D2A" id="swatch-espresso"/>
+<text x="276" y="380" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Espresso</text>
+<text x="276" y="397" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.55">#332D2A</text>
+<rect x="504" y="288" width="200" height="72" rx="14" fill="#DDD4C5" id="swatch-warm-gray"/>
+<text x="504" y="380" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Warm Gray</text>
+<text x="504" y="397" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.55">#DDD4C5</text>
+<rect x="732" y="288" width="200" height="72" rx="14" fill="#C85A3A" id="swatch-brick"/>
+<text x="732" y="380" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Brick</text>
+<text x="732" y="397" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.55">#C85A3A</text>
+<text x="48" y="456" font-family="Bricolage Grotesque" font-size="18" font-weight="700" fill="#332D2A">Type</text>
+<text x="48" y="494" font-family="Bricolage Grotesque" font-size="22" font-weight="700" fill="#332D2A">Bricolage Grotesque 700 / 22 — display</text>
+<text x="48" y="524" font-family="Inter Tight" font-size="14" font-weight="600" fill="#332D2A">Inter Tight 600 / 14 — UI label</text>
+<text x="48" y="548" font-family="Inter Tight" font-size="13" font-weight="400" fill="#332D2A">Inter Tight 400 / 13 — body &amp; meta</text>
+<text x="48" y="570" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.6">Inter Tight 400 / 11 — caption</text>
+<text x="520" y="456" font-family="Bricolage Grotesque" font-size="18" font-weight="700" fill="#332D2A">Radius &amp; surface</text>
+<rect x="520" y="476" width="120" height="80" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="radius-14-card"/>
+<text x="520" y="574" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.6">14px — --radius-sticker</text>
+<rect x="664" y="476" width="120" height="80" rx="40" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="radius-full-pill"/>
+<text x="664" y="574" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.6">full — pills &amp; chips</text>
+<text x="48" y="636" font-family="Bricolage Grotesque" font-size="18" font-weight="700" fill="#332D2A">Placeholder sticker art — on-brand only</text>
+<text x="48" y="658" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.6">Retired: #2E7D5B (off-palette green), #12345f (stray navy). Brand hexes at varied opacity replace them — no invented hues.</text>
+<circle cx="74" cy="712" r="26" fill="#0064A4" fill-opacity="0.85" id="art-tone-1"/>
+<circle cx="148" cy="712" r="26" fill="#C85A3A" fill-opacity="0.85" id="art-tone-2"/>
+<circle cx="222" cy="712" r="26" fill="#FFD200" fill-opacity="0.95" id="art-tone-3"/>
+<circle cx="296" cy="712" r="26" fill="#0F2D5C" fill-opacity="0.85" id="art-tone-4"/>
+<circle cx="370" cy="712" r="26" fill="#0064A4" fill-opacity="0.35" id="art-tone-5"/>
+<circle cx="444" cy="712" r="26" fill="#C85A3A" fill-opacity="0.4" id="art-tone-6"/>
+<circle cx="518" cy="712" r="26" fill="#0F2D5C" fill-opacity="0.45" id="art-tone-7"/>
+<circle cx="592" cy="712" r="26" fill="#FFD200" fill-opacity="0.5" id="art-tone-8"/>
+</svg>

@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<title>C - Scrolled (sticky collapse)</title>
+<rect x="0" y="0" width="1024" height="1024" fill="#F4EFE6" id="artboard-bg"/>
+<g id="nav-rail">
+  <rect x="0" y="0" width="56" height="1024" fill="#0064A4" id="rail-bg"/>
+  <rect x="18" y="84" width="20" height="20" rx="5" fill="#FFFFFF" fill-opacity="0.55" id="rail-icon-1"/>
+  <rect x="18" y="132" width="20" height="20" rx="5" fill="#FFFFFF" fill-opacity="0.55" id="rail-icon-2"/>
+  <rect x="18" y="180" width="20" height="20" rx="5" fill="#FFFFFF" fill-opacity="0.55" id="rail-icon-3"/>
+  <rect x="18" y="228" width="20" height="20" rx="5" fill="#FFFFFF" fill-opacity="0.55" id="rail-icon-4"/>
+  <rect x="18" y="28" width="20" height="20" rx="6" fill="#FFD200" id="rail-logo"/>
+  <circle cx="28" cy="988" r="16" fill="#FFD200" id="rail-avatar-chip-your-account"/>
+  <text x="28" y="993" font-family="Inter Tight" font-size="11" font-weight="700" fill="#332D2A" text-anchor="middle">AG</text>
+</g>
+<g id="sticker-grid-scrolled">
+  <g id="sticker-card-5">
+  <rect x="88" y="76" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="98" y="86" width="170" height="184" rx="10" fill="#0064A4" fill-opacity="0.077" id="art-bg"/>
+  <circle cx="183.0" cy="170.0" r="34" fill="#0064A4" fill-opacity="0.35" id="art-shape"/>
+  <rect x="167.0" y="204.0" width="32" height="12" rx="6" fill="#0064A4" fill-opacity="0.24499999999999997"/>
+  <text x="102" y="296" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Anteater Recreation</text>
+  <text x="102" y="313" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2024 - Common</text>
+</g>
+  <g id="sticker-card-6">
+  <rect x="298" y="76" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="308" y="86" width="170" height="184" rx="10" fill="#C85A3A" fill-opacity="0.08800000000000001" id="art-bg"/>
+  <circle cx="393.0" cy="170.0" r="34" fill="#C85A3A" fill-opacity="0.4" id="art-shape"/>
+  <rect x="377.0" y="204.0" width="32" height="12" rx="6" fill="#C85A3A" fill-opacity="0.27999999999999997"/>
+  <text x="312" y="296" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Langson Library</text>
+  <text x="312" y="313" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2023 - Campus set</text>
+</g>
+  <g id="sticker-card-7">
+  <rect x="508" y="76" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="518" y="86" width="170" height="184" rx="10" fill="#0F2D5C" fill-opacity="0.099" id="art-bg"/>
+  <circle cx="603.0" cy="170.0" r="34" fill="#0F2D5C" fill-opacity="0.45" id="art-shape"/>
+  <rect x="587.0" y="204.0" width="32" height="12" rx="6" fill="#0F2D5C" fill-opacity="0.315"/>
+  <text x="522" y="296" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Middle Earth</text>
+  <text x="522" y="313" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2024 - Housing</text>
+</g>
+  <g id="sticker-card-8">
+  <rect x="718" y="76" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="728" y="86" width="170" height="184" rx="10" fill="#FFD200" fill-opacity="0.11" id="art-bg"/>
+  <circle cx="813.0" cy="170.0" r="34" fill="#FFD200" fill-opacity="0.5" id="art-shape"/>
+  <rect x="797.0" y="204.0" width="32" height="12" rx="6" fill="#FFD200" fill-opacity="0.35"/>
+  <text x="732" y="296" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Mesa Court</text>
+  <text x="732" y="313" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2023 - Housing</text>
+</g>
+  <g id="sticker-card-9">
+  <rect x="88" y="346" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="98" y="356" width="170" height="184" rx="10" fill="#0064A4" fill-opacity="0.132" id="art-bg"/>
+  <circle cx="183.0" cy="440.0" r="34" fill="#0064A4" fill-opacity="0.6" id="art-shape"/>
+  <rect x="167.0" y="474.0" width="32" height="12" rx="6" fill="#0064A4" fill-opacity="0.42"/>
+  <text x="102" y="566" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Science Library</text>
+  <text x="102" y="583" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2022 - Campus set</text>
+</g>
+  <g id="sticker-card-10">
+  <rect x="298" y="346" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="308" y="356" width="170" height="184" rx="10" fill="#0F2D5C" fill-opacity="0.055" id="art-bg"/>
+  <circle cx="393.0" cy="440.0" r="34" fill="#0F2D5C" fill-opacity="0.25" id="art-shape"/>
+  <rect x="377.0" y="474.0" width="32" height="12" rx="6" fill="#0F2D5C" fill-opacity="0.175"/>
+  <text x="312" y="566" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">UCI Bookstore</text>
+  <text x="312" y="583" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2024 - Common</text>
+</g>
+  <g id="sticker-card-11">
+  <rect x="508" y="346" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="518" y="356" width="170" height="184" rx="10" fill="#C85A3A" fill-opacity="0.132" id="art-bg"/>
+  <circle cx="603.0" cy="440.0" r="34" fill="#C85A3A" fill-opacity="0.6" id="art-shape"/>
+  <rect x="587.0" y="474.0" width="32" height="12" rx="6" fill="#C85A3A" fill-opacity="0.42"/>
+  <text x="522" y="566" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Anteater Express</text>
+  <text x="522" y="583" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2023 - Transit</text>
+</g>
+  <g id="sticker-card-12">
+  <rect x="718" y="346" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="728" y="356" width="170" height="184" rx="10" fill="#FFD200" fill-opacity="0.154" id="art-bg"/>
+  <circle cx="813.0" cy="440.0" r="34" fill="#FFD200" fill-opacity="0.7" id="art-shape"/>
+  <rect x="797.0" y="474.0" width="32" height="12" rx="6" fill="#FFD200" fill-opacity="0.48999999999999994"/>
+  <text x="732" y="566" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Student Center</text>
+  <text x="732" y="583" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2024 - Campus set</text>
+</g>
+  <g id="sticker-card-13">
+  <rect x="88" y="616" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="98" y="626" width="170" height="184" rx="10" fill="#0064A4" fill-opacity="0.187" id="art-bg"/>
+  <circle cx="183.0" cy="710.0" r="34" fill="#0064A4" fill-opacity="0.85" id="art-shape"/>
+  <rect x="167.0" y="744.0" width="32" height="12" rx="6" fill="#0064A4" fill-opacity="0.595"/>
+  <text x="102" y="836" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Peter the Anteater</text>
+  <text x="102" y="853" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2024 - Welcome Week</text>
+</g>
+  <g id="sticker-card-14">
+  <rect x="298" y="616" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="308" y="626" width="170" height="184" rx="10" fill="#C85A3A" fill-opacity="0.187" id="art-bg"/>
+  <circle cx="393.0" cy="710.0" r="34" fill="#C85A3A" fill-opacity="0.85" id="art-shape"/>
+  <rect x="377.0" y="744.0" width="32" height="12" rx="6" fill="#C85A3A" fill-opacity="0.595"/>
+  <text x="312" y="836" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Zot Zot Zot</text>
+  <text x="312" y="853" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2023 - Homecoming</text>
+</g>
+  <g id="sticker-card-15">
+  <rect x="508" y="616" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="518" y="626" width="170" height="184" rx="10" fill="#FFD200" fill-opacity="0.209" id="art-bg"/>
+  <circle cx="603.0" cy="710.0" r="34" fill="#FFD200" fill-opacity="0.95" id="art-shape"/>
+  <rect x="587.0" y="744.0" width="32" height="12" rx="6" fill="#FFD200" fill-opacity="0.6649999999999999"/>
+  <text x="522" y="836" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Ring Road</text>
+  <text x="522" y="853" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2024 - Campus set</text>
+</g>
+  <g id="sticker-card-16">
+  <rect x="718" y="616" width="190" height="250" rx="14" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="card-surface"/>
+  <rect x="728" y="626" width="170" height="184" rx="10" fill="#0F2D5C" fill-opacity="0.187" id="art-bg"/>
+  <circle cx="813.0" cy="710.0" r="34" fill="#0F2D5C" fill-opacity="0.85" id="art-shape"/>
+  <rect x="797.0" y="744.0" width="32" height="12" rx="6" fill="#0F2D5C" fill-opacity="0.595"/>
+  <text x="732" y="836" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">Aldrich Park</text>
+  <text x="732" y="853" font-family="Inter Tight" font-size="11" font-weight="400" fill="#332D2A" fill-opacity="0.55">2022 - Rare</text>
+</g>
+</g>
+<rect x="56" y="0" width="968" height="64" fill="#FAF8F4" id="sticky-bar-bg"/>
+<rect x="56" y="63" width="968" height="1" fill="#DDD4C5" id="sticky-bar-border"/>
+<g id="pill-tabs-sticky">
+  <rect x="88" y="14" width="143" height="36" rx="18" fill="#0064A4" id="pill-collection-active"/>
+  <text x="104" y="37" font-family="Inter Tight" font-size="14" font-weight="600" fill="#FFFFFF">Collection</text>
+  <rect x="186" y="24" width="33" height="16" rx="8" fill="#FFFFFF" fill-opacity="0.22"/>
+  <text x="202.5" y="36" font-family="Inter Tight" font-size="11" font-weight="600" fill="#FFFFFF" text-anchor="middle">128</text>
+  <rect x="241" y="14" width="143" height="36" rx="18" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="pill-looking-for"/>
+  <text x="257" y="37" font-family="Inter Tight" font-size="14" font-weight="500" fill="#332D2A">Looking For</text>
+  <rect x="346" y="24" width="26" height="16" rx="8" fill="#332D2A" fill-opacity="0.09"/>
+  <text x="359.0" y="36" font-family="Inter Tight" font-size="11" font-weight="600" fill="#332D2A" fill-opacity="0.7" text-anchor="middle">12</text>
+  <rect x="394" y="14" width="144" height="36" rx="18" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="pill-trading-away"/>
+  <text x="410" y="37" font-family="Inter Tight" font-size="14" font-weight="500" fill="#332D2A">Trading Away</text>
+  <rect x="507" y="24" width="19" height="16" rx="8" fill="#332D2A" fill-opacity="0.09"/>
+  <text x="516.5" y="36" font-family="Inter Tight" font-size="11" font-weight="600" fill="#332D2A" fill-opacity="0.7" text-anchor="middle">5</text>
+  <rect x="548" y="14" width="114" height="36" rx="18" fill="#FAF8F4" stroke="#DDD4C5" stroke-width="1" id="pill-showcase"/>
+  <text x="564" y="37" font-family="Inter Tight" font-size="14" font-weight="500" fill="#332D2A">Showcase</text>
+  <rect x="631" y="24" width="19" height="16" rx="8" fill="#332D2A" fill-opacity="0.09"/>
+  <text x="640.5" y="36" font-family="Inter Tight" font-size="11" font-weight="600" fill="#332D2A" fill-opacity="0.7" text-anchor="middle">3</text>
+</g>
+<g id="identity-chip-sticky">
+  <circle cx="908" cy="32" r="15" fill="#F4EFE6" stroke="#FFFFFF" stroke-width="2"/>
+  <text x="908" y="37" font-family="Bricolage Grotesque" font-size="12" font-weight="600" fill="#332D2A" fill-opacity="0.55" text-anchor="middle">A</text>
+  <text x="930" y="37" font-family="Inter Tight" font-size="13" font-weight="600" fill="#332D2A">angel.g</text>
+</g>
+<text x="88" y="1004" font-family="Inter Tight" font-size="12" font-weight="400" fill="#332D2A" fill-opacity="0.5">C — Scrolled. Identity row has collapsed into the sticky bar; pills persist. This is the Spotify feel, earned only once content exists.</text>
+</svg>
